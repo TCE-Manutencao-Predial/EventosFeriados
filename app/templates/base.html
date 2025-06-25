@@ -11,9 +11,6 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
     <!-- FullCalendar CSS -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.css' rel='stylesheet' />
     
@@ -25,38 +22,37 @@
     
     {% block extra_css %}{% endblock %}
 </head>
-<body>
-    <!-- Header -->
-    <header>
-        <nav>
-            <button class="btn-home" onclick="window.location.href='{{ url_for('web.index') }}'">
-                <i class="fas fa-calendar-alt"></i> Sistema de Eventos
-            </button>
-            <button class="btn-resumo {% if request.endpoint == 'web.feriados' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.feriados') }}'">
-                <i class="fas fa-calendar-check"></i> Feriados
-            </button>
-            <button class="btn-periodicidade {% if request.endpoint == 'web.eventos' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.eventos') }}'">
-                <i class="fas fa-calendar-plus"></i> Eventos
-            </button>
-            <button class="btn-terminal {% if request.endpoint == 'web.calendario' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.calendario') }}'">
-                <i class="fas fa-calendar"></i> Calendário
-            </button>
-            <button class="btn-controle-nfs" onclick="window.location.href='/api/status'">
-                <i class="fas fa-cogs"></i> API Status
-            </button>
-        </nav>
-    </header>
+<body class="eventos-custom-layout">
+    <!-- Container de Toast -->
+    <div class="toast-container" id="toastContainer"></div>
 
-    <!-- Toast Container -->
-    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1050; margin-top: 70px;">
-        <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="toast-header">
-                <i class="bi bi-bell me-2"></i>
-                <strong class="me-auto">Notificação</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    <!-- Header Customizado -->
+    <div class="eventos-custom-header">
+        <nav class="eventos-custom-nav">
+            <h1 class="eventos-system-title">
+                <i class="fas fa-calendar-alt"></i>
+                Sistema de Eventos
+            </h1>
+
+            <div class="eventos-nav-buttons">
+                <button class="eventos-nav-btn {% if request.endpoint == 'web.index' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.index') }}'">
+                    <i class="fas fa-home"></i>
+                    <span>Início</span>
+                </button>
+                <button class="eventos-nav-btn {% if request.endpoint == 'web.feriados' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.feriados') }}'">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>Feriados</span>
+                </button>
+                <button class="eventos-nav-btn {% if request.endpoint == 'web.eventos' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.eventos') }}'">
+                    <i class="fas fa-calendar-plus"></i>
+                    <span>Eventos</span>
+                </button>
+                <button class="eventos-nav-btn {% if request.endpoint == 'web.calendario' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.calendario') }}'">
+                    <i class="fas fa-calendar"></i>
+                    <span>Calendário</span>
+                </button>
             </div>
-            <div class="toast-body"></div>
-        </div>
+        </nav>
     </div>
 
     <!-- Main Content -->

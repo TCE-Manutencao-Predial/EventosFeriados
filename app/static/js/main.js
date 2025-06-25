@@ -10,38 +10,54 @@ $.ajaxSetup({
     }
 });
 
-// Função para mostrar notificações
+// Sistema de Toast (padrão RFID)
 function showNotification(message, type = 'info') {
-    const toast = $('#notificationToast');
-    const toastBody = toast.find('.toast-body');
-    const toastHeader = toast.find('.toast-header');
-    
-    // Remover classes anteriores
-    toastHeader.removeClass('bg-success bg-danger bg-warning bg-info text-white');
-    
-    // Adicionar classe baseada no tipo
-    switch(type) {
-        case 'success':
-            toastHeader.addClass('bg-success text-white');
-            toastHeader.find('i').attr('class', 'bi bi-check-circle-fill me-2');
-            break;
-        case 'error':
-            toastHeader.addClass('bg-danger text-white');
-            toastHeader.find('i').attr('class', 'bi bi-exclamation-circle-fill me-2');
-            break;
-        case 'warning':
-            toastHeader.addClass('bg-warning');
-            toastHeader.find('i').attr('class', 'bi bi-exclamation-triangle-fill me-2');
-            break;
-        default:
-            toastHeader.addClass('bg-info text-white');
-            toastHeader.find('i').attr('class', 'bi bi-info-circle-fill me-2');
+    const toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) {
+        // Criar container se não existir
+        const container = document.createElement('div');
+        container.className = 'toast-container';
+        container.id = 'toastContainer';
+        document.body.appendChild(container);
     }
     
-    toastBody.text(message);
+    const toastId = 'toast_' + Date.now();
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
     
-    const bsToast = new bootstrap.Toast(toast[0]);
-    bsToast.show();
+    const toastHtml = `
+        <div class="toast ${type}" id="${toastId}">
+            <i class="fas ${icons[type]} toast-icon"></i>
+            <div class="toast-content">
+                <div class="toast-title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close" onclick="closeToast('${toastId}')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    document.getElementById('toastContainer').insertAdjacentHTML('beforeend', toastHtml);
+    
+    // Auto fechar após 5 segundos
+    setTimeout(() => {
+        closeToast(toastId);
+    }, 5000);
+}
+
+function closeToast(toastId) {
+    const toast = document.getElementById(toastId);
+    if (toast) {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }
 }
 
 // Função para formatar data
@@ -173,11 +189,6 @@ $(document).ready(function() {
             }, 1000);
         }
     });
-    
-    // Auto-hide alerts após 5 segundos
-    setTimeout(function() {
-        $('.alert-dismissible').fadeOut('slow');
-    }, 5000);
 });
 
 // Função para atualizar contador de caracteres em textareas
@@ -202,16 +213,4 @@ function setupCharacterCounter(textareaId, maxLength) {
     
     textarea.addEventListener('input', updateCounter);
     updateCounter();
-}
-
-// Função para dark mode (futuro)
-function toggleDarkMode() {
-    document.body.classList.toggle('dark-mode');
-    const isDark = document.body.classList.contains('dark-mode');
-    localStorage.setItem('darkMode', isDark);
-}
-
-// Verificar preferência de dark mode
-if (localStorage.getItem('darkMode') === 'true') {
-    document.body.classList.add('dark-mode');
 }

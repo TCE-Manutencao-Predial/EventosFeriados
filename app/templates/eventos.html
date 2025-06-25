@@ -3,128 +3,128 @@
 {% block title %}Gerenciar Eventos - Sistema de Feriados e Eventos{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="fas fa-calendar-plus"></i> Gerenciamento de Eventos</h4>
-                <button class="btn btn-light btn-sm" onclick="abrirModalNovoEvento()">
-                    <i class="fas fa-plus"></i> Novo Evento
-                </button>
-            </div>
-            <div class="card-body">
-                <!-- Filtros -->
-                <div class="row mb-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Filtrar por Local:</label>
-                        <select class="form-select" id="filtroLocal" onchange="carregarEventos()">
-                            <option value="">Todos os locais</option>
-                            <option value="Auditório Nobre">Auditório Nobre</option>
-                            <option value="Átrio">Átrio</option>
-                            <option value="Plenário">Plenário</option>
-                            <option value="Creche">Creche</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Filtrar por Mês:</label>
-                        <select class="form-select" id="filtroMes" onchange="carregarEventos()">
-                            <option value="">Todos os meses</option>
-                            <option value="1">Janeiro</option>
-                            <option value="2">Fevereiro</option>
-                            <option value="3">Março</option>
-                            <option value="4">Abril</option>
-                            <option value="5">Maio</option>
-                            <option value="6">Junho</option>
-                            <option value="7">Julho</option>
-                            <option value="8">Agosto</option>
-                            <option value="9">Setembro</option>
-                            <option value="10">Outubro</option>
-                            <option value="11">Novembro</option>
-                            <option value="12">Dezembro</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Filtrar por Ano:</label>
-                        <select class="form-select" id="filtroAno" onchange="carregarEventos()">
-                            <option value="">Todos os anos</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Buscar:</label>
-                        <input type="text" class="form-control" id="buscarEvento" placeholder="Digite para buscar..." onkeyup="filtrarEventos()">
-                    </div>
-                </div>
+<!-- Estatísticas por Local -->
+<div class="eventos-stats">
+    <div class="eventos-stat-card">
+        <i class="fas fa-microphone eventos-stat-icon" style="color: var(--eventos-primary)"></i>
+        <h2 class="eventos-stat-value" id="totalAuditorioNobre">0</h2>
+        <p class="eventos-stat-label">Auditório Nobre</p>
+    </div>
+    <div class="eventos-stat-card">
+        <i class="fas fa-door-open eventos-stat-icon" style="color: var(--eventos-info)"></i>
+        <h2 class="eventos-stat-value" id="totalAtrio">0</h2>
+        <p class="eventos-stat-label">Átrio</p>
+    </div>
+    <div class="eventos-stat-card">
+        <i class="fas fa-users eventos-stat-icon" style="color: var(--eventos-warning)"></i>
+        <h2 class="eventos-stat-value" id="totalPlenario">0</h2>
+        <p class="eventos-stat-label">Plenário</p>
+    </div>
+    <div class="eventos-stat-card">
+        <i class="fas fa-baby eventos-stat-icon" style="color: var(--eventos-success)"></i>
+        <h2 class="eventos-stat-value" id="totalCreche">0</h2>
+        <p class="eventos-stat-label">Creche</p>
+    </div>
+</div>
 
-                <!-- Cards por Local -->
-                <div class="row mb-4">
-                    <div class="col-md-3 mb-3">
-                        <div class="card border-primary">
-                            <div class="card-body text-center">
-                                <i class="fas fa-microphone fs-3 text-primary"></i>
-                                <h6 class="card-title mt-2">Auditório Nobre</h6>
-                                <p class="card-text display-6" id="totalAuditorioNobre">0</p>
-                                <small class="text-muted">eventos</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card border-info">
-                            <div class="card-body text-center">
-                                <i class="fas fa-door-open fs-3 text-info"></i>
-                                <h6 class="card-title mt-2">Átrio</h6>
-                                <p class="card-text display-6" id="totalAtrio">0</p>
-                                <small class="text-muted">eventos</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card border-warning">
-                            <div class="card-body text-center">
-                                <i class="fas fa-users fs-3 text-warning"></i>
-                                <h6 class="card-title mt-2">Plenário</h6>
-                                <p class="card-text display-6" id="totalPlenario">0</p>
-                                <small class="text-muted">eventos</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card border-success">
-                            <div class="card-body text-center">
-                                <i class="fas fa-baby fs-3 text-success"></i>
-                                <h6 class="card-title mt-2">Creche</h6>
-                                <p class="card-text display-6" id="totalCreche">0</p>
-                                <small class="text-muted">eventos</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<!-- Controles e Filtros -->
+<div class="eventos-controls">
+    <div class="eventos-controls-header">
+        <h3 class="eventos-controls-title"><i class="fas fa-calendar-plus"></i> Gerenciamento de Eventos</h3>
+        <div class="eventos-btn-group">
+            <button class="btn btn-success" onclick="abrirModalNovoEvento()">
+                <i class="fas fa-plus"></i> Novo Evento
+            </button>
+            <button class="btn btn-primary" onclick="carregarEventos()">
+                <i class="fas fa-sync-alt"></i> Atualizar
+            </button>
+        </div>
+    </div>
 
-                <!-- Tabela de Eventos -->
-                <div class="table-responsive">
-                    <table class="table table-hover" id="tabelaEventos">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Evento</th>
-                                <th>Local</th>
-                                <th>Horário</th>
-                                <th>Responsável</th>
-                                <th>Participantes</th>
-                                <th class="text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="listaEventos">
-                            <tr>
-                                <td colspan="7" class="text-center">
-                                    <div class="spinner-border text-success" role="status">
-                                        <span class="visually-hidden">Carregando...</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-building"></i> Filtrar por Local
+                </label>
+                <select class="form-select" id="filtroLocal" onchange="carregarEventos()">
+                    <option value="">Todos os locais</option>
+                    <option value="Auditório Nobre">Auditório Nobre</option>
+                    <option value="Átrio">Átrio</option>
+                    <option value="Plenário">Plenário</option>
+                    <option value="Creche">Creche</option>
+                </select>
             </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-calendar-alt"></i> Filtrar por Mês
+                </label>
+                <select class="form-select" id="filtroMes" onchange="carregarEventos()">
+                    <option value="">Todos os meses</option>
+                    <option value="1">Janeiro</option>
+                    <option value="2">Fevereiro</option>
+                    <option value="3">Março</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Maio</option>
+                    <option value="6">Junho</option>
+                    <option value="7">Julho</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-calendar"></i> Filtrar por Ano
+                </label>
+                <select class="form-select" id="filtroAno" onchange="carregarEventos()">
+                    <option value="">Todos os anos</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-search"></i> Buscar
+                </label>
+                <input type="text" class="form-control" id="buscarEvento" placeholder="Digite para buscar..." onkeyup="filtrarEventos()">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Eventos -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="tabelaEventos">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Evento</th>
+                        <th>Local</th>
+                        <th>Horário</th>
+                        <th>Responsável</th>
+                        <th>Participantes</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="listaEventos">
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            <div class="spinner-border text-success" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

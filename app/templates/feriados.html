@@ -3,65 +3,81 @@
 {% block title %}Gerenciar Feriados - Sistema de Feriados e Eventos{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="fas fa-calendar-check"></i> Gerenciamento de Feriados</h4>
-                <button class="btn btn-light btn-sm" onclick="abrirModalNovoFeriado()">
-                    <i class="fas fa-plus"></i> Novo Feriado
-                </button>
-            </div>
-            <div class="card-body">
-                <!-- Filtros -->
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Filtrar por Ano:</label>
-                        <select class="form-select" id="filtroAno" onchange="carregarFeriados()">
-                            <option value="">Todos os anos</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Filtrar por Tipo:</label>
-                        <select class="form-select" id="filtroTipo" onchange="carregarFeriados()">
-                            <option value="">Todos os tipos</option>
-                            <option value="nacional">Nacional</option>
-                            <option value="estadual">Estadual</option>
-                            <option value="municipal">Municipal</option>
-                            <option value="customizado">Customizado</option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Buscar:</label>
-                        <input type="text" class="form-control" id="buscarFeriado" placeholder="Digite para buscar..." onkeyup="filtrarFeriados()">
-                    </div>
-                </div>
+<!-- Controles e Filtros -->
+<div class="eventos-controls">
+    <div class="eventos-controls-header">
+        <h3 class="eventos-controls-title"><i class="fas fa-calendar-check"></i> Gerenciamento de Feriados</h3>
+        <div class="eventos-btn-group">
+            <button class="btn btn-success" onclick="abrirModalNovoFeriado()">
+                <i class="fas fa-plus"></i> Novo Feriado
+            </button>
+            <button class="btn btn-primary" onclick="carregarFeriados()">
+                <i class="fas fa-sync-alt"></i> Atualizar
+            </button>
+        </div>
+    </div>
 
-                <!-- Tabela de Feriados -->
-                <div class="table-responsive">
-                    <table class="table table-hover" id="tabelaFeriados">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Nome</th>
-                                <th>Tipo</th>
-                                <th>Descrição</th>
-                                <th>Horário</th>
-                                <th class="text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="listaFeriados">
-                            <tr>
-                                <td colspan="6" class="text-center">
-                                    <div class="spinner-border text-primary" role="status">
-                                        <span class="visually-hidden">Carregando...</span>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+    <div class="row">
+        <div class="col-md-4">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-calendar"></i> Filtrar por Ano
+                </label>
+                <select class="form-select" id="filtroAno" onchange="carregarFeriados()">
+                    <option value="">Todos os anos</option>
+                </select>
             </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-filter"></i> Filtrar por Tipo
+                </label>
+                <select class="form-select" id="filtroTipo" onchange="carregarFeriados()">
+                    <option value="">Todos os tipos</option>
+                    <option value="nacional">Nacional</option>
+                    <option value="estadual">Estadual</option>
+                    <option value="municipal">Municipal</option>
+                    <option value="customizado">Customizado</option>
+                </select>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-search"></i> Buscar
+                </label>
+                <input type="text" class="form-control" id="buscarFeriado" placeholder="Digite para buscar..." onkeyup="filtrarFeriados()">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela de Feriados -->
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="tabelaFeriados">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Nome</th>
+                        <th>Tipo</th>
+                        <th>Descrição</th>
+                        <th>Horário</th>
+                        <th class="text-center">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="listaFeriados">
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Carregando...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

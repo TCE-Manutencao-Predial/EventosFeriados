@@ -3,53 +3,53 @@
 {% block title %}Calendário - Sistema de Feriados e Eventos{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <div class="card shadow-sm mb-4">
-            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="fas fa-calendar"></i> Calendário de Feriados e Eventos</h4>
-                <div>
-                    <button class="btn btn-sm btn-outline-dark" onclick="alternarVisualizacao()">
-                        <i class="fas fa-th"></i> Alternar Visualização
-                    </button>
-                    <button class="btn btn-sm btn-outline-dark" onclick="imprimirCalendario()">
-                        <i class="fas fa-print"></i> Imprimir
-                    </button>
-                </div>
-            </div>
-            <div class="card-body">
-                <!-- Legenda -->
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <div class="d-flex flex-wrap gap-3">
-                            <div class="d-flex align-items-center">
-                                <div style="width: 20px; height: 20px; background-color: #dc3545; border-radius: 3px;" class="me-2"></div>
-                                <small>Feriados</small>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <div style="width: 20px; height: 20px; background-color: #0d6efd; border-radius: 3px;" class="me-2"></div>
-                                <small>Auditório Nobre</small>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <div style="width: 20px; height: 20px; background-color: #0dcaf0; border-radius: 3px;" class="me-2"></div>
-                                <small>Átrio</small>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <div style="width: 20px; height: 20px; background-color: #ffc107; border-radius: 3px;" class="me-2"></div>
-                                <small>Plenário</small>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <div style="width: 20px; height: 20px; background-color: #198754; border-radius: 3px;" class="me-2"></div>
-                                <small>Creche</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<!-- Controles do Calendário -->
+<div class="eventos-controls">
+    <div class="eventos-controls-header">
+        <h3 class="eventos-controls-title"><i class="fas fa-calendar"></i> Calendário de Feriados e Eventos</h3>
+        <div class="eventos-btn-group">
+            <button class="btn btn-primary" onclick="alternarVisualizacao()">
+                <i class="fas fa-th"></i> Alternar Visualização
+            </button>
+            <button class="btn btn-secondary" onclick="imprimirCalendario()">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+        </div>
+    </div>
 
-                <!-- Calendário -->
-                <div id="calendario" style="min-height: 600px;"></div>
+    <!-- Legenda -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex flex-wrap gap-3 justify-content-center">
+                <div class="d-flex align-items-center">
+                    <div style="width: 20px; height: 20px; background-color: #dc3545; border-radius: 3px;" class="me-2"></div>
+                    <small>Feriados</small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div style="width: 20px; height: 20px; background-color: #0d6efd; border-radius: 3px;" class="me-2"></div>
+                    <small>Auditório Nobre</small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div style="width: 20px; height: 20px; background-color: #0dcaf0; border-radius: 3px;" class="me-2"></div>
+                    <small>Átrio</small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div style="width: 20px; height: 20px; background-color: #ffc107; border-radius: 3px;" class="me-2"></div>
+                    <small>Plenário</small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <div style="width: 20px; height: 20px; background-color: #198754; border-radius: 3px;" class="me-2"></div>
+                    <small>Creche</small>
+                </div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Calendário -->
+<div class="card">
+    <div class="card-body">
+        <div id="calendario" style="min-height: 600px;"></div>
     </div>
 </div>
 
