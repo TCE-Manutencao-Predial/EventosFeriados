@@ -7,13 +7,13 @@
     <div class="col-12">
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="bi bi-calendar3"></i> Calendário de Feriados e Eventos</h4>
+                <h4 class="mb-0"><i class="fas fa-calendar"></i> Calendário de Feriados e Eventos</h4>
                 <div>
                     <button class="btn btn-sm btn-outline-dark" onclick="alternarVisualizacao()">
-                        <i class="bi bi-grid-3x3-gap"></i> Alternar Visualização
+                        <i class="fas fa-th"></i> Alternar Visualização
                     </button>
                     <button class="btn btn-sm btn-outline-dark" onclick="imprimirCalendario()">
-                        <i class="bi bi-printer"></i> Imprimir
+                        <i class="fas fa-print"></i> Imprimir
                     </button>
                 </div>
             </div>
@@ -225,7 +225,7 @@ function mostrarDetalhesEvento(evento) {
     let conteudo = '';
     
     if (props.tipo === 'feriado') {
-        $('#tituloDetalhes').html(`<i class="bi bi-calendar-check"></i> ${evento.title}`);
+        $('#tituloDetalhes').html(`<i class="fas fa-calendar-check"></i> ${evento.title}`);
         
         conteudo = `
             <p><strong>Tipo:</strong> Feriado ${props.tipoFeriado}</p>
@@ -240,7 +240,7 @@ function mostrarDetalhesEvento(evento) {
             conteudo += `<p><strong>Descrição:</strong> ${props.descricao}</p>`;
         }
     } else {
-        $('#tituloDetalhes').html(`<i class="bi bi-calendar-event"></i> ${evento.title}`);
+        $('#tituloDetalhes').html(`<i class="fas fa-calendar-plus"></i> ${evento.title}`);
         
         conteudo = `
             <p><strong>Local:</strong> <span class="badge" style="background-color: ${evento.backgroundColor}">${props.local}</span></p>

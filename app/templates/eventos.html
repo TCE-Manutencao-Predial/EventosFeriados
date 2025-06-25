@@ -7,9 +7,9 @@
     <div class="col-12">
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-                <h4 class="mb-0"><i class="bi bi-calendar-event"></i> Gerenciamento de Eventos</h4>
+                <h4 class="mb-0"><i class="fas fa-calendar-plus"></i> Gerenciamento de Eventos</h4>
                 <button class="btn btn-light btn-sm" onclick="abrirModalNovoEvento()">
-                    <i class="bi bi-plus-circle"></i> Novo Evento
+                    <i class="fas fa-plus"></i> Novo Evento
                 </button>
             </div>
             <div class="card-body">
@@ -60,7 +60,7 @@
                     <div class="col-md-3 mb-3">
                         <div class="card border-primary">
                             <div class="card-body text-center">
-                                <i class="bi bi-mic fs-3 text-primary"></i>
+                                <i class="fas fa-microphone fs-3 text-primary"></i>
                                 <h6 class="card-title mt-2">Auditório Nobre</h6>
                                 <p class="card-text display-6" id="totalAuditorioNobre">0</p>
                                 <small class="text-muted">eventos</small>
@@ -70,7 +70,7 @@
                     <div class="col-md-3 mb-3">
                         <div class="card border-info">
                             <div class="card-body text-center">
-                                <i class="bi bi-door-open fs-3 text-info"></i>
+                                <i class="fas fa-door-open fs-3 text-info"></i>
                                 <h6 class="card-title mt-2">Átrio</h6>
                                 <p class="card-text display-6" id="totalAtrio">0</p>
                                 <small class="text-muted">eventos</small>
@@ -80,7 +80,7 @@
                     <div class="col-md-3 mb-3">
                         <div class="card border-warning">
                             <div class="card-body text-center">
-                                <i class="bi bi-people fs-3 text-warning"></i>
+                                <i class="fas fa-users fs-3 text-warning"></i>
                                 <h6 class="card-title mt-2">Plenário</h6>
                                 <p class="card-text display-6" id="totalPlenario">0</p>
                                 <small class="text-muted">eventos</small>
@@ -90,7 +90,7 @@
                     <div class="col-md-3 mb-3">
                         <div class="card border-success">
                             <div class="card-body text-center">
-                                <i class="bi bi-balloon-heart fs-3 text-success"></i>
+                                <i class="fas fa-baby fs-3 text-success"></i>
                                 <h6 class="card-title mt-2">Creche</h6>
                                 <p class="card-text display-6" id="totalCreche">0</p>
                                 <small class="text-muted">eventos</small>
@@ -345,10 +345,10 @@ function exibirEventos() {
                 <td>${evento.participantes_estimados || '<span class="text-muted">-</span>'}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary" onclick="editarEvento('${evento.id}')" title="Editar">
-                        <i class="bi bi-pencil"></i>
+                        <i class="fas fa-edit"></i>
                     </button>
                     <button class="btn btn-sm btn-outline-danger" onclick="excluirEvento('${evento.id}', '${evento.nome}')" title="Excluir">
-                        <i class="bi bi-trash"></i>
+                        <i class="fas fa-trash"></i>
                     </button>
                 </td>
             </tr>
