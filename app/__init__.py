@@ -59,11 +59,13 @@ def create_app():
     # Registrar blueprints com prefixo
     from .routes.api_feriados import api_feriados_bp
     from .routes.api_eventos import api_eventos_bp
+    from .routes.api_clp import api_clp_bp
     from .routes.web import web_bp
     
     # IMPORTANTE: Registrar com url_prefix
     app.register_blueprint(api_feriados_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_eventos_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    app.register_blueprint(api_clp_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(web_bp, url_prefix=ROUTES_PREFIX)
     
     # Rota de status da API
