@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Eventos - Sistema de Feriados e Eventos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-calendar-event"></i> Gerenciamento de Eventos</h4>
+                <button class="btn btn-light btn-sm" onclick="abrirModalNovoEvento()">
+                    <i class="bi bi-plus-circle"></i> Novo Evento
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Filtros -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Filtrar por Local:</label>
+                        <select class="form-select" id="filtroLocal" onchange="carregarEventos()">
+                            <option value="">Todos os locais</option>
+                            <option value="Auditório Nobre">Auditório Nobre</option>
+                            <option value="Átrio">Átrio</option>
+                            <option value="Plenário">Plenário</option>
+                            <option value="Creche">Creche</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Filtrar por Mês:</label>
+                        <select class="form-select" id="filtroMes" onchange="carregarEventos()">
+                            <option value="">Todos os meses</option>
+                            <option value="1">Janeiro</option>
+                            <option value="2">Fevereiro</option>
+                            <option value="3">Março</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Maio</option>
+                            <option value="6">Junho</option>
+                            <option value="7">Julho</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Setembro</option>
+                            <option value="10">Outubro</option>
+                            <option value="11">Novembro</option>
+                            <option value="12">Dezembro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Filtrar por Ano:</label>
+                        <select class="form-select" id="filtroAno" onchange="carregarEventos()">
+                            <option value="">Todos os anos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Buscar:</label>
+                        <input type="text" class="form-control" id="buscarEvento" placeholder="Digite para buscar..." onkeyup="filtrarEventos()">
+                    </div>
+                </div>
+
+                <!-- Cards por Local -->
+                <div class="row mb-4">
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-primary">
+                            <div class="card-body text-center">
+                                <i class="bi bi-mic fs-3 text-primary"></i>
+                                <h6 class="card-title mt-2">Auditório Nobre</h6>
+                                <p class="card-text display-6" id="totalAuditorioNobre">0</p>
+                                <small class="text-muted">eventos</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <i class="bi bi-door-open fs-3 text-info"></i>
+                                <h6 class="card-title mt-2">Átrio</h6>
+                                <p class="card-text display-6" id="totalAtrio">0</p>
+                                <small class="text-muted">eventos</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-warning">
+                            <div class="card-body text-center">
+                                <i class="bi bi-people fs-3 text-warning"></i>
+                                <h6 class="card-title mt-2">Plenário</h6>
+                                <p class="card-text display-6" id="totalPlenario">0</p>
+                                <small class="text-muted">eventos</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="card border-success">
+                            <div class="card-body text-center">
+                                <i class="bi bi-balloon-heart fs-3 text-success"></i>
+                                <h6 class="card-title mt-2">Creche</h6>
+                                <p class="card-text display-6" id="totalCreche">0</p>
+                                <small class="text-muted">eventos</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabela de Eventos -->
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tabelaEventos">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Evento</th>
+                                <th>Local</th>
+                                <th>Horário</th>
+                                <th>Responsável</th>
+                                <th>Participantes</th>
+                                <th class="text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaEventos">
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="spinner-border text-success" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo/Editar Evento -->
+<div class="modal fade" id="modalEvento" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEventoTitulo">Novo Evento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formEvento">
+                    <input type="hidden" id="eventoId">
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Nome do Evento*</label>
+                            <input type="text" class="form-control" id="eventoNome" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Local*</label>
+                            <select class="form-select" id="eventoLocal" required>
+                                <option value="">Selecione...</option>
+                                <option value="Auditório Nobre">Auditório Nobre</option>
+                                <option value="Átrio">Átrio</option>
+                                <option value="Plenário">Plenário</option>
+                                <option value="Creche">Creche</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Dia*</label>
+                            <input type="number" class="form-control" id="eventoDia" min="1" max="31" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mês*</label>
+                            <select class="form-select" id="eventoMes" required>
+                                <option value="">Selecione...</option>
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ano*</label>
+                            <input type="number" class="form-control" id="eventoAno" min="2024" max="2030" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Hora Início*</label>
+                            <input type="time" class="form-control" id="eventoHoraInicio" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Hora Fim*</label>
+                            <input type="time" class="form-control" id="eventoHoraFim" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Responsável</label>
+                            <input type="text" class="form-control" id="eventoResponsavel">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Participantes Estimados</label>
+                            <input type="number" class="form-control" id="eventoParticipantes" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" id="eventoDescricao" rows="3"></textarea>
+                    </div>
+                    
+                    <!-- Aviso de Disponibilidade -->
+                    <div id="avisoDisponibilidade" class="alert alert-warning d-none" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <span id="mensagemDisponibilidade"></span>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="salvarEvento()">
+                    <i class="bi bi-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Exclusão -->
+<div class="modal fade" id="modalExcluirEvento" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir o evento "<span id="nomeEventoExcluir"></span>"?</p>
+                <p class="text-danger"><small>Esta ação não pode ser desfeita.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarExclusaoEvento()">
+                    <i class="bi bi-trash"></i> Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let eventosList = [];
+let eventoExcluirId = null;
+
+$(document).ready(function() {
+    // Preencher anos no filtro
+    const anoAtual = new Date().getFullYear();
+    for (let ano = anoAtual - 1; ano <= anoAtual + 2; ano++) {
+        $('#filtroAno').append(`<option value="${ano}">${ano}</option>`);
+    }
+    
+    // Definir ano e mês atual
+    $('#eventoAno').val(anoAtual);
+    $('#filtroMes').val(new Date().getMonth() + 1);
+    
+    // Carregar eventos
+    carregarEventos();
+    
+    // Verificar disponibilidade ao mudar campos
+    $('#eventoLocal, #eventoDia, #eventoMes, #eventoAno, #eventoHoraInicio, #eventoHoraFim').on('change', verificarDisponibilidade);
+});
+
+function carregarEventos() {
+    const local = $('#filtroLocal').val();
+    const mes = $('#filtroMes').val();
+    const ano = $('#filtroAno').val();
+    
+    let url = '{{ url_for("api_eventos.listar_eventos") }}';
+    const params = [];
+    
+    if (local) params.push(`local=${encodeURIComponent(local)}`);
+    if (mes) params.push(`mes=${mes}`);
+    if (ano) params.push(`ano=${ano}`);
+    
+    if (params.length > 0) {
+        url += '?' + params.join('&');
+    }
+    
+    $.get(url, function(data) {
+        eventosList = data.eventos;
+        exibirEventos();
+        atualizarEstatisticas();
+    }).fail(function(xhr) {
+        showNotification('Erro ao carregar eventos', 'error');
+    });
+}
+
+function exibirEventos() {
+    const busca = $('#buscarEvento').val().toLowerCase();
+    const tbody = $('#listaEventos');
+    tbody.empty();
+    
+    let eventosFiltrados = eventosList;
+    
+    // Filtrar por busca
+    if (busca) {
+        eventosFiltrados = eventosFiltrados.filter(e => 
+            e.nome.toLowerCase().includes(busca) || 
+            e.local.toLowerCase().includes(busca) ||
+            (e.responsavel && e.responsavel.toLowerCase().includes(busca)) ||
+            (e.descricao && e.descricao.toLowerCase().includes(busca))
+        );
+    }
+    
+    if (eventosFiltrados.length === 0) {
+        tbody.html('<tr><td colspan="7" class="text-center text-muted">Nenhum evento encontrado</td></tr>');
+        return;
+    }
+    
+    eventosFiltrados.forEach(function(evento) {
+        const localBadge = {
+            'Auditório Nobre': 'primary',
+            'Átrio': 'info',
+            'Plenário': 'warning',
+            'Creche': 'success'
+        };
+        
+        tbody.append(`
+            <tr>
+                <td>${evento.dia.toString().padStart(2, '0')}/${evento.mes.toString().padStart(2, '0')}/${evento.ano}</td>
+                <td>
+                    <strong>${evento.nome}</strong>
+                    ${evento.descricao ? `<br><small class="text-muted">${evento.descricao}</small>` : ''}
+                </td>
+                <td><span class="badge bg-${localBadge[evento.local] || 'secondary'}">${evento.local}</span></td>
+                <td>${evento.hora_inicio} - ${evento.hora_fim}</td>
+                <td>${evento.responsavel || '<span class="text-muted">-</span>'}</td>
+                <td>${evento.participantes_estimados || '<span class="text-muted">-</span>'}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editarEvento('${evento.id}')" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="excluirEvento('${evento.id}', '${evento.nome}')" title="Excluir">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `);
+    });
+}
+
+function atualizarEstatisticas() {
+    const estatisticas = {
+        'Auditório Nobre': 0,
+        'Átrio': 0,
+        'Plenário': 0,
+        'Creche': 0
+    };
+    
+    eventosList.forEach(evento => {
+        if (estatisticas.hasOwnProperty(evento.local)) {
+            estatisticas[evento.local]++;
+        }
+    });
+    
+    $('#totalAuditorioNobre').text(estatisticas['Auditório Nobre']);
+    $('#totalAtrio').text(estatisticas['Átrio']);
+    $('#totalPlenario').text(estatisticas['Plenário']);
+    $('#totalCreche').text(estatisticas['Creche']);
+}
+
+function filtrarEventos() {
+    exibirEventos();
+}
+
+function abrirModalNovoEvento() {
+    $('#modalEventoTitulo').text('Novo Evento');
+    $('#formEvento')[0].reset();
+    $('#eventoId').val('');
+    $('#eventoAno').val(new Date().getFullYear());
+    $('#avisoDisponibilidade').addClass('d-none');
+    $('#modalEvento').modal('show');
+}
+
+function editarEvento(id) {
+    const evento = eventosList.find(e => e.id === id);
+    if (!evento) return;
+    
+    $('#modalEventoTitulo').text('Editar Evento');
+    $('#eventoId').val(evento.id);
+    $('#eventoNome').val(evento.nome);
+    $('#eventoLocal').val(evento.local);
+    $('#eventoDia').val(evento.dia);
+    $('#eventoMes').val(evento.mes);
+    $('#eventoAno').val(evento.ano);
+    $('#eventoHoraInicio').val(evento.hora_inicio);
+    $('#eventoHoraFim').val(evento.hora_fim);
+    $('#eventoResponsavel').val(evento.responsavel);
+    $('#eventoParticipantes').val(evento.participantes_estimados);
+    $('#eventoDescricao').val(evento.descricao);
+    
+    $('#modalEvento').modal('show');
+}
+
+function verificarDisponibilidade() {
+    const local = $('#eventoLocal').val();
+    const dia = $('#eventoDia').val();
+    const mes = $('#eventoMes').val();
+    const ano = $('#eventoAno').val();
+    const horaInicio = $('#eventoHoraInicio').val();
+    const horaFim = $('#eventoHoraFim').val();
+    
+    if (!local || !dia || !mes || !ano || !horaInicio || !horaFim) {
+        return;
+    }
+    
+    const dados = {
+        local: local,
+        dia: parseInt(dia),
+        mes: parseInt(mes),
+        ano: parseInt(ano),
+        hora_inicio: horaInicio,
+        hora_fim: horaFim
+    };
+    
+    $.ajax({
+        url: '{{ url_for("api_clp.verificar_disponibilidade_clp") }}',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(dados),
+        success: function(response) {
+            if (!response.disponivel) {
+                $('#avisoDisponibilidade').removeClass('d-none');
+                $('#mensagemDisponibilidade').text(response.motivo);
+                
+                if (response.eventos_conflitantes.length > 0) {
+                    let conflitos = response.eventos_conflitantes.map(e => 
+                        `${e.nome} (${e.inicio} - ${e.fim})`
+                    ).join(', ');
+                    $('#mensagemDisponibilidade').append(`: ${conflitos}`);
+                }
+            } else {
+                $('#avisoDisponibilidade').addClass('d-none');
+            }
+        }
+    });
+}
+
+function salvarEvento() {
+    const id = $('#eventoId').val();
+    const dados = {
+        nome: $('#eventoNome').val(),
+        local: $('#eventoLocal').val(),
+        dia: parseInt($('#eventoDia').val()),
+        mes: parseInt($('#eventoMes').val()),
+        ano: parseInt($('#eventoAno').val()),
+        hora_inicio: $('#eventoHoraInicio').val(),
+        hora_fim: $('#eventoHoraFim').val(),
+        responsavel: $('#eventoResponsavel').val(),
+        participantes_estimados: parseInt($('#eventoParticipantes').val()) || 0,
+        descricao: $('#eventoDescricao').val()
+    };
+    
+    // Validar
+    if (!dados.nome || !dados.local || !dados.dia || !dados.mes || !dados.ano || !dados.hora_inicio || !dados.hora_fim) {
+        showNotification('Preencha todos os campos obrigatórios', 'error');
+        return;
+    }
+    
+    const url = id 
+        ? `{{ url_for("api_eventos.atualizar_evento", evento_id="") }}${id}`
+        : '{{ url_for("api_eventos.adicionar_evento") }}';
+    
+    const method = id ? 'PUT' : 'POST';
+    
+    $.ajax({
+        url: url,
+        method: method,
+        contentType: 'application/json',
+        data: JSON.stringify(dados),
+        success: function(response) {
+            $('#modalEvento').modal('hide');
+            showNotification(response.mensagem || 'Evento salvo com sucesso', 'success');
+            carregarEventos();
+        },
+        error: function(xhr) {
+            const erro = xhr.responseJSON?.erro || 'Erro ao salvar evento';
+            showNotification(erro, 'error');
+        }
+    });
+}
+
+function excluirEvento(id, nome) {
+    eventoExcluirId = id;
+    $('#nomeEventoExcluir').text(nome);
+    $('#modalExcluirEvento').modal('show');
+}
+
+function confirmarExclusaoEvento() {
+    if (!eventoExcluirId) return;
+    
+    $.ajax({
+        url: `{{ url_for("api_eventos.remover_evento", evento_id="") }}${eventoExcluirId}`,
+        method: 'DELETE',
+        success: function(response) {
+            $('#modalExcluirEvento').modal('hide');
+            showNotification('Evento excluído com sucesso', 'success');
+            carregarEventos();
+        },
+        error: function(xhr) {
+            showNotification('Erro ao excluir evento', 'error');
+        }
+    });
+}
+</script>
+{% endblock %}

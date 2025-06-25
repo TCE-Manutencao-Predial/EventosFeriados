@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Início - Sistema de Feriados e Eventos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h1 class="card-title text-primary">
+                    <i class="bi bi-calendar-event"></i> Sistema de Gerenciamento de Feriados e Eventos
+                </h1>
+                <p class="card-text lead">
+                    Bem-vindo ao sistema de gerenciamento de feriados e eventos da instituição.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cards de Resumo -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card border-primary shadow-sm h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-check fs-1 text-primary"></i>
+                <h5 class="card-title mt-3">Feriados</h5>
+                <p class="card-text display-6" id="totalFeriados">0</p>
+                <a href="{{ url_for('web.feriados') }}" class="btn btn-primary btn-sm">Gerenciar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-success shadow-sm h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-event fs-1 text-success"></i>
+                <h5 class="card-title mt-3">Eventos</h5>
+                <p class="card-text display-6" id="totalEventos">0</p>
+                <a href="{{ url_for('web.eventos') }}" class="btn btn-success btn-sm">Gerenciar</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-info shadow-sm h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-building fs-1 text-info"></i>
+                <h5 class="card-title mt-3">Locais</h5>
+                <p class="card-text display-6">4</p>
+                <button class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#locaisModal">Ver Locais</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card border-warning shadow-sm h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-week fs-1 text-warning"></i>
+                <h5 class="card-title mt-3">Próximo Evento</h5>
+                <p class="card-text" id="proximoEvento">
+                    <small>Carregando...</small>
+                </p>
+                <a href="{{ url_for('web.calendario') }}" class="btn btn-warning btn-sm">Ver Calendário</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Próximos Eventos e Feriados -->
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Próximos Eventos</h5>
+            </div>
+            <div class="card-body">
+                <div id="proximosEventos" class="list-group list-group-flush">
+                    <div class="text-center p-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Próximos Feriados</h5>
+            </div>
+            <div class="card-body">
+                <div id="proximosFeriados" class="list-group list-group-flush">
+                    <div class="text-center p-3">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status da API -->
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-cpu"></i> Status do Sistema</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-circle-fill text-success me-2" id="statusGerenciadorFeriados"></i>
+                            <span>Gerenciador de Feriados</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-circle-fill text-success me-2" id="statusGerenciadorEventos"></i>
+                            <span>Gerenciador de Eventos</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-circle-fill text-success me-2" id="statusAPI"></i>
+                            <span>API de Integração</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Locais -->
+<div class="modal fade" id="locaisModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-building"></i> Locais Disponíveis</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="bi bi-mic"></i> Auditório Nobre</h6>
+                            <small class="text-muted">Código: AN</small>
+                        </div>
+                        <p class="mb-1">Local para grandes eventos e solenidades</p>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="bi bi-door-open"></i> Átrio</h6>
+                            <small class="text-muted">Código: AT</small>
+                        </div>
+                        <p class="mb-1">Espaço para exposições e recepções</p>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="bi bi-people"></i> Plenário</h6>
+                            <small class="text-muted">Código: PL</small>
+                        </div>
+                        <p class="mb-1">Local para sessões e reuniões oficiais</p>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1"><i class="bi bi-balloon-heart"></i> Creche</h6>
+                            <small class="text-muted">Código: CR</small>
+                        </div>
+                        <p class="mb-1">Espaço para atividades infantis</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Carregar estatísticas
+    carregarEstatisticas();
+    
+    // Carregar próximos eventos e feriados
+    carregarProximosEventos();
+    carregarProximosFeriados();
+    
+    // Verificar status da API
+    verificarStatus();
+    
+    // Atualizar a cada 60 segundos
+    setInterval(function() {
+        carregarEstatisticas();
+        verificarStatus();
+    }, 60000);
+});
+
+function carregarEstatisticas() {
+    // Total de feriados
+    $.get('{{ url_for("api_feriados.listar_feriados") }}', function(data) {
+        $('#totalFeriados').text(data.total);
+    });
+    
+    // Total de eventos
+    $.get('{{ url_for("api_eventos.listar_eventos") }}', function(data) {
+        $('#totalEventos').text(data.total);
+    });
+    
+    // Próximo evento
+    $.get('{{ url_for("api_clp.proximo_evento_clp") }}', function(data) {
+        if (data.encontrado) {
+            const evento = data.evento;
+            $('#proximoEvento').html(`
+                <strong>${evento.nome}</strong><br>
+                <small>${evento.data} às ${evento.inicio}</small><br>
+                <small class="text-muted">${evento.local}</small>
+            `);
+        } else {
+            $('#proximoEvento').html('<small class="text-muted">Nenhum evento agendado</small>');
+        }
+    });
+}
+
+function carregarProximosEventos() {
+    const ano = new Date().getFullYear();
+    const mes = new Date().getMonth() + 1;
+    
+    $.get(`{{ url_for("api_eventos.listar_eventos") }}?ano=${ano}&mes=${mes}`, function(data) {
+        const container = $('#proximosEventos');
+        container.empty();
+        
+        if (data.eventos.length === 0) {
+            container.html('<p class="text-muted text-center">Nenhum evento este mês</p>');
+            return;
+        }
+        
+        // Mostrar apenas os próximos 5 eventos
+        data.eventos.slice(0, 5).forEach(function(evento) {
+            const dataEvento = moment(`${evento.ano}-${evento.mes}-${evento.dia}`);
+            const hoje = moment();
+            const diasRestantes = dataEvento.diff(hoje, 'days');
+            
+            let badge = '';
+            if (diasRestantes === 0) {
+                badge = '<span class="badge bg-danger">Hoje</span>';
+            } else if (diasRestantes === 1) {
+                badge = '<span class="badge bg-warning">Amanhã</span>';
+            } else if (diasRestantes <= 7) {
+                badge = `<span class="badge bg-info">${diasRestantes} dias</span>`;
+            }
+            
+            container.append(`
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${evento.nome}</h6>
+                        ${badge}
+                    </div>
+                    <p class="mb-1">
+                        <i class="bi bi-calendar"></i> ${evento.dia}/${evento.mes}/${evento.ano} 
+                        <i class="bi bi-clock ms-2"></i> ${evento.hora_inicio} - ${evento.hora_fim}
+                    </p>
+                    <small class="text-muted">
+                        <i class="bi bi-geo-alt"></i> ${evento.local}
+                    </small>
+                </div>
+            `);
+        });
+    });
+}
+
+function carregarProximosFeriados() {
+    const ano = new Date().getFullYear();
+    
+    $.get(`{{ url_for("api_feriados.listar_feriados") }}?ano=${ano}`, function(data) {
+        const container = $('#proximosFeriados');
+        container.empty();
+        
+        // Filtrar apenas feriados futuros
+        const hoje = moment();
+        const feriadosFuturos = data.feriados.filter(function(feriado) {
+            const dataFeriado = moment(`${feriado.ano}-${feriado.mes}-${feriado.dia}`);
+            return dataFeriado.isAfter(hoje) || dataFeriado.isSame(hoje, 'day');
+        });
+        
+        if (feriadosFuturos.length === 0) {
+            container.html('<p class="text-muted text-center">Nenhum feriado próximo</p>');
+            return;
+        }
+        
+        // Mostrar apenas os próximos 5 feriados
+        feriadosFuturos.slice(0, 5).forEach(function(feriado) {
+            const dataFeriado = moment(`${feriado.ano}-${feriado.mes}-${feriado.dia}`);
+            const diasRestantes = dataFeriado.diff(hoje, 'days');
+            
+            let badge = '';
+            if (diasRestantes === 0) {
+                badge = '<span class="badge bg-danger">Hoje</span>';
+            } else if (diasRestantes <= 30) {
+                badge = `<span class="badge bg-info">${diasRestantes} dias</span>`;
+            }
+            
+            let tipoBadge = '';
+            switch(feriado.tipo) {
+                case 'nacional':
+                    tipoBadge = '<span class="badge bg-primary">Nacional</span>';
+                    break;
+                case 'estadual':
+                    tipoBadge = '<span class="badge bg-secondary">Estadual</span>';
+                    break;
+                case 'municipal':
+                    tipoBadge = '<span class="badge bg-success">Municipal</span>';
+                    break;
+            }
+            
+            container.append(`
+                <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">${feriado.nome}</h6>
+                        ${badge}
+                    </div>
+                    <p class="mb-1">
+                        <i class="bi bi-calendar"></i> ${feriado.dia}/${feriado.mes}/${feriado.ano}
+                        ${tipoBadge}
+                    </p>
+                    ${feriado.descricao ? `<small class="text-muted">${feriado.descricao}</small>` : ''}
+                </div>
+            `);
+        });
+    });
+}
+
+function verificarStatus() {
+    $.get('{{ url_for("api_status") }}', function(data) {
+        // Status dos gerenciadores
+        $('#statusGerenciadorFeriados').removeClass('text-success text-danger')
+            .addClass(data.gerenciadores.feriados ? 'text-success' : 'text-danger');
+        
+        $('#statusGerenciadorEventos').removeClass('text-success text-danger')
+            .addClass(data.gerenciadores.eventos ? 'text-success' : 'text-danger');
+        
+        $('#statusAPI').removeClass('text-success text-danger').addClass('text-success');
+    }).fail(function() {
+        $('.bi-circle-fill').removeClass('text-success').addClass('text-danger');
+    });
+}
+</script>
+{% endblock %}

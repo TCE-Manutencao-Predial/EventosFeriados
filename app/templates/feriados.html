@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Feriados - Sistema de Feriados e Eventos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0"><i class="bi bi-calendar-check"></i> Gerenciamento de Feriados</h4>
+                <button class="btn btn-light btn-sm" onclick="abrirModalNovoFeriado()">
+                    <i class="bi bi-plus-circle"></i> Novo Feriado
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Filtros -->
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Filtrar por Ano:</label>
+                        <select class="form-select" id="filtroAno" onchange="carregarFeriados()">
+                            <option value="">Todos os anos</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Filtrar por Tipo:</label>
+                        <select class="form-select" id="filtroTipo" onchange="carregarFeriados()">
+                            <option value="">Todos os tipos</option>
+                            <option value="nacional">Nacional</option>
+                            <option value="estadual">Estadual</option>
+                            <option value="municipal">Municipal</option>
+                            <option value="customizado">Customizado</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Buscar:</label>
+                        <input type="text" class="form-control" id="buscarFeriado" placeholder="Digite para buscar..." onkeyup="filtrarFeriados()">
+                    </div>
+                </div>
+
+                <!-- Tabela de Feriados -->
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tabelaFeriados">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Nome</th>
+                                <th>Tipo</th>
+                                <th>Descrição</th>
+                                <th>Horário</th>
+                                <th class="text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaFeriados">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Novo/Editar Feriado -->
+<div class="modal fade" id="modalFeriado" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalFeriadoTitulo">Novo Feriado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formFeriado">
+                    <input type="hidden" id="feriadoId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nome do Feriado*</label>
+                        <input type="text" class="form-control" id="feriadoNome" required>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Dia*</label>
+                            <input type="number" class="form-control" id="feriadoDia" min="1" max="31" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mês*</label>
+                            <select class="form-select" id="feriadoMes" required>
+                                <option value="">Selecione...</option>
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Ano*</label>
+                            <input type="number" class="form-control" id="feriadoAno" min="2024" max="2030" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Hora Início*</label>
+                            <input type="time" class="form-control" id="feriadoHoraInicio" value="00:00" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Hora Fim*</label>
+                            <input type="time" class="form-control" id="feriadoHoraFim" value="23:59" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select" id="feriadoTipo">
+                            <option value="customizado">Customizado</option>
+                            <option value="nacional">Nacional</option>
+                            <option value="estadual">Estadual</option>
+                            <option value="municipal">Municipal</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Descrição</label>
+                        <textarea class="form-control" id="feriadoDescricao" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarFeriado()">
+                    <i class="bi bi-save"></i> Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Exclusão -->
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir o feriado "<span id="nomeExcluir"></span>"?</p>
+                <p class="text-danger"><small>Esta ação não pode ser desfeita.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarExclusao()">
+                    <i class="bi bi-trash"></i> Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let feriadosList = [];
+let feriadoExcluirId = null;
+
+$(document).ready(function() {
+    // Preencher anos no filtro
+    const anoAtual = new Date().getFullYear();
+    for (let ano = anoAtual - 1; ano <= anoAtual + 2; ano++) {
+        $('#filtroAno').append(`<option value="${ano}">${ano}</option>`);
+    }
+    
+    // Definir ano atual no formulário
+    $('#feriadoAno').val(anoAtual);
+    
+    // Carregar feriados
+    carregarFeriados();
+});
+
+function carregarFeriados() {
+    const ano = $('#filtroAno').val();
+    let url = '{{ url_for("api_feriados.listar_feriados") }}';
+    
+    if (ano) {
+        url += `?ano=${ano}`;
+    }
+    
+    $.get(url, function(data) {
+        feriadosList = data.feriados;
+        exibirFeriados();
+    }).fail(function(xhr) {
+        showNotification('Erro ao carregar feriados', 'error');
+    });
+}
+
+function exibirFeriados() {
+    const tipo = $('#filtroTipo').val();
+    const busca = $('#buscarFeriado').val().toLowerCase();
+    const tbody = $('#listaFeriados');
+    tbody.empty();
+    
+    let feriadosFiltrados = feriadosList;
+    
+    // Filtrar por tipo
+    if (tipo) {
+        feriadosFiltrados = feriadosFiltrados.filter(f => f.tipo === tipo);
+    }
+    
+    // Filtrar por busca
+    if (busca) {
+        feriadosFiltrados = feriadosFiltrados.filter(f => 
+            f.nome.toLowerCase().includes(busca) || 
+            (f.descricao && f.descricao.toLowerCase().includes(busca))
+        );
+    }
+    
+    if (feriadosFiltrados.length === 0) {
+        tbody.html('<tr><td colspan="6" class="text-center text-muted">Nenhum feriado encontrado</td></tr>');
+        return;
+    }
+    
+    feriadosFiltrados.forEach(function(feriado) {
+        const tipoBadge = {
+            'nacional': 'primary',
+            'estadual': 'secondary',
+            'municipal': 'success',
+            'customizado': 'info'
+        };
+        
+        tbody.append(`
+            <tr>
+                <td>${feriado.dia.toString().padStart(2, '0')}/${feriado.mes.toString().padStart(2, '0')}/${feriado.ano}</td>
+                <td>${feriado.nome}</td>
+                <td><span class="badge bg-${tipoBadge[feriado.tipo] || 'secondary'}">${feriado.tipo}</span></td>
+                <td>${feriado.descricao || '<span class="text-muted">-</span>'}</td>
+                <td>${feriado.hora_inicio} - ${feriado.hora_fim}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary" onclick="editarFeriado('${feriado.id}')" title="Editar">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="excluirFeriado('${feriado.id}', '${feriado.nome}')" title="Excluir">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `);
+    });
+}
+
+function filtrarFeriados() {
+    exibirFeriados();
+}
+
+function abrirModalNovoFeriado() {
+    $('#modalFeriadoTitulo').text('Novo Feriado');
+    $('#formFeriado')[0].reset();
+    $('#feriadoId').val('');
+    $('#feriadoAno').val(new Date().getFullYear());
+    $('#feriadoHoraInicio').val('00:00');
+    $('#feriadoHoraFim').val('23:59');
+    $('#modalFeriado').modal('show');
+}
+
+function editarFeriado(id) {
+    const feriado = feriadosList.find(f => f.id === id);
+    if (!feriado) return;
+    
+    $('#modalFeriadoTitulo').text('Editar Feriado');
+    $('#feriadoId').val(feriado.id);
+    $('#feriadoNome').val(feriado.nome);
+    $('#feriadoDia').val(feriado.dia);
+    $('#feriadoMes').val(feriado.mes);
+    $('#feriadoAno').val(feriado.ano);
+    $('#feriadoHoraInicio').val(feriado.hora_inicio);
+    $('#feriadoHoraFim').val(feriado.hora_fim);
+    $('#feriadoTipo').val(feriado.tipo);
+    $('#feriadoDescricao').val(feriado.descricao);
+    
+    $('#modalFeriado').modal('show');
+}
+
+function salvarFeriado() {
+    const id = $('#feriadoId').val();
+    const dados = {
+        nome: $('#feriadoNome').val(),
+        dia: parseInt($('#feriadoDia').val()),
+        mes: parseInt($('#feriadoMes').val()),
+        ano: parseInt($('#feriadoAno').val()),
+        hora_inicio: $('#feriadoHoraInicio').val(),
+        hora_fim: $('#feriadoHoraFim').val(),
+        tipo: $('#feriadoTipo').val(),
+        descricao: $('#feriadoDescricao').val()
+    };
+    
+    // Validar
+    if (!dados.nome || !dados.dia || !dados.mes || !dados.ano) {
+        showNotification('Preencha todos os campos obrigatórios', 'error');
+        return;
+    }
+    
+    const url = id 
+        ? `{{ url_for("api_feriados.atualizar_feriado", feriado_id="") }}${id}`
+        : '{{ url_for("api_feriados.adicionar_feriado") }}';
+    
+    const method = id ? 'PUT' : 'POST';
+    
+    $.ajax({
+        url: url,
+        method: method,
+        contentType: 'application/json',
+        data: JSON.stringify(dados),
+        success: function(response) {
+            $('#modalFeriado').modal('hide');
+            showNotification(response.mensagem || 'Feriado salvo com sucesso', 'success');
+            carregarFeriados();
+        },
+        error: function(xhr) {
+            const erro = xhr.responseJSON?.erro || 'Erro ao salvar feriado';
+            showNotification(erro, 'error');
+        }
+    });
+}
+
+function excluirFeriado(id, nome) {
+    feriadoExcluirId = id;
+    $('#nomeExcluir').text(nome);
+    $('#modalExcluir').modal('show');
+}
+
+function confirmarExclusao() {
+    if (!feriadoExcluirId) return;
+    
+    $.ajax({
+        url: `{{ url_for("api_feriados.remover_feriado", feriado_id="") }}${feriadoExcluirId}`,
+        method: 'DELETE',
+        success: function(response) {
+            $('#modalExcluir').modal('hide');
+            showNotification('Feriado excluído com sucesso', 'success');
+            carregarFeriados();
+        },
+        error: function(xhr) {
+            showNotification('Erro ao excluir feriado', 'error');
+        }
+    });
+}
+</script>
+{% endblock %}
