@@ -1,0 +1,13 @@
+[Unit]
+Description=EventosFeriados Service
+
+[Service]
+User=root
+WorkingDirectory=/var/softwaresTCE/EventosFeriados
+ExecStart=/var/softwaresTCE/EventosFeriados/scripts/run.sh
+EnvironmentFile=/etc/environment
+Restart=always
+RestartSec=3600
+
+[Install]
+WantedBy=multi-user.target

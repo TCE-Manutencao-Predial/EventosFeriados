@@ -1,87 +1,87 @@
 # app/__init__.py
-from flask import Flask, render_template
-from .config import setup_logging
+from flask import Flask, render_template, jsonify, request
+from .config import setup_logging, ROUTES_PREFIX
 import logging
 
 # Configurar logging
-rfid_logger = setup_logging()
-
-ROUTES_PREFIX = '/RFID'
+eventos_logger = setup_logging()
 
 def create_app():
+    """Cria e configura a aplicação Flask"""
     # IMPORTANTE: Configurar static_url_path com o prefixo
     app = Flask(__name__, static_url_path=f'{ROUTES_PREFIX}/static')
-    app.config['SECRET_KEY'] = '123rfid'
+    app.config['SECRET_KEY'] = 'eventos_feriados_secret_key_2024'
     
-    # Inicializa gerenciador de etiquetas RFID
+    # Inicializa gerenciador de feriados
     try:
-        from .utils.GerenciadorEtiquetasRFID import GerenciadorEtiquetasRFID
-        app.config['GERENCIADOR_RFID'] = GerenciadorEtiquetasRFID.get_instance()
-        rfid_logger.info("Gerenciador de etiquetas RFID iniciado")
+        from .utils.GerenciadorFeriados import GerenciadorFeriados
+        app.config['GERENCIADOR_FERIADOS'] = GerenciadorFeriados.get_instance()
+        eventos_logger.info("Gerenciador de feriados iniciado")
     except Exception as e:
-        rfid_logger.error(f"Erro ao inicializar gerenciador RFID: {e}")
-        app.config['GERENCIADOR_RFID'] = None
+        eventos_logger.error(f"Erro ao inicializar gerenciador de feriados: {e}")
+        app.config['GERENCIADOR_FERIADOS'] = None
     
-    # Inicializa gerenciador de leitores RFID
+    # Inicializa gerenciador de eventos
     try:
-        from .utils.GerenciadorLeitoresRFID import GerenciadorLeitoresRFID
-        app.config['GERENCIADOR_LEITORES'] = GerenciadorLeitoresRFID.get_instance()
-        rfid_logger.info("Gerenciador de leitores RFID iniciado")
+        from .utils.GerenciadorEventos import GerenciadorEventos
+        app.config['GERENCIADOR_EVENTOS'] = GerenciadorEventos.get_instance()
+        eventos_logger.info("Gerenciador de eventos iniciado")
     except Exception as e:
-        rfid_logger.error(f"Erro ao inicializar gerenciador de leitores: {e}")
-        app.config['GERENCIADOR_LEITORES'] = None
+        eventos_logger.error(f"Erro ao inicializar gerenciador de eventos: {e}")
+        app.config['GERENCIADOR_EVENTOS'] = None
     
-    # Inicializa gerenciador de empréstimos RFID
-    try:
-        from .utils.GerenciadorEmprestimosRFID import GerenciadorEmprestimosRFID
-        app.config['GERENCIADOR_EMPRESTIMOS_RFID'] = GerenciadorEmprestimosRFID.get_instance()
-        rfid_logger.info("Gerenciador de empréstimos RFID iniciado")
-    except Exception as e:
-        rfid_logger.error(f"Erro ao inicializar gerenciador de empréstimos: {e}")
-        app.config['GERENCIADOR_EMPRESTIMOS_RFID'] = None
-    
-    # Inicializa gerenciador de inventários RFID
-    try:
-        from .utils.GerenciadorInventariosRFID import GerenciadorInventariosRFID
-        app.config['GERENCIADOR_INVENTARIOS_RFID'] = GerenciadorInventariosRFID.get_instance()
-        rfid_logger.info("Gerenciador de inventários RFID iniciado")
-    except Exception as e:
-        rfid_logger.error(f"Erro ao inicializar gerenciador de inventários: {e}")
-        app.config['GERENCIADOR_INVENTARIOS_RFID'] = None
-
     # Handlers de erro
     @app.errorhandler(404)
     def not_found_error(error):
+        if request.path.startswith('/api/'):
+            return jsonify({'erro': 'Endpoint não encontrado'}), 404
         try:
-            return render_template('erro_pagina_nao_encontrada.html')
+            return render_template('erro_404.html'), 404
         except:
             return "Página não encontrada", 404
     
     @app.errorhandler(500)
     def internal_error(error):
-        rfid_logger.error(f"Erro interno: {error}")
+        eventos_logger.error(f"Erro interno: {error}")
+        if request.path.startswith('/api/'):
+            return jsonify({'erro': 'Erro interno do servidor'}), 500
         try:
-            return render_template('erro_interno.html'), 500
+            return render_template('erro_500.html'), 500
         except:
             return "Erro interno do servidor", 500
-
+    
+    @app.errorhandler(400)
+    def bad_request_error(error):
+        if request.path.startswith('/api/'):
+            return jsonify({'erro': 'Requisição inválida'}), 400
+        return "Requisição inválida", 400
+    
     # Registrar blueprints com prefixo
+    from .routes.api_feriados import api_feriados_bp
+    from .routes.api_eventos import api_eventos_bp
     from .routes.web import web_bp
-    from .routes.api_etiquetas import api_bp
-    from .routes.api_leitores import api_leitores_bp
-    from .routes.api_emprestimos import api_emprestimos_bp
-    from .routes.api_inventarios import api_inventarios_bp
     
     # IMPORTANTE: Registrar com url_prefix
+    app.register_blueprint(api_feriados_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    app.register_blueprint(api_eventos_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(web_bp, url_prefix=ROUTES_PREFIX)
-    app.register_blueprint(api_bp, url_prefix=f'{ROUTES_PREFIX}/api')
-    app.register_blueprint(api_leitores_bp, url_prefix=f'{ROUTES_PREFIX}/api')
-    app.register_blueprint(api_emprestimos_bp, url_prefix=f'{ROUTES_PREFIX}/api')
-    app.register_blueprint(api_inventarios_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    
+    # Rota de status da API
+    @app.route(f'{ROUTES_PREFIX}/api/status')
+    def api_status():
+        return jsonify({
+            'status': 'online',
+            'versao': '1.0.0',
+            'gerenciadores': {
+                'feriados': app.config['GERENCIADOR_FERIADOS'] is not None,
+                'eventos': app.config['GERENCIADOR_EVENTOS'] is not None
+            }
+        })
     
     # Log de rotas registradas para debug
-    rfid_logger.info("Rotas registradas:")
-    for rule in app.url_map.iter_rules():
-        rfid_logger.info(f"  {rule.endpoint}: {rule.rule}")
+    eventos_logger.info("Rotas registradas:")
+    with app.app_context():
+        for rule in app.url_map.iter_rules():
+            eventos_logger.info(f"  {rule.endpoint}: {rule.rule}")
     
     return app

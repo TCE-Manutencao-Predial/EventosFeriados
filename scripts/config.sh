@@ -1,17 +1,17 @@
-PROJECT_NAME="RFID"
-SERVICE_NAME="RFID.service"
+PROJECT_NAME="EventosFeriados"
+SERVICE_NAME="EventosFeriados.service"
 
 ROOT_FRONTEND=/var/www/automacao.tce.go.gov.br/$PROJECT_NAME
 
 ROOT_SOFTWARES=/var/softwaresTCE
 ROOT_BACKEND=$ROOT_SOFTWARES"/"$PROJECT_NAME
 
-GIT_REPO_NAME="RFID"
+GIT_REPO_NAME="EventosFeriados"
 GIT_REPO_OWNER="TCE-Manutencao-Predial"
 GIT_REPO_LINK="https://github.com/$GIT_REPO_OWNER/$GIT_REPO_NAME.git"
 
 APACHE_CONFIG_DIR="/etc/httpd/conf.d"
-APACHE_CONFIG_FILE="RFID.conf"
+APACHE_CONFIG_FILE="EventosFeriados.conf"
 
 HTACCESS_FILE="scripts/htaccess"
 

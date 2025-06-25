@@ -1,5 +1,5 @@
 APP_NAME=RFID
-PORT=5074
+PORT=5045
 
 VENV_PYTHON=.venv/bin/python
 VENV_PIP=.venv/bin/pip

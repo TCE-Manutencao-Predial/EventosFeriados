@@ -10,21 +10,11 @@ DATA_DIR = os.path.join(BASE_DIR, 'dados')
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR, exist_ok=True)
 
-ROUTES_PREFIX = '/RFID'
-
-# Configurações do MySQL
-MYSQL_CONFIG = {
-    'host': 'bdserver.tce.go.gov.br',
-    'database': 'equipamentos',
-    'user': 'equipamentos_adm',
-    'password': 'lOXidexutMoSNX',
-    'connection_timeout': 30,
-    'command_timeout': 60
-}
+ROUTES_PREFIX = '/EventosFeriados'
 
 # Configuração dos diretórios de logs
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
-LOG_FILE = os.path.join(LOG_DIR, 'rfid.log')
+LOG_FILE = os.path.join(LOG_DIR, 'eventos_feriados.log')
 
 def setup_logging():
     """Configura o sistema de logging da aplicação."""
@@ -39,8 +29,51 @@ def setup_logging():
             logging.StreamHandler()
         ]
     )
-
-    logger = logging.getLogger('RFID')
+    
+    logger = logging.getLogger('EventosFeriados')
     logger.info("Sistema de logging inicializado")
     
     return logger
+
+# Configurações da aplicação
+class Config:
+    """Configurações base da aplicação"""
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'eventos_feriados_dev_key_2024'
+    
+    # Configurações de paginação
+    ITEMS_PER_PAGE = 20
+    
+    # Configurações de cache
+    CACHE_TYPE = 'simple'
+    CACHE_DEFAULT_TIMEOUT = 300
+    
+    # Configurações de CORS (se necessário)
+    CORS_ORIGINS = ['*']
+    
+    # Configurações de formato de data/hora
+    DATE_FORMAT = '%d/%m/%Y'
+    TIME_FORMAT = '%H:%M'
+    DATETIME_FORMAT = '%d/%m/%Y %H:%M'
+
+class DevelopmentConfig(Config):
+    """Configurações para desenvolvimento"""
+    DEBUG = True
+    TESTING = False
+
+class ProductionConfig(Config):
+    """Configurações para produção"""
+    DEBUG = False
+    TESTING = False
+
+class TestingConfig(Config):
+    """Configurações para testes"""
+    DEBUG = True
+    TESTING = True
+
+# Mapeamento de configurações
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+    'default': DevelopmentConfig
+}

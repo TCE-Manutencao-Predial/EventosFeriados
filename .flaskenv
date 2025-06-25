@@ -1,4 +1,4 @@
-FLASK_APP=RFID.py
+FLASK_APP=EventosFeriados.py
 FLASK_ENV=development
 
 
