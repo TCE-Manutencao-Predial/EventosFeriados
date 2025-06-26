@@ -27,60 +27,7 @@
     </div>
 </div>
 
-<!-- Controles e Próximo Evento -->
-<div class="eventos-controls">
-    <div class="eventos-controls-header">
-        <h3 class="eventos-controls-title"><i class="fas fa-info-circle"></i> Informações Gerais</h3>
-        <div class="eventos-btn-group">
-            <button class="btn btn-success" onclick="window.location.href='{{ url_for('web.eventos') }}'">
-                <i class="fas fa-plus"></i> Novo Evento
-            </button>
-            <button class="btn btn-primary" onclick="window.location.href='{{ url_for('web.feriados') }}'">
-                <i class="fas fa-plus"></i> Novo Feriado
-            </button>
-            <button class="btn" style="background: var(--eventos-accent); color: white;" onclick="window.location.href='{{ url_for('web.calendario') }}'">
-                <i class="fas fa-calendar"></i> Ver Calendário
-            </button>
-        </div>
-    </div>
-    
-    <div class="row">
-        <div class="col-md-6">
-            <div class="mb-3">
-                <h5><i class="fas fa-clock"></i> Próximo Evento</h5>
-                <div id="proximoEvento" class="alert alert-info">
-                    <div class="text-center">
-                        <div class="spinner-border spinner-border-sm" role="status">
-                            <span class="visually-hidden">Carregando...</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="mb-3">
-                <h5><i class="fas fa-building"></i> Locais Disponíveis</h5>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
-                        <i class="fas fa-microphone"></i> Auditório Nobre (AN)
-                    </button>
-                    <button class="btn btn-outline-info btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
-                        <i class="fas fa-door-open"></i> Átrio (AT)
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
-                        <i class="fas fa-users"></i> Plenário (PL)
-                    </button>
-                    <button class="btn btn-outline-dark btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
-                        <i class="fas fa-baby"></i> Creche (CR)
-                    </button>
-                    <button class="btn btn-outline-secondary btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
-                        <i class="fas fa-door-closed"></i> Foyer do Auditório (FA)
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Próximos Eventos e Feriados -->
 <div class="row">
