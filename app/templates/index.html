@@ -11,17 +11,17 @@
         <p class="eventos-stat-label">Total de Feriados</p>
     </div>
     <div class="eventos-stat-card">
-        <i class="fas fa-calendar-plus eventos-stat-icon" style="color: var(--eventos-success)"></i>
+        <i class="fas fa-calendar-plus eventos-stat-icon" style="color: var(--eventos-secondary)"></i>
         <h2 class="eventos-stat-value" id="totalEventos">0</h2>
         <p class="eventos-stat-label">Total de Eventos</p>
     </div>
     <div class="eventos-stat-card">
-        <i class="fas fa-building eventos-stat-icon" style="color: var(--eventos-info)"></i>
+        <i class="fas fa-building eventos-stat-icon" style="color: var(--eventos-accent)"></i>
         <h2 class="eventos-stat-value">4</h2>
         <p class="eventos-stat-label">Locais Disponíveis</p>
     </div>
     <div class="eventos-stat-card">
-        <i class="fas fa-calendar-week eventos-stat-icon" style="color: var(--eventos-warning)"></i>
+        <i class="fas fa-calendar-week eventos-stat-icon" style="color: var(--eventos-info)"></i>
         <h2 class="eventos-stat-value" id="eventosHoje">0</h2>
         <p class="eventos-stat-label">Eventos Hoje</p>
     </div>
@@ -38,7 +38,7 @@
             <button class="btn btn-primary" onclick="window.location.href='{{ url_for('web.feriados') }}'">
                 <i class="fas fa-plus"></i> Novo Feriado
             </button>
-            <button class="btn btn-warning" onclick="window.location.href='{{ url_for('web.calendario') }}'">
+            <button class="btn" style="background: var(--eventos-accent); color: white;" onclick="window.location.href='{{ url_for('web.calendario') }}'">
                 <i class="fas fa-calendar"></i> Ver Calendário
             </button>
         </div>
@@ -67,10 +67,10 @@
                     <button class="btn btn-outline-info btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
                         <i class="fas fa-door-open"></i> Átrio (AT)
                     </button>
-                    <button class="btn btn-outline-warning btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
+                    <button class="btn btn-outline-secondary btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
                         <i class="fas fa-users"></i> Plenário (PL)
                     </button>
-                    <button class="btn btn-outline-success btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
+                    <button class="btn btn-outline-dark btn-sm text-start" data-bs-toggle="modal" data-bs-target="#locaisModal">
                         <i class="fas fa-baby"></i> Creche (CR)
                     </button>
                 </div>
@@ -83,7 +83,7 @@
 <div class="row">
     <div class="col-md-6 mb-4">
         <div class="card shadow-sm h-100">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header text-white" style="background: var(--eventos-secondary);">
                 <h5 class="mb-0"><i class="fas fa-calendar-plus"></i> Próximos Eventos</h5>
             </div>
             <div class="card-body">
@@ -100,7 +100,7 @@
     
     <div class="col-md-6 mb-4">
         <div class="card shadow-sm h-100">
-            <div class="card-header bg-success text-white">
+            <div class="card-header text-white" style="background: var(--eventos-accent);">
                 <h5 class="mb-0"><i class="fas fa-calendar-check"></i> Próximos Feriados</h5>
             </div>
             <div class="card-body">
@@ -235,8 +235,8 @@ function carregarProximosEventos() {
             return;
         }
         
-        // Mostrar apenas os próximos 5 eventos
-        data.eventos.slice(0, 5).forEach(function(evento) {
+        // Mostrar apenas os próximos 2 eventos
+        data.eventos.slice(0, 2).forEach(function(evento) {
             const dataEvento = moment(`${evento.ano}-${evento.mes}-${evento.dia}`);
             const hoje = moment();
             const diasRestantes = dataEvento.diff(hoje, 'days');
@@ -288,8 +288,8 @@ function carregarProximosFeriados() {
             return;
         }
         
-        // Mostrar apenas os próximos 5 feriados
-        feriadosFuturos.slice(0, 5).forEach(function(feriado) {
+        // Mostrar apenas os próximos 2 feriados
+        feriadosFuturos.slice(0, 2).forEach(function(feriado) {
             const dataFeriado = moment(`${feriado.ano}-${feriado.mes}-${feriado.dia}`);
             const diasRestantes = dataFeriado.diff(hoje, 'days');
             
