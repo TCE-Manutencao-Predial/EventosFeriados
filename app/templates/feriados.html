@@ -211,8 +211,21 @@ function carregarFeriados() {
     const ano = $('#filtroAno').val();
     let url = '{{ url_for("api_feriados.listar_feriados") }}';
     
+    // Adicionar parâmetros de filtro
+    const params = [];
     if (ano) {
-        url += `?ano=${ano}`;
+        params.push(`ano=${ano}`);
+    }
+    
+    // Adicionar filtro para não carregar feriados muito antigos
+    const anoAtual = new Date().getFullYear();
+    if (!ano) {
+        // Se não especificou ano, filtrar apenas do ano passado em diante
+        params.push(`ano_minimo=${anoAtual - 1}`);
+    }
+    
+    if (params.length > 0) {
+        url += '?' + params.join('&');
     }
     
     $.get(url, function(data) {
@@ -230,6 +243,11 @@ function exibirFeriados() {
     tbody.empty();
     
     let feriadosFiltrados = feriadosList;
+    
+    // Filtrar feriados passados (não exibir feriados anteriores a 1 semana atrás)
+    feriadosFiltrados = feriadosFiltrados.filter(f => {
+        return feriadoDeveSerExibido(f.dia, f.mes, f.ano);
+    });
     
     // Filtrar por tipo
     if (tipo) {

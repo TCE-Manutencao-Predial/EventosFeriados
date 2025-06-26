@@ -103,12 +103,14 @@ class GerenciadorFeriados:
             self.logger.error(f"Erro ao salvar feriados: {e}")
             return False
     
-    def listar_feriados(self, ano: Optional[int] = None, mes: Optional[int] = None) -> List[Dict]:
+    def listar_feriados(self, ano: Optional[int] = None, mes: Optional[int] = None, ano_minimo: Optional[int] = None) -> List[Dict]:
         """Lista todos os feriados ou filtra por ano/mês"""
         feriados_filtrados = self.feriados
         
         if ano:
             feriados_filtrados = [f for f in feriados_filtrados if f['ano'] == ano]
+        elif ano_minimo:
+            feriados_filtrados = [f for f in feriados_filtrados if f['ano'] >= ano_minimo]
         
         if mes:
             feriados_filtrados = [f for f in feriados_filtrados if f['mes'] == mes]

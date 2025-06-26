@@ -17,8 +17,9 @@ def listar_feriados():
         # Obter parâmetros de filtro
         ano = request.args.get('ano', type=int)
         mes = request.args.get('mes', type=int)
+        ano_minimo = request.args.get('ano_minimo', type=int)
         
-        feriados = gerenciador.listar_feriados(ano=ano, mes=mes)
+        feriados = gerenciador.listar_feriados(ano=ano, mes=mes, ano_minimo=ano_minimo)
         
         return jsonify({
             'sucesso': True,
