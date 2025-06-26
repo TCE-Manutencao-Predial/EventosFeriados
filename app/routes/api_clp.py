@@ -176,7 +176,8 @@ def listar_locais_clp():
                 'Auditório Nobre': 'AN',
                 'Átrio': 'AT',
                 'Plenário': 'PL',
-                'Creche': 'CR'
+                'Creche': 'CR',
+                'Foyer do Auditório': 'FA'
             }
         })
         

@@ -25,6 +25,11 @@
         <h2 class="eventos-stat-value" id="totalCreche">0</h2>
         <p class="eventos-stat-label">Creche</p>
     </div>
+    <div class="eventos-stat-card">
+        <i class="fas fa-door-closed eventos-stat-icon" style="color: var(--eventos-secondary)"></i>
+        <h2 class="eventos-stat-value" id="totalFoyerAuditorio">0</h2>
+        <p class="eventos-stat-label">Foyer do Auditório</p>
+    </div>
 </div>
 
 <!-- Controles e Filtros -->
@@ -53,6 +58,7 @@
                     <option value="Átrio">Átrio</option>
                     <option value="Plenário">Plenário</option>
                     <option value="Creche">Creche</option>
+                    <option value="Foyer do Auditório">Foyer do Auditório</option>
                 </select>
             </div>
         </div>
@@ -154,6 +160,7 @@
                                 <option value="Átrio">Átrio</option>
                                 <option value="Plenário">Plenário</option>
                                 <option value="Creche">Creche</option>
+                                <option value="Foyer do Auditório">Foyer do Auditório</option>
                             </select>
                         </div>
                     </div>
@@ -329,7 +336,8 @@ function exibirEventos() {
             'Auditório Nobre': 'primary',
             'Átrio': 'info',
             'Plenário': 'warning',
-            'Creche': 'success'
+            'Creche': 'success',
+            'Foyer do Auditório': 'secondary'
         };
         
         tbody.append(`
@@ -361,7 +369,8 @@ function atualizarEstatisticas() {
         'Auditório Nobre': 0,
         'Átrio': 0,
         'Plenário': 0,
-        'Creche': 0
+        'Creche': 0,
+        'Foyer do Auditório': 0
     };
     
     eventosList.forEach(evento => {
@@ -374,6 +383,7 @@ function atualizarEstatisticas() {
     $('#totalAtrio').text(estatisticas['Átrio']);
     $('#totalPlenario').text(estatisticas['Plenário']);
     $('#totalCreche').text(estatisticas['Creche']);
+    $('#totalFoyerAuditorio').text(estatisticas['Foyer do Auditório']);
 }
 
 function filtrarEventos() {
