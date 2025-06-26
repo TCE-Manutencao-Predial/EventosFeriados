@@ -18,8 +18,9 @@ def listar_eventos():
         ano = request.args.get('ano', type=int)
         mes = request.args.get('mes', type=int)
         local = request.args.get('local')
+        ano_minimo = request.args.get('ano_minimo', type=int)
         
-        eventos = gerenciador.listar_eventos(ano=ano, mes=mes, local=local)
+        eventos = gerenciador.listar_eventos(ano=ano, mes=mes, local=local, ano_minimo=ano_minimo)
         
         return jsonify({
             'sucesso': True,

@@ -2,7 +2,7 @@
 import json
 import os
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import List, Dict, Optional
 from ..config import DATA_DIR
 
@@ -78,12 +78,21 @@ class GerenciadorEventos:
         return False
     
     def listar_eventos(self, ano: Optional[int] = None, mes: Optional[int] = None, 
-                      local: Optional[str] = None) -> List[Dict]:
+                      local: Optional[str] = None, ano_minimo: Optional[int] = None) -> List[Dict]:
         """Lista todos os eventos ou filtra por ano/mês/local"""
         eventos_filtrados = self.eventos
         
+        # Filtrar eventos muito antigos (mais de 7 dias) apenas se não houver filtro de mês específico
+        if not mes and not ano:
+            data_limite = datetime.now() - timedelta(days=7)
+            
+            eventos_filtrados = [e for e in eventos_filtrados 
+                               if datetime(e['ano'], e['mes'], e['dia']) >= data_limite]
+        
         if ano:
             eventos_filtrados = [e for e in eventos_filtrados if e['ano'] == ano]
+        elif ano_minimo:
+            eventos_filtrados = [e for e in eventos_filtrados if e['ano'] >= ano_minimo]
         
         if mes:
             eventos_filtrados = [e for e in eventos_filtrados if e['mes'] == mes]

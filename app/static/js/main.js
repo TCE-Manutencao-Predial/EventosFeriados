@@ -175,6 +175,16 @@ function feriadoDeveSerExibido(dia, mes, ano) {
     return dataFeriado >= umaSemanaaAtras;
 }
 
+// Função para verificar se um evento deve ser exibido (não muito antigo)
+function eventoDeveSerExibido(dia, mes, ano) {
+    const dataEvento = new Date(ano, mes - 1, dia);
+    const agora = new Date();
+    const umaSemanaaAtras = new Date();
+    umaSemanaaAtras.setDate(agora.getDate() - 7);
+    
+    return dataEvento >= umaSemanaaAtras;
+}
+
 // Inicialização global
 $(document).ready(function() {
     // Ativar tooltips

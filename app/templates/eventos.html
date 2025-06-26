@@ -295,6 +295,12 @@ function carregarEventos() {
     if (mes) params.push(`mes=${mes}`);
     if (ano) params.push(`ano=${ano}`);
     
+    // Adicionar filtro para não carregar eventos muito antigos apenas se não há filtro de mês específico
+    if (!mes && !ano) {
+        const anoAtual = new Date().getFullYear();
+        params.push(`ano_minimo=${anoAtual - 1}`);
+    }
+    
     if (params.length > 0) {
         url += '?' + params.join('&');
     }
@@ -307,13 +313,30 @@ function carregarEventos() {
         showNotification('Erro ao carregar eventos', 'error');
     });
 }
+    
+    $.get(url, function(data) {
+        eventosList = data.eventos;
+        exibirEventos();
+        atualizarEstatisticas();
+    }).fail(function(xhr) {
+        showNotification('Erro ao carregar eventos', 'error');
+    });
+}
 
 function exibirEventos() {
     const busca = $('#buscarEvento').val().toLowerCase();
+    const mes = $('#filtroMes').val();
     const tbody = $('#listaEventos');
     tbody.empty();
     
     let eventosFiltrados = eventosList;
+    
+    // Filtrar eventos passados (não exibir eventos anteriores a 7 dias) apenas se não há filtro de mês específico
+    if (!mes) {
+        eventosFiltrados = eventosFiltrados.filter(e => {
+            return eventoDeveSerExibido(e.dia, e.mes, e.ano);
+        });
+    }
     
     // Filtrar por busca
     if (busca) {
@@ -364,6 +387,16 @@ function exibirEventos() {
 }
 
 function atualizarEstatisticas() {
+    const mes = $('#filtroMes').val();
+    let eventosParaEstatistica = eventosList;
+    
+    // Aplicar o mesmo filtro de eventos passados nas estatísticas se não há filtro de mês
+    if (!mes) {
+        eventosParaEstatistica = eventosList.filter(e => {
+            return eventoDeveSerExibido(e.dia, e.mes, e.ano);
+        });
+    }
+    
     const estatisticas = {
         'Auditório Nobre': 0,
         'Átrio': 0,
@@ -372,7 +405,7 @@ function atualizarEstatisticas() {
         'Foyer do Auditório': 0
     };
     
-    eventosList.forEach(evento => {
+    eventosParaEstatistica.forEach(evento => {
         if (estatisticas.hasOwnProperty(evento.local)) {
             estatisticas[evento.local]++;
         }
