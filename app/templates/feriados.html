@@ -38,7 +38,7 @@
                     <option value="nacional">Nacional</option>
                     <option value="estadual">Estadual</option>
                     <option value="municipal">Municipal</option>
-                    <option value="customizado">Customizado</option>
+                    <option value="customizado">TCE-GO</option>
                 </select>
             </div>
         </div>
@@ -142,7 +142,7 @@
                     <div class="mb-3">
                         <label class="form-label">Tipo</label>
                         <select class="form-select" id="feriadoTipo">
-                            <option value="customizado">Customizado</option>
+                            <option value="customizado">TCE-GO</option>
                             <option value="nacional">Nacional</option>
                             <option value="estadual">Estadual</option>
                             <option value="municipal">Municipal</option>
@@ -261,15 +261,15 @@ function exibirFeriados() {
             <tr>
                 <td>${feriado.dia.toString().padStart(2, '0')}/${feriado.mes.toString().padStart(2, '0')}/${feriado.ano}</td>
                 <td>${feriado.nome}</td>
-                <td><span class="badge bg-${tipoBadge[feriado.tipo] || 'secondary'}">${feriado.tipo}</span></td>
+                <td><span class="badge bg-${tipoBadge[feriado.tipo] || 'secondary'}">${feriado.tipo === 'customizado' ? 'TCE-GO' : feriado.tipo}</span></td>
                 <td>${feriado.descricao || '<span class="text-muted">-</span>'}</td>
                 <td>${feriado.hora_inicio} - ${feriado.hora_fim}</td>
                 <td class="text-center">
                     <button class="btn btn-sm btn-outline-primary" onclick="editarFeriado('${feriado.id}')" title="Editar">
-                        <i class="bi bi-pencil"></i>
+                        <i class="bi bi-pencil"></i> Editar
                     </button>
                     <button class="btn btn-sm btn-outline-danger" onclick="excluirFeriado('${feriado.id}', '${feriado.nome}')" title="Excluir">
-                        <i class="bi bi-trash"></i>
+                        <i class="bi bi-trash"></i> Excluir
                     </button>
                 </td>
             </tr>

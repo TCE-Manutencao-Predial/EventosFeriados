@@ -273,9 +273,8 @@ $(document).ready(function() {
         $('#filtroAno').append(`<option value="${ano}">${ano}</option>`);
     }
     
-    // Definir ano e mês atual
+    // Definir ano atual
     $('#eventoAno').val(anoAtual);
-    $('#filtroMes').val(new Date().getMonth() + 1);
     
     // Carregar eventos
     carregarEventos();
