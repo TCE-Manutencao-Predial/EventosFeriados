@@ -313,15 +313,6 @@ function carregarEventos() {
         showNotification('Erro ao carregar eventos', 'error');
     });
 }
-    
-    $.get(url, function(data) {
-        eventosList = data.eventos;
-        exibirEventos();
-        atualizarEstatisticas();
-    }).fail(function(xhr) {
-        showNotification('Erro ao carregar eventos', 'error');
-    });
-}
 
 function exibirEventos() {
     const busca = $('#buscarEvento').val().toLowerCase();
