@@ -165,3 +165,23 @@ def verificar_feriado():
     except Exception as e:
         logger.error(f"Erro ao verificar feriado: {e}")
         return jsonify({'erro': str(e)}), 500
+
+@api_feriados_bp.route('/feriados/remover-duplicatas', methods=['POST'])
+def remover_duplicatas():
+    """Remove feriados duplicados, mantendo apenas o de maior hierarquia (nacional > estadual > municipal > customizado)"""
+    try:
+        gerenciador = current_app.config['GERENCIADOR_FERIADOS']
+        if not gerenciador:
+            return jsonify({'erro': 'Gerenciador de feriados não disponível'}), 503
+        
+        duplicatas_removidas = gerenciador.remover_duplicatas()
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': f'Processo concluído. {duplicatas_removidas} duplicatas removidas.',
+            'duplicatas_removidas': duplicatas_removidas
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao remover duplicatas: {e}")
+        return jsonify({'erro': str(e)}), 500

@@ -124,7 +124,7 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Ano*</label>
-                            <input type="number" class="form-control" id="feriadoAno" min="2024" max="2030" required>
+                            <input type="number" class="form-control" id="feriadoAno" min="2024" required>
                         </div>
                     </div>
                     
@@ -194,14 +194,14 @@ let feriadosList = [];
 let feriadoExcluirId = null;
 
 $(document).ready(function() {
-    // Preencher anos no filtro
+    // Preencher anos no filtro (apenas até o ano atual)
     const anoAtual = new Date().getFullYear();
-    for (let ano = anoAtual - 1; ano <= anoAtual + 2; ano++) {
+    for (let ano = anoAtual - 1; ano <= anoAtual; ano++) {
         $('#filtroAno').append(`<option value="${ano}">${ano}</option>`);
     }
     
-    // Definir ano atual no formulário
-    $('#feriadoAno').val(anoAtual);
+    // Definir ano atual no formulário e limitar input de ano
+    $('#feriadoAno').val(anoAtual).attr('max', anoAtual);
     
     // Carregar feriados
     carregarFeriados();

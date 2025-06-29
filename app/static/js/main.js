@@ -165,14 +165,16 @@ function verificarConflitoHorario(horaInicio1, horaFim1, horaInicio2, horaFim2) 
     return !(fim1.isSameOrBefore(inicio2) || inicio1.isSameOrAfter(fim2));
 }
 
-// Função para verificar se um feriado deve ser exibido (não muito antigo)
+// Função para verificar se um feriado deve ser exibido (não muito antigo e não do próximo ano)
 function feriadoDeveSerExibido(dia, mes, ano) {
     const dataFeriado = new Date(ano, mes - 1, dia);
     const agora = new Date();
+    const anoAtual = agora.getFullYear();
     const umaSemanaaAtras = new Date();
     umaSemanaaAtras.setDate(agora.getDate() - 7);
     
-    return dataFeriado >= umaSemanaaAtras;
+    // Não exibir feriados muito antigos (anterior a 1 semana) ou do próximo ano
+    return dataFeriado >= umaSemanaaAtras && ano <= anoAtual;
 }
 
 // Função para verificar se um evento deve ser exibido (não muito antigo)
