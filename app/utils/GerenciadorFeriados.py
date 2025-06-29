@@ -15,6 +15,8 @@ class GerenciadorFeriados:
         self.arquivo_feriados = os.path.join(DATA_DIR, 'feriados.json')
         self.feriados = []
         self._carregar_feriados()
+        # Sempre remover duplicatas na inicialização para garantir integridade
+        self._remover_duplicatas_inicializacao()
         
     @classmethod
     def get_instance(cls):
@@ -42,50 +44,63 @@ class GerenciadorFeriados:
         feriados_temp = {}  # Dicionário para controlar duplicatas: (ano, mes, dia) -> feriado
         
         ano_atual = datetime.now().year
+        self.logger.info(f"Inicializando feriados padrão para {ano_atual} e {ano_atual + 1}")
         
         # Primeiro: Adicionar feriados nacionais
         for ano in range(ano_atual, ano_atual + 2):
-            feriados_nacionais = holidays.Brazil(years=ano)
-            
-            for data, nome in feriados_nacionais.items():
-                chave_data = (data.year, data.month, data.day)
-                feriado = {
-                    'id': f"{data.strftime('%Y%m%d')}_{self._gerar_id(nome)}",
-                    'nome': nome,
-                    'descricao': f"Feriado Nacional {nome}",
-                    'dia': data.day,
-                    'mes': data.month,
-                    'ano': data.year,
-                    'hora_inicio': '00:00',
-                    'hora_fim': '23:59',
-                    'tipo': 'nacional',
-                    'criado_em': datetime.now().isoformat()
-                }
-                feriados_temp[chave_data] = feriado
-        
-        # Segundo: Adicionar feriados estaduais (Goiás), mas só se não existir um nacional na mesma data
-        for ano in range(ano_atual, ano_atual + 2):
-            feriados_estaduais_go = holidays.Brazil(state='GO', years=ano)
-            feriados_nacionais = holidays.Brazil(years=ano)
-            
-            for data, nome in feriados_estaduais_go.items():
-                chave_data = (data.year, data.month, data.day)
+            try:
+                feriados_nacionais = holidays.Brazil(years=ano)
                 
-                # Só adiciona se não for um feriado nacional
-                if data not in feriados_nacionais and chave_data not in feriados_temp:
+                for data, nome in feriados_nacionais.items():
+                    chave_data = (data.year, data.month, data.day)
                     feriado = {
                         'id': f"{data.strftime('%Y%m%d')}_{self._gerar_id(nome)}",
                         'nome': nome,
-                        'descricao': f"Feriado Estadual {nome}",
+                        'descricao': f"Feriado Nacional - {nome}",
                         'dia': data.day,
                         'mes': data.month,
                         'ano': data.year,
                         'hora_inicio': '00:00',
                         'hora_fim': '23:59',
-                        'tipo': 'estadual',
+                        'tipo': 'nacional',
                         'criado_em': datetime.now().isoformat()
                     }
                     feriados_temp[chave_data] = feriado
+                    
+                self.logger.debug(f"Adicionados {len([f for f in feriados_temp.values() if f['ano'] == ano and f['tipo'] == 'nacional'])} feriados nacionais para {ano}")
+            except Exception as e:
+                self.logger.error(f"Erro ao carregar feriados nacionais para {ano}: {e}")
+        
+        # Segundo: Adicionar feriados estaduais (Goiás), mas só se não existir um nacional na mesma data
+        for ano in range(ano_atual, ano_atual + 2):
+            try:
+                feriados_estaduais_go = holidays.Brazil(state='GO', years=ano)
+                feriados_nacionais = holidays.Brazil(years=ano)
+                
+                estaduais_adicionados = 0
+                for data, nome in feriados_estaduais_go.items():
+                    chave_data = (data.year, data.month, data.day)
+                    
+                    # Só adiciona se não for um feriado nacional e não existir na mesma data
+                    if data not in feriados_nacionais and chave_data not in feriados_temp:
+                        feriado = {
+                            'id': f"{data.strftime('%Y%m%d')}_{self._gerar_id(nome)}",
+                            'nome': nome,
+                            'descricao': f"Feriado Estadual (GO) - {nome}",
+                            'dia': data.day,
+                            'mes': data.month,
+                            'ano': data.year,
+                            'hora_inicio': '00:00',
+                            'hora_fim': '23:59',
+                            'tipo': 'estadual',
+                            'criado_em': datetime.now().isoformat()
+                        }
+                        feriados_temp[chave_data] = feriado
+                        estaduais_adicionados += 1
+                        
+                self.logger.debug(f"Adicionados {estaduais_adicionados} feriados estaduais únicos para {ano}")
+            except Exception as e:
+                self.logger.error(f"Erro ao carregar feriados estaduais para {ano}: {e}")
         
         # Terceiro: Adicionar feriados municipais de Goiânia, mas só se não existir nacional ou estadual na mesma data
         feriados_municipais = [
@@ -93,6 +108,7 @@ class GerenciadorFeriados:
             {'dia': 24, 'mes': 5, 'nome': 'Nossa Senhora Auxiliadora', 'descricao': 'Padroeira de Goiânia'},
         ]
         
+        municipais_adicionados = 0
         for fm in feriados_municipais:
             for ano in range(ano_atual, ano_atual + 2):
                 chave_data = (ano, fm['mes'], fm['dia'])
@@ -102,7 +118,7 @@ class GerenciadorFeriados:
                     feriado = {
                         'id': f"{ano}{fm['mes']:02d}{fm['dia']:02d}_{self._gerar_id(fm['nome'])}",
                         'nome': fm['nome'],
-                        'descricao': fm['descricao'],
+                        'descricao': f"Feriado Municipal (Goiânia) - {fm['descricao']}",
                         'dia': fm['dia'],
                         'mes': fm['mes'],
                         'ano': ano,
@@ -112,12 +128,25 @@ class GerenciadorFeriados:
                         'criado_em': datetime.now().isoformat()
                     }
                     feriados_temp[chave_data] = feriado
+                    municipais_adicionados += 1
+        
+        self.logger.debug(f"Adicionados {municipais_adicionados} feriados municipais únicos")
         
         # Converter dicionário para lista
         self.feriados = list(feriados_temp.values())
         
+        # Ordenar por data para melhor organização
+        self.feriados.sort(key=lambda x: (x['ano'], x['mes'], x['dia']))
+        
         self._salvar_feriados()
-        self.logger.info(f"Inicializados {len(self.feriados)} feriados padrão (sem duplicatas)")
+        
+        # Log de resumo
+        total = len(self.feriados)
+        nacionais = len([f for f in self.feriados if f['tipo'] == 'nacional'])
+        estaduais = len([f for f in self.feriados if f['tipo'] == 'estadual'])
+        municipais = len([f for f in self.feriados if f['tipo'] == 'municipal'])
+        
+        self.logger.info(f"Feriados padrão inicializados: {total} total ({nacionais} nacionais, {estaduais} estaduais, {municipais} municipais) - SEM DUPLICATAS")
     
     def _gerar_id(self, nome: str) -> str:
         """Gera um ID baseado no nome"""
@@ -143,6 +172,9 @@ class GerenciadorFeriados:
         """Remove feriados duplicados, mantendo apenas o de maior hierarquia"""
         feriados_unicos = {}
         feriados_removidos = 0
+        total_inicial = len(self.feriados)
+        
+        self.logger.info(f"Iniciando remoção de duplicatas em {total_inicial} feriados...")
         
         for feriado in self.feriados:
             chave_data = (feriado['ano'], feriado['mes'], feriado['dia'])
@@ -156,20 +188,24 @@ class GerenciadorFeriados:
                 
                 if tipo_prevalente == feriado['tipo']:
                     # O feriado atual tem prioridade maior
-                    self.logger.info(f"Removendo duplicata: {feriado_existente['tipo']} '{feriado_existente['nome']}', mantendo {feriado['tipo']} '{feriado['nome']}'")
+                    self.logger.info(f"Removendo duplicata: {feriado_existente['tipo']} '{feriado_existente['nome']}', mantendo {feriado['tipo']} '{feriado['nome']}' ({feriado['dia']:02d}/{feriado['mes']:02d}/{feriado['ano']})")
                     feriados_unicos[chave_data] = feriado
                 else:
                     # O feriado existente tem prioridade maior ou igual
-                    self.logger.info(f"Removendo duplicata: {feriado['tipo']} '{feriado['nome']}', mantendo {feriado_existente['tipo']} '{feriado_existente['nome']}'")
+                    self.logger.info(f"Removendo duplicata: {feriado['tipo']} '{feriado['nome']}', mantendo {feriado_existente['tipo']} '{feriado_existente['nome']}' ({feriado['dia']:02d}/{feriado['mes']:02d}/{feriado['ano']})")
                 
                 feriados_removidos += 1
         
         # Atualizar lista de feriados
         self.feriados = list(feriados_unicos.values())
+        # Ordenar por data
+        self.feriados.sort(key=lambda x: (x['ano'], x['mes'], x['dia']))
         
         if feriados_removidos > 0:
             self._salvar_feriados()
-            self.logger.info(f"Removidas {feriados_removidos} duplicatas de feriados")
+            self.logger.info(f"Limpeza concluída: {feriados_removidos} duplicatas removidas de {total_inicial} feriados, restando {len(self.feriados)} únicos")
+        else:
+            self.logger.info(f"Nenhuma duplicata encontrada nos {total_inicial} feriados")
         
         return feriados_removidos
     
@@ -339,3 +375,47 @@ class GerenciadorFeriados:
             if feriado['dia'] == dia and feriado['mes'] == mes and feriado['ano'] == ano:
                 return feriado
         return None
+    
+    def _remover_duplicatas_inicializacao(self):
+        """Remove duplicatas automaticamente na inicialização do sistema"""
+        try:
+            if len(self.feriados) == 0:
+                return
+            
+            feriados_unicos = {}
+            feriados_removidos = 0
+            total_inicial = len(self.feriados)
+            
+            self.logger.info(f"Verificando duplicatas em {total_inicial} feriados...")
+            
+            for feriado in self.feriados:
+                chave_data = (feriado['ano'], feriado['mes'], feriado['dia'])
+                
+                if chave_data not in feriados_unicos:
+                    feriados_unicos[chave_data] = feriado
+                else:
+                    # Existe duplicata, manter o de maior hierarquia
+                    feriado_existente = feriados_unicos[chave_data]
+                    tipo_prevalente = self._determinar_tipo_hierarquia(feriado['tipo'], feriado_existente['tipo'])
+                    
+                    if tipo_prevalente == feriado['tipo']:
+                        # O feriado atual tem prioridade maior
+                        self.logger.info(f"[INIT] Substituindo duplicata: {feriado_existente['tipo']} '{feriado_existente['nome']}' por {feriado['tipo']} '{feriado['nome']}'")
+                        feriados_unicos[chave_data] = feriado
+                    else:
+                        # O feriado existente tem prioridade maior ou igual
+                        self.logger.info(f"[INIT] Mantendo: {feriado_existente['tipo']} '{feriado_existente['nome']}', removendo {feriado['tipo']} '{feriado['nome']}'")
+                    
+                    feriados_removidos += 1
+            
+            # Atualizar lista de feriados
+            self.feriados = list(feriados_unicos.values())
+            
+            if feriados_removidos > 0:
+                self._salvar_feriados()
+                self.logger.info(f"[INIT] Limpeza concluída: {feriados_removidos} duplicatas removidas de {total_inicial} feriados, restando {len(self.feriados)} únicos")
+            else:
+                self.logger.info(f"[INIT] Nenhuma duplicata encontrada nos {total_inicial} feriados")
+                
+        except Exception as e:
+            self.logger.error(f"Erro ao remover duplicatas na inicialização: {e}")
