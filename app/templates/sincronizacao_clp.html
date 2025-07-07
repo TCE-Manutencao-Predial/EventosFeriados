@@ -1048,5 +1048,16 @@ async function limparTodosDados() {
         mostrarMensagem('Erro ao limpar todos os dados', 'error');
     }
 }
+
+// Inicialização da página
+window.addEventListener('DOMContentLoaded', function() {
+    // Carregar status inicial
+    atualizarStatus();
+    
+    // Atualizar status automaticamente a cada 30 segundos
+    setInterval(() => {
+        atualizarStatus();
+    }, 30000);
+});
 </script>
 {% endblock %}

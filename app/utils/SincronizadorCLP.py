@@ -170,12 +170,12 @@ class SincronizadorCLP:
                     
                     # Ler todas as 6 tags do evento
                     urls = [
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag}%253A0",      # dia
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+1}%253A0",    # mês
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+2}%253A0",    # hora início
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+3}%253A0",    # minuto início
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+4}%253A0",    # hora fim
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+5}%253A0"     # minuto fim
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag}",      # dia
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+1}",    # mês
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+2}",    # hora início
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+3}",    # minuto início
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+4}",    # hora fim
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+5}"     # minuto fim
                     ]
                     
                     responses = []
@@ -469,27 +469,27 @@ class SincronizadorCLP:
                         base_tag = 60 + (slot * 6)  # Cada evento usa 6 tags consecutivas
                         
                         # Escrever dia (N(60+slot*6))
-                        url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag}%253A0/{dia}"
+                        url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag}/{dia}"
                         response_dia = requests.get(url_dia, auth=auth, timeout=self.config['TIMEOUT'])
                         
                         # Escrever mês (N(61+slot*6))
-                        url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+1}%253A0/{mes}"
+                        url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+1}/{mes}"
                         response_mes = requests.get(url_mes, auth=auth, timeout=self.config['TIMEOUT'])
                         
                         # Escrever hora início (N(62+slot*6))
-                        url_h_ini = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+2}%253A0/{hora_inicio}"
+                        url_h_ini = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+2}/{hora_inicio}"
                         response_h_ini = requests.get(url_h_ini, auth=auth, timeout=self.config['TIMEOUT'])
                         
                         # Escrever minuto início (N(63+slot*6))
-                        url_m_ini = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+3}%253A0/{minuto_inicio}"
+                        url_m_ini = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+3}/{minuto_inicio}"
                         response_m_ini = requests.get(url_m_ini, auth=auth, timeout=self.config['TIMEOUT'])
                         
                         # Escrever hora fim (N(64+slot*6))
-                        url_h_fim = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+4}%253A0/{hora_fim}"
+                        url_h_fim = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+4}/{hora_fim}"
                         response_h_fim = requests.get(url_h_fim, auth=auth, timeout=self.config['TIMEOUT'])
                         
                         # Escrever minuto fim (N(65+slot*6))
-                        url_m_fim = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+5}%253A0/{minuto_fim}"
+                        url_m_fim = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+5}/{minuto_fim}"
                         response_m_fim = requests.get(url_m_fim, auth=auth, timeout=self.config['TIMEOUT'])
                         
                         responses = [response_dia, response_mes, response_h_ini, response_m_ini, response_h_fim, response_m_fim]
@@ -548,7 +548,7 @@ class SincronizadorCLP:
                             
                             for j in range(6):  # 6 tags por evento
                                 tag_num = base_tag + j
-                                url_limpar = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{tag_num}%253A0/0"
+                                url_limpar = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{tag_num}/0"
                                 response = requests.get(url_limpar, auth=auth, timeout=self.config['TIMEOUT'])
                                 
                                 if response.status_code == 401:
@@ -852,7 +852,7 @@ class SincronizadorCLP:
                     
                     for j in range(6):  # 6 tags por evento
                         tag_num = base_tag + j
-                        url_limpar = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{tag_num}%253A0/0"
+                        url_limpar = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{tag_num}/0"
                         response = requests.get(url_limpar, auth=auth, timeout=self.config['TIMEOUT'])
                         
                         if response.status_code == 401:
