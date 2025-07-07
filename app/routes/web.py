@@ -42,3 +42,12 @@ def calendario():
     except Exception as e:
         logger.error(f"Erro ao renderizar página de calendário: {e}")
         return "Erro ao carregar página", 500
+
+@web_bp.route('/sincronizacao-clp')
+def sincronizacao_clp():
+    """Página de sincronização com CLP"""
+    try:
+        return render_template('sincronizacao_clp.html')
+    except Exception as e:
+        logger.error(f"Erro ao renderizar página de sincronização CLP: {e}")
+        return "Erro ao carregar página", 500

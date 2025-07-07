@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+
+{% block title %}Sincronização CLP{% endblock %}
+
+{% block extra_head %}
+<style>
+.status-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.status-online { background-color: #28a745; }
+.status-offline { background-color: #dc3545; }
+.status-warning { background-color: #ffc107; }
+
+.sync-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 5px;
+}
+
+.sync-button:hover { background: #0056b3; }
+.sync-button:disabled { 
+    background: #6c757d; 
+    cursor: not-allowed; 
+}
+
+.log-container {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    font-family: monospace;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #28a745;
+    transition: width 0.3s ease;
+}
+
+.timestamp {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.error-message {
+    color: #dc3545;
+    background: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+
+.success-message {
+    color: #155724;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h1>Sincronização CLP</h1>
+            <p class="text-muted">Monitoramento e controle da sincronização com Controladores Lógicos Programáveis</p>
+        </div>
+    </div>
+
+    <!-- Status Geral -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="status-card">
+                <h5>Status da Conexão</h5>
+                <div id="connection-status">
+                    <span class="status-indicator status-offline" id="connection-indicator"></span>
+                    <span id="connection-text">Verificando...</span>
+                </div>
+                <div class="timestamp" id="connection-timestamp"></div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="status-card">
+                <h5>Última Sincronização</h5>
+                <div id="last-sync">
+                    <span id="last-sync-text">Nunca sincronizado</span>
+                </div>
+                <div class="timestamp" id="last-sync-timestamp"></div>
+                <div><small id="sync-details">-</small></div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="status-card">
+                <h5>Próxima Sincronização</h5>
+                <div id="next-sync">
+                    <span id="next-sync-text">-</span>
+                </div>
+                <div><small>Automática: <span id="auto-sync-status">-</span></small></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controles -->
+    <div class="row">
+        <div class="col-12">
+            <div class="status-card">
+                <h5>Controles de Sincronização</h5>
+                <div class="d-flex flex-wrap align-items-center">
+                    <button class="sync-button" onclick="executarSincronizacao()" id="btn-sincronizar">
+                        Sincronizar Agora
+                    </button>
+                    <button class="sync-button" onclick="verificarConectividade()" id="btn-conectividade">
+                        Testar Conexão
+                    </button>
+                    <button class="sync-button" onclick="lerDadosCLP()" id="btn-ler-dados">
+                        Ler Dados do CLP
+                    </button>
+                    <button class="sync-button" onclick="atualizarStatus()" id="btn-atualizar">
+                        Atualizar Status
+                    </button>
+                    <button class="sync-button" onclick="testarTag()" id="btn-teste-tag">
+                        Testar Tag N33:0
+                    </button>
+                    <button class="sync-button" onclick="limparFeriados()" id="btn-limpar">
+                        Limpar Feriados CLP
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progresso da Sincronização -->
+    <div class="row" id="progress-section" style="display: none;">
+        <div class="col-12">
+            <div class="status-card">
+                <h5>Progresso da Sincronização</h5>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="mt-2">
+                    <span id="progress-text">Preparando...</span>
+                    <span class="float-right" id="progress-percent">0%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dados Detalhados -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="status-card">
+                <h5>Dados do Sistema</h5>
+                <div id="system-data">
+                    <div>Feriados (ano atual): <span id="system-feriados">-</span></div>
+                    <div>Eventos (ano atual): <span id="system-eventos">-</span></div>
+                    <div>Última atualização: <span id="system-timestamp">-</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="status-card">
+                <h5>Dados no CLP</h5>
+                <div id="clp-data">
+                    <div>Feriados: <span id="clp-feriados">-</span></div>
+                    <div>Eventos: <span id="clp-eventos">-</span></div>
+                    <div>Última leitura: <span id="clp-timestamp">-</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log de Atividades -->
+    <div class="row">
+        <div class="col-12">
+            <div class="status-card">
+                <h5>Log de Atividades</h5>
+                <div class="log-container" id="log-container">
+                    <div>Aguardando atividades...</div>
+                </div>
+                <button class="btn btn-sm btn-secondary mt-2" onclick="limparLog()">Limpar Log</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensagens -->
+    <div id="messages"></div>
+
+    <!-- Teste de Tags -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="status-card">
+                <h5>Teste Manual de Tags</h5>
+                <div class="mb-2">
+                    <label>Tag:</label>
+                    <input type="text" id="input-tag" value="N33:0" class="form-control" style="display:inline; width:100px; margin:0 10px;">
+                    <label>Valor:</label>
+                    <input type="number" id="input-valor" placeholder="Deixe vazio para ler" class="form-control" style="display:inline; width:120px; margin:0 10px;">
+                    <button class="btn btn-sm btn-primary" onclick="testarTagCustom()">Executar</button>
+                </div>
+                <div id="resultado-teste" style="margin-top:10px; font-family:monospace; background:#f8f9fa; padding:10px; border-radius:5px;">
+                    Resultado aparecerá aqui...
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="status-card">
+                <h5>Mapeamento TCE - Feriados</h5>
+                <div style="font-family: monospace; font-size: 0.9em;">
+                    <div><strong>N33:0-19</strong> - Dias dos feriados</div>
+                    <div><strong>N34:0-19</strong> - Meses dos feriados</div>
+                    <div><strong>CLP IP:</strong> 172.17.85.104</div>
+                    <div><strong>Slots disponíveis:</strong> 20 feriados</div>
+                    <div style="margin-top:10px;">
+                        <small><strong>Exemplo:</strong><br>
+                        N33:0 = 25, N34:0 = 12 → Natal (25/12)<br>
+                        N33:1 = 1, N34:1 = 1 → Ano Novo (01/01)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts JavaScript -->
+<script>
+let logCount = 0;
+let syncInProgress = false;
+
+// Função para adicionar log
+function adicionarLog(mensagem, tipo = 'info') {
+    const logContainer = document.getElementById('log-container');
+    const timestamp = new Date().toLocaleString();
+    const logEntry = document.createElement('div');
+    logEntry.innerHTML = `[${timestamp}] ${mensagem}`;
+    
+    if (tipo === 'error') logEntry.style.color = '#dc3545';
+    if (tipo === 'success') logEntry.style.color = '#28a745';
+    if (tipo === 'warning') logEntry.style.color = '#ffc107';
+    
+    if (logCount === 0) {
+        logContainer.innerHTML = '';
+    }
+    
+    logContainer.appendChild(logEntry);
+    logContainer.scrollTop = logContainer.scrollHeight;
+    logCount++;
+}
+
+// Função para mostrar mensagem
+function mostrarMensagem(mensagem, tipo = 'info') {
+    const messagesDiv = document.getElementById('messages');
+    const messageClass = tipo === 'error' ? 'error-message' : 'success-message';
+    
+    messagesDiv.innerHTML = `<div class="${messageClass}">${mensagem}</div>`;
+    
+    setTimeout(() => {
+        messagesDiv.innerHTML = '';
+    }, 5000);
+}
+
+// Função para atualizar indicador de status
+function atualizarIndicadorStatus(elementId, status) {
+    const indicator = document.getElementById(elementId);
+    indicator.className = 'status-indicator';
+    
+    if (status === 'online' || status === true) {
+        indicator.classList.add('status-online');
+    } else if (status === 'warning') {
+        indicator.classList.add('status-warning');
+    } else {
+        indicator.classList.add('status-offline');
+    }
+}
+
+// Função para mostrar progresso
+function mostrarProgresso(show, texto = '', porcentagem = 0) {
+    const progressSection = document.getElementById('progress-section');
+    const progressText = document.getElementById('progress-text');
+    const progressPercent = document.getElementById('progress-percent');
+    const progressFill = document.getElementById('progress-fill');
+    
+    if (show) {
+        progressSection.style.display = 'block';
+        progressText.textContent = texto;
+        progressPercent.textContent = `${porcentagem}%`;
+        progressFill.style.width = `${porcentagem}%`;
+    } else {
+        progressSection.style.display = 'none';
+    }
+}
+
+// Função para executar sincronização
+async function executarSincronizacao() {
+    if (syncInProgress) return;
+    
+    syncInProgress = true;
+    document.getElementById('btn-sincronizar').disabled = true;
+    
+    adicionarLog('Iniciando sincronização manual...', 'info');
+    mostrarProgresso(true, 'Conectando ao CLP...', 10);
+    
+    try {
+        const response = await fetch('{{ url_for("api_clp.executar_sincronizacao") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+            mostrarProgresso(true, 'Sincronização concluída!', 100);
+            adicionarLog(`Sincronização concluída: ${resultado.dados_sincronizados} itens (${resultado.feriados} feriados, ${resultado.eventos} eventos)`, 'success');
+            mostrarMensagem('Sincronização realizada com sucesso!', 'success');
+            
+            setTimeout(() => {
+                mostrarProgresso(false);
+                atualizarStatus();
+            }, 2000);
+        } else {
+            mostrarProgresso(false);
+            adicionarLog(`Erro na sincronização: ${resultado.erro}`, 'error');
+            mostrarMensagem(`Erro na sincronização: ${resultado.erro}`, 'error');
+            
+            if (resultado.erros && resultado.erros.length > 0) {
+                resultado.erros.forEach(erro => adicionarLog(`- ${erro}`, 'error'));
+            }
+        }
+    } catch (error) {
+        mostrarProgresso(false);
+        adicionarLog(`Erro de conexão: ${error.message}`, 'error');
+        mostrarMensagem('Erro de conexão com o servidor', 'error');
+    } finally {
+        syncInProgress = false;
+        document.getElementById('btn-sincronizar').disabled = false;
+    }
+}
+
+// Função para verificar conectividade
+async function verificarConectividade() {
+    adicionarLog('Verificando conectividade com CLP...', 'info');
+    
+    try {
+        const response = await fetch('{{ url_for("api_clp.verificar_conectividade") }}');
+        const resultado = await response.json();
+        
+        if (resultado.conectado) {
+            adicionarLog('CLP conectado e acessível', 'success');
+            mostrarMensagem('CLP conectado com sucesso!', 'success');
+        } else {
+            adicionarLog(`CLP não acessível: ${resultado.mensagem}`, 'error');
+            mostrarMensagem(`CLP não acessível: ${resultado.mensagem}`, 'error');
+        }
+        
+        atualizarIndicadorStatus('connection-indicator', resultado.conectado);
+        document.getElementById('connection-text').textContent = resultado.mensagem;
+        document.getElementById('connection-timestamp').textContent = new Date(resultado.timestamp).toLocaleString();
+        
+    } catch (error) {
+        adicionarLog(`Erro ao verificar conectividade: ${error.message}`, 'error');
+        mostrarMensagem('Erro ao verificar conectividade', 'error');
+    }
+}
+
+// Função para ler dados do CLP
+async function lerDadosCLP() {
+    adicionarLog('Lendo dados do CLP...', 'info');
+    
+    try {
+        const response = await fetch('{{ url_for("api_clp.obter_dados_clp") }}');
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+            const dados = resultado.dados;
+            adicionarLog(`Dados lidos do CLP: ${dados.feriados?.length || 0} feriados, ${dados.eventos?.length || 0} eventos`, 'success');
+            
+            document.getElementById('clp-feriados').textContent = dados.feriados?.length || 0;
+            document.getElementById('clp-eventos').textContent = dados.eventos?.length || 0;
+            document.getElementById('clp-timestamp').textContent = new Date(resultado.timestamp).toLocaleString();
+            
+            mostrarMensagem('Dados do CLP lidos com sucesso!', 'success');
+        } else {
+            adicionarLog(`Erro ao ler dados do CLP: ${resultado.dados.erro}`, 'error');
+            mostrarMensagem(`Erro ao ler dados do CLP: ${resultado.dados.erro}`, 'error');
+        }
+    } catch (error) {
+        adicionarLog(`Erro ao ler dados do CLP: ${error.message}`, 'error');
+        mostrarMensagem('Erro ao ler dados do CLP', 'error');
+    }
+}
+
+// Função para atualizar status geral
+async function atualizarStatus() {
+    try {
+        // Status de sincronização
+        const syncResponse = await fetch('{{ url_for("api_clp.status_sincronizacao") }}');
+        const syncStatus = await syncResponse.json();
+        
+        // Atualizar dados na interface
+        if (syncStatus.ultima_sincronizacao) {
+            document.getElementById('last-sync-text').textContent = 'Sincronizado';
+            document.getElementById('last-sync-timestamp').textContent = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
+            document.getElementById('sync-details').textContent = `${syncStatus.dados_sincronizados} itens sincronizados`;
+        }
+        
+        // Status da conexão
+        atualizarIndicadorStatus('connection-indicator', syncStatus.clp_online);
+        document.getElementById('connection-text').textContent = syncStatus.msg_conectividade;
+        
+        // Próxima sincronização
+        if (syncStatus.sync_automatica_habilitada) {
+            document.getElementById('next-sync-text').textContent = 'Automática habilitada';
+            document.getElementById('auto-sync-status').textContent = `Horários: ${syncStatus.horarios_sincronizacao.join(', ')}`;
+        } else {
+            document.getElementById('next-sync-text').textContent = 'Desabilitada';
+            document.getElementById('auto-sync-status').textContent = 'Sincronização automática desabilitada';
+        }
+        
+        // Obter dados do sistema atual
+        const eventosResponse = await fetch('{{ url_for("api_eventos.listar_eventos") }}?ano=' + new Date().getFullYear());
+        const eventosData = await eventosResponse.json();
+        
+        const feriadosResponse = await fetch('{{ url_for("api_feriados.listar_feriados") }}?ano=' + new Date().getFullYear());
+        const feriadosData = await feriadosResponse.json();
+        
+        document.getElementById('system-feriados').textContent = feriadosData.total || 0;
+        document.getElementById('system-eventos').textContent = eventosData.total || 0;
+        document.getElementById('system-timestamp').textContent = new Date().toLocaleString();
+        
+        // Atualizar informações específicas do TCE
+        if (syncStatus.feriados_sincronizados !== undefined) {
+            document.getElementById('sync-details').textContent = `${syncStatus.feriados_sincronizados} feriados sincronizados (slots: ${syncStatus.feriados_sincronizados}/20)`;
+        }
+        
+    } catch (error) {
+        console.error('Erro ao atualizar status:', error);
+        adicionarLog(`Erro ao atualizar status: ${error.message}`, 'error');
+    }
+}
+
+// Função para limpar log
+function limparLog() {
+    document.getElementById('log-container').innerHTML = '<div>Log limpo...</div>';
+    logCount = 0;
+}
+
+// Função para testar tag N33:0
+async function testarTag() {
+    adicionarLog('Testando conectividade com tag N33:0...', 'info');
+    
+    try {
+        // Primeiro, ler o valor atual
+        const responseLeitura = await fetch('{{ url_for("api_clp.teste_tag") }}?tag=N33:0');
+        const resultadoLeitura = await responseLeitura.json();
+        
+        if (responseLeitura.ok) {
+            adicionarLog(`Leitura N33:0 = ${resultadoLeitura.valor_lido}`, 'success');
+            
+            // Agora testar escrita (escrever 99 e depois voltar ao valor original)
+            const valorOriginal = resultadoLeitura.valor_lido;
+            const valorTeste = 99;
+            
+            const responseEscrita = await fetch(`{{ url_for("api_clp.teste_tag") }}?tag=N33:0&valor=${valorTeste}`);
+            const resultadoEscrita = await responseEscrita.json();
+            
+            if (responseEscrita.ok && resultadoEscrita.sucesso) {
+                adicionarLog(`Escrita N33:0 = ${valorTeste} → sucesso`, 'success');
+                
+                // Aguardar um pouco e restaurar valor original
+                setTimeout(async () => {
+                    try {
+                        const responseRestore = await fetch(`{{ url_for("api_clp.teste_tag") }}?tag=N33:0&valor=${valorOriginal}`);
+                        const resultadoRestore = await responseRestore.json();
+                        
+                        if (responseRestore.ok && resultadoRestore.sucesso) {
+                            adicionarLog(`Valor original restaurado: N33:0 = ${valorOriginal}`, 'success');
+                            mostrarMensagem('Teste de conectividade realizado com sucesso!', 'success');
+                        }
+                    } catch (error) {
+                        adicionarLog(`Erro ao restaurar valor: ${error.message}`, 'warning');
+                    }
+                }, 1000);
+                
+            } else {
+                adicionarLog(`Falha na escrita: ${resultadoEscrita.erro || 'sucesso=false'}`, 'error');
+                mostrarMensagem('Falha no teste de escrita', 'error');
+            }
+        } else {
+            adicionarLog(`Falha na leitura: ${resultadoLeitura.erro}`, 'error');
+            mostrarMensagem('Falha no teste de leitura', 'error');
+        }
+        
+    } catch (error) {
+        adicionarLog(`Erro no teste de tag: ${error.message}`, 'error');
+        mostrarMensagem('Erro no teste de conectividade', 'error');
+    }
+}
+
+// Função para testar tag customizada
+async function testarTagCustom() {
+    const tag = document.getElementById('input-tag').value;
+    const valorInput = document.getElementById('input-valor').value;
+    const valor = valorInput ? parseInt(valorInput) : null;
+    
+    const resultadoDiv = document.getElementById('resultado-teste');
+    
+    try {
+        let url = `{{ url_for("api_clp.teste_tag") }}?tag=${encodeURIComponent(tag)}`;
+        if (valor !== null) {
+            url += `&valor=${valor}`;
+        }
+        
+        const response = await fetch(url);
+        const resultado = await response.json();
+        
+        if (response.ok) {
+            let html = `<strong>${resultado.operacao.toUpperCase()}:</strong> ${tag}<br>`;
+            
+            if (resultado.operacao === 'escrita') {
+                html += `Valor escrito: ${resultado.valor_escrito}<br>`;
+                html += `Sucesso: ${resultado.sucesso ? 'SIM' : 'NÃO'}<br>`;
+            } else {
+                html += `Valor lido: ${resultado.valor_lido}<br>`;
+            }
+            
+            html += `<small>Resposta CLP: ${JSON.stringify(resultado.resposta_clp)}</small>`;
+            resultadoDiv.innerHTML = html;
+            resultadoDiv.style.color = '#28a745';
+            
+            adicionarLog(`${resultado.operacao} ${tag} = ${resultado.valor_escrito || resultado.valor_lido}`, 'success');
+            
+        } else {
+            resultadoDiv.innerHTML = `<strong>ERRO:</strong> ${resultado.erro}`;
+            resultadoDiv.style.color = '#dc3545';
+            adicionarLog(`Erro no teste de ${tag}: ${resultado.erro}`, 'error');
+        }
+        
+    } catch (error) {
+        resultadoDiv.innerHTML = `<strong>ERRO:</strong> ${error.message}`;
+        resultadoDiv.style.color = '#dc3545';
+        adicionarLog(`Erro no teste customizado: ${error.message}`, 'error');
+    }
+}
+
+// Função para limpar todos os feriados do CLP
+async function limparFeriados() {
+    if (!confirm('Tem certeza que deseja limpar TODOS os feriados do CLP? Esta ação irá zerar as tags N33 e N34.')) {
+        return;
+    }
+    
+    adicionarLog('Iniciando limpeza de feriados no CLP...', 'info');
+    mostrarProgresso(true, 'Limpando slots de feriados...', 0);
+    
+    try {
+        const response = await fetch('{{ url_for("api_clp.limpar_feriados") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+            mostrarProgresso(true, 'Limpeza concluída!', 100);
+            adicionarLog(`Limpeza concluída: ${resultado.slots_limpos}/${resultado.total_slots} slots limpos`, 'success');
+            mostrarMensagem(`Feriados limpos com sucesso! ${resultado.slots_limpos} slots zerados.`, 'success');
+            
+            setTimeout(() => {
+                mostrarProgresso(false);
+            }, 2000);
+        } else {
+            mostrarProgresso(false);
+            adicionarLog(`Limpeza com problemas: ${resultado.slots_limpos}/${resultado.total_slots} slots limpos`, 'warning');
+            
+            if (resultado.erros && resultado.erros.length > 0) {
+                resultado.erros.forEach(erro => adicionarLog(`- ${erro}`, 'error'));
+            }
+            
+            mostrarMensagem(`Limpeza parcial: ${resultado.slots_limpos}/${resultado.total_slots} slots limpos`, 'warning');
+        }
+        
+    } catch (error) {
+        mostrarProgresso(false);
+        adicionarLog(`Erro na limpeza: ${error.message}`, 'error');
+        mostrarMensagem('Erro na limpeza de feriados', 'error');
+    }
+}
+
+// Atualização automática do status
+setInterval(atualizarStatus, 30000); // A cada 30 segundos
+
+// Carregar status inicial
+document.addEventListener('DOMContentLoaded', function() {
+    adicionarLog('Página de sincronização CLP carregada', 'info');
+    atualizarStatus();
+});
+</script>
+{% endblock %}

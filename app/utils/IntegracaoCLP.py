@@ -1,8 +1,8 @@
 # app/utils/IntegracaoCLP.py
-import logging
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional
-import json
+import logging
+from .SincronizadorCLP import SincronizadorCLP
 
 class IntegracaoCLP:
     """
@@ -14,6 +14,36 @@ class IntegracaoCLP:
         self.logger = logging.getLogger('EventosFeriados.IntegracaoCLP')
         self.gerenciador_feriados = gerenciador_feriados
         self.gerenciador_eventos = gerenciador_eventos
+        self.sincronizador = SincronizadorCLP.get_instance()
+    
+    def obter_status_sincronizacao(self) -> Dict:
+        """Obtém status completo da sincronização com CLP"""
+        return self.sincronizador.obter_status_sincronizacao()
+    
+    def sincronizar_dados(self) -> Dict:
+        """Executa sincronização manual com CLP"""
+        return self.sincronizador.sincronizar_manual(
+            self.gerenciador_feriados,
+            self.gerenciador_eventos
+        )
+    
+    def verificar_conectividade(self) -> Dict:
+        """Verifica conectividade com CLP"""
+        conectado, mensagem = self.sincronizador.verificar_conectividade_clp()
+        return {
+            'conectado': conectado,
+            'mensagem': mensagem,
+            'timestamp': datetime.now().isoformat()
+        }
+    
+    def ler_dados_do_clp(self) -> Dict:
+        """Lê dados atuais do CLP"""
+        sucesso, dados = self.sincronizador.ler_dados_clp()
+        return {
+            'sucesso': sucesso,
+            'dados': dados,
+            'timestamp': datetime.now().isoformat()
+        }
     
     def obter_status_data(self, dia: int, mes: int, ano: int) -> Dict:
         """

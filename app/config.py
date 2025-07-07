@@ -16,6 +16,26 @@ ROUTES_PREFIX = '/EventosFeriados'
 LOG_DIR = os.path.join(BASE_DIR, 'logs')
 LOG_FILE = os.path.join(LOG_DIR, 'eventos_feriados.log')
 
+# Configurações CLP TCE
+CLP_CONFIG = {
+    'API_BASE_URL': 'https://automacao.tce.go.gov.br/scadaweb/api',
+    'CLP_IP': '172.17.85.104',  # IP do CLP Térreo B1
+    'AUTH_USER': 'eventosferiados',  # Usuário para autenticação básica
+    'AUTH_PASS': 'WzPcMMFU',  # Senha para autenticação básica
+    'TIMEOUT': int(os.environ.get('CLP_TIMEOUT', '30')),  # Timeout em segundos para requisições
+    'RETRY_COUNT': int(os.environ.get('CLP_RETRY_COUNT', '3')),  # Número de tentativas em caso de falha
+    'SYNC_TIMES': os.environ.get('CLP_SYNC_TIMES', '07:00,18:00').split(','),  # Horários de sincronização automática
+    'MAX_FERIADOS': 20,  # Máximo de feriados (N33:0 a N33:19)
+    'SYNC_ENABLED': os.environ.get('CLP_SYNC_ENABLED', 'true').lower() == 'true',  # Habilitar sincronização automática
+    'STATUS_FILE': os.path.join(DATA_DIR, 'clp_status.json'),  # Arquivo de status
+    'BACKUP_FILE': os.path.join(DATA_DIR, 'clp_backup.json'),   # Backup dos dados
+    # Mapeamento das tags do CLP
+    'TAGS_FERIADOS': {
+        'DIA': 'N33',   # N33:0 a N33:19 - dias dos feriados
+        'MES': 'N34'    # N34:0 a N34:19 - meses dos feriados
+    }
+}
+
 def setup_logging():
     """Configura o sistema de logging da aplicação."""
     if not os.path.exists(LOG_DIR):

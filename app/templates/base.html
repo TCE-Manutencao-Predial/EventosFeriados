@@ -51,6 +51,10 @@
                     <i class="fas fa-calendar"></i>
                     <span>Calendário</span>
                 </button>
+                <button class="eventos-nav-btn {% if request.endpoint == 'web.sincronizacao_clp' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.sincronizacao_clp') }}'">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>CLP</span>
+                </button>
             </div>
         </nav>
     </div>

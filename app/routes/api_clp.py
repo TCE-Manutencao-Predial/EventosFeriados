@@ -2,6 +2,8 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 import logging
+import requests
+import time
 from ..utils.IntegracaoCLP import IntegracaoCLP
 
 api_clp_bp = Blueprint('api_clp', __name__)
@@ -183,4 +185,190 @@ def listar_locais_clp():
         
     except Exception as e:
         logger.error(f"Erro ao listar locais: {e}")
+        return jsonify({'erro': 'Erro interno'}), 500
+
+@api_clp_bp.route('/clp/sincronizacao/status', methods=['GET'])
+def status_sincronizacao():
+    """Obtém status da sincronização com CLP"""
+    try:
+        integracao = get_integracao_clp()
+        if not integracao:
+            return jsonify({'erro': 'Serviço indisponível'}), 503
+        
+        status = integracao.obter_status_sincronizacao()
+        return jsonify(status)
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter status de sincronização: {e}")
+        return jsonify({'erro': 'Erro interno'}), 500
+
+@api_clp_bp.route('/clp/sincronizacao/executar', methods=['POST'])
+def executar_sincronizacao():
+    """Executa sincronização manual com CLP"""
+    try:
+        integracao = get_integracao_clp()
+        if not integracao:
+            return jsonify({'erro': 'Serviço indisponível'}), 503
+        
+        resultado = integracao.sincronizar_dados()
+        
+        if resultado['sucesso']:
+            return jsonify(resultado), 200
+        else:
+            return jsonify(resultado), 400
+        
+    except Exception as e:
+        logger.error(f"Erro ao executar sincronização: {e}")
+        return jsonify({'erro': 'Erro interno'}), 500
+
+@api_clp_bp.route('/clp/conectividade', methods=['GET'])
+def verificar_conectividade():
+    """Verifica conectividade com CLP"""
+    try:
+        integracao = get_integracao_clp()
+        if not integracao:
+            return jsonify({'erro': 'Serviço indisponível'}), 503
+        
+        conectividade = integracao.verificar_conectividade()
+        return jsonify(conectividade)
+        
+    except Exception as e:
+        logger.error(f"Erro ao verificar conectividade: {e}")
+        return jsonify({'erro': 'Erro interno'}), 500
+
+@api_clp_bp.route('/clp/dados-clp', methods=['GET'])
+def obter_dados_clp():
+    """Lê dados atuais do CLP"""
+    try:
+        integracao = get_integracao_clp()
+        if not integracao:
+            return jsonify({'erro': 'Serviço indisponível'}), 503
+        
+        dados = integracao.ler_dados_do_clp()
+        return jsonify(dados)
+        
+    except Exception as e:
+        logger.error(f"Erro ao ler dados do CLP: {e}")
+        return jsonify({'erro': 'Erro interno'}), 500
+
+@api_clp_bp.route('/clp/agendador/status', methods=['GET'])
+def status_agendador():
+    """Obtém status do agendador automático"""
+    try:
+        from ..utils.AgendadorCLP import AgendadorCLP
+        agendador = AgendadorCLP.get_instance()
+        status = agendador.status()
+        return jsonify(status)
+        
+    except Exception as e:
+        logger.error(f"Erro ao obter status do agendador: {e}")
+        return jsonify({'erro': 'Erro interno'}), 500
+
+@api_clp_bp.route('/clp/teste-tag', methods=['GET'])
+def teste_tag():
+    """Testa leitura/escrita de uma tag específica do CLP"""
+    try:
+        tag = request.args.get('tag', 'N33:0')
+        valor = request.args.get('valor', type=int)
+        
+        # URL base da API TCE
+        api_base = 'https://automacao.tce.go.gov.br/scadaweb/api'
+        clp_ip = '172.17.85.104'
+        
+        if valor is not None:
+            # Escrever valor na tag
+            url_escrita = f"{api_base}/tag_write/{clp_ip}/{tag.replace(':', '%253A')}/{valor}"
+            response = requests.get(url_escrita, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return jsonify({
+                    'operacao': 'escrita',
+                    'tag': tag,
+                    'valor_escrito': valor,
+                    'sucesso': data.get('sucesso', False),
+                    'resposta_clp': data
+                })
+            else:
+                return jsonify({
+                    'erro': f'Erro HTTP na escrita: {response.status_code}',
+                    'tag': tag,
+                    'valor': valor
+                }), 400
+        else:
+            # Ler valor da tag
+            url_leitura = f"{api_base}/tag_read/{clp_ip}/{tag.replace(':', '%253A')}"
+            response = requests.get(url_leitura, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return jsonify({
+                    'operacao': 'leitura',
+                    'tag': tag,
+                    'valor_lido': data.get('valor'),
+                    'resposta_clp': data
+                })
+            else:
+                return jsonify({
+                    'erro': f'Erro HTTP na leitura: {response.status_code}',
+                    'tag': tag
+                }), 400
+                
+    except Exception as e:
+        logger.error(f"Erro no teste de tag: {e}")
+        return jsonify({'erro': f'Erro interno: {str(e)}'}), 500
+
+@api_clp_bp.route('/clp/limpar-feriados', methods=['POST'])
+def limpar_feriados():
+    """Limpa todos os feriados do CLP (zera N33 e N34)"""
+    try:
+        integracao = get_integracao_clp()
+        if not integracao:
+            return jsonify({'erro': 'Serviço indisponível'}), 503
+        
+        # Acessar o sincronizador diretamente
+        sincronizador = integracao.sincronizador
+        api_base = sincronizador.config['API_BASE_URL']
+        clp_ip = sincronizador.config['CLP_IP']
+        max_feriados = sincronizador.config['MAX_FERIADOS']
+        
+        slots_limpos = 0
+        erros = []
+        
+        for i in range(max_feriados):
+            try:
+                # Limpar dia (N33:i)
+                url_dia = f"{api_base}/tag_write/{clp_ip}/N33%253A{i}/0"
+                response_dia = requests.get(url_dia, timeout=30)
+                
+                # Limpar mês (N34:i)
+                url_mes = f"{api_base}/tag_write/{clp_ip}/N34%253A{i}/0"
+                response_mes = requests.get(url_mes, timeout=30)
+                
+                if response_dia.status_code == 200 and response_mes.status_code == 200:
+                    data_dia = response_dia.json()
+                    data_mes = response_mes.json()
+                    
+                    if data_dia.get('sucesso') and data_mes.get('sucesso'):
+                        slots_limpos += 1
+                    else:
+                        erros.append(f"Slot {i}: falha na operação (sucesso=false)")
+                else:
+                    erros.append(f"Slot {i}: erro HTTP (dia={response_dia.status_code}, mês={response_mes.status_code})")
+                
+                time.sleep(0.1)  # Pausa entre operações
+                
+            except Exception as e:
+                erros.append(f"Slot {i}: {str(e)}")
+        
+        return jsonify({
+            'sucesso': len(erros) == 0,
+            'slots_limpos': slots_limpos,
+            'total_slots': max_feriados,
+            'erros': erros,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao limpar feriados: {e}")
         return jsonify({'erro': 'Erro interno'}), 500

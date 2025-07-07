@@ -30,6 +30,22 @@ def create_app():
         eventos_logger.error(f"Erro ao inicializar gerenciador de eventos: {e}")
         app.config['GERENCIADOR_EVENTOS'] = None
     
+    # Inicializa agendador CLP
+    try:
+        from .utils.AgendadorCLP import AgendadorCLP
+        agendador = AgendadorCLP.get_instance()
+        if app.config['GERENCIADOR_FERIADOS'] and app.config['GERENCIADOR_EVENTOS']:
+            agendador.inicializar_gerenciadores(
+                app.config['GERENCIADOR_FERIADOS'],
+                app.config['GERENCIADOR_EVENTOS']
+            )
+            agendador.iniciar()
+            eventos_logger.info("Agendador CLP iniciado")
+        else:
+            eventos_logger.warning("Agendador CLP não iniciado - gerenciadores indisponíveis")
+    except Exception as e:
+        eventos_logger.error(f"Erro ao inicializar agendador CLP: {e}")
+
     # Handlers de erro
     @app.errorhandler(404)
     def not_found_error(error):
