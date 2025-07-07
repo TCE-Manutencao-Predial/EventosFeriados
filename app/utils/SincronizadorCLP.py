@@ -249,49 +249,10 @@ class SincronizadorCLP:
             
             auth = HTTPBasicAuth(self.config['AUTH_USER'], self.config['AUTH_PASS'])
             
-            # Primeiro: Limpar apenas os primeiros 10 slots (otimização)
-            slots_a_limpar = min(10, self.config['MAX_FERIADOS'])
-            self.logger.info(f"Limpando {slots_a_limpar} slots de feriados no CLP...")
-            
-            for i in range(slots_a_limpar):
-                try:
-                    # Limpar dia (N33:i)
-                    url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N33%253A{i}/0"
-                    response_dia = requests.get(url_dia, auth=auth, timeout=self.config['TIMEOUT'])
-                    
-                    # Limpar mês (N34:i)
-                    url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N34%253A{i}/0"
-                    response_mes = requests.get(url_mes, auth=auth, timeout=self.config['TIMEOUT'])
-                    
-                    if response_dia.status_code == 401 or response_mes.status_code == 401:
-                        return False, ["Erro de autenticação ao escrever dados"]
-                    elif response_dia.status_code != 200 or response_mes.status_code != 200:
-                        erro = f"Erro ao limpar slot {i}: dia={response_dia.status_code}, mês={response_mes.status_code}"
-                        erros.append(erro)
-                        self.logger.warning(erro)
-                    else:
-                        # Verificar se retornou {"sucesso":true}
-                        try:
-                            data_dia = response_dia.json()
-                            data_mes = response_mes.json()
-                            if not (data_dia.get('sucesso') and data_mes.get('sucesso')):
-                                erro = f"Falha na limpeza do slot {i}: respostas inválidas"
-                                erros.append(erro)
-                        except:
-                            erro = f"Erro ao verificar resposta da limpeza do slot {i}"
-                            erros.append(erro)
-                    
-                    # Pequena pausa entre escritas
-                    time.sleep(0.1)
-                    
-                except Exception as e:
-                    erro = f"Erro ao limpar slot {i}: {str(e)}"
-                    erros.append(erro)
-                    sucesso = False
-            
-            # Segundo: Escrever feriados nos slots correspondentes
+            # Primeiro: Escrever feriados nos slots correspondentes
             self.logger.info(f"Escrevendo {len(dados['feriados'])} feriados no CLP...")
             feriados_escritos = 0
+            slots_utilizados = len(dados['feriados'])
             
             for feriado in dados['feriados']:
                 slot = feriado['slot']
@@ -340,6 +301,47 @@ class SincronizadorCLP:
                     erro = f"Erro ao escrever feriado {feriado['nome']} no slot {slot}: {str(e)}"
                     erros.append(erro)
                     sucesso = False
+            
+            # Segundo: Limpar apenas os slots não utilizados (otimização)
+            slots_a_limpar = min(10, self.config['MAX_FERIADOS'])
+            if slots_utilizados < slots_a_limpar:
+                self.logger.info(f"Limpando slots não utilizados {slots_utilizados} a {slots_a_limpar-1}...")
+                
+                for i in range(slots_utilizados, slots_a_limpar):
+                    try:
+                        # Limpar dia (N33:i)
+                        url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N33%253A{i}/0"
+                        response_dia = requests.get(url_dia, auth=auth, timeout=self.config['TIMEOUT'])
+                        
+                        # Limpar mês (N34:i)
+                        url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N34%253A{i}/0"
+                        response_mes = requests.get(url_mes, auth=auth, timeout=self.config['TIMEOUT'])
+                        
+                        if response_dia.status_code == 401 or response_mes.status_code == 401:
+                            return False, ["Erro de autenticação ao limpar dados"]
+                        elif response_dia.status_code != 200 or response_mes.status_code != 200:
+                            erro = f"Erro ao limpar slot {i}: dia={response_dia.status_code}, mês={response_mes.status_code}"
+                            erros.append(erro)
+                            self.logger.warning(erro)
+                        else:
+                            # Verificar se retornou {"sucesso":true}
+                            try:
+                                data_dia = response_dia.json()
+                                data_mes = response_mes.json()
+                                if not (data_dia.get('sucesso') and data_mes.get('sucesso')):
+                                    erro = f"Falha na limpeza do slot {i}: respostas inválidas"
+                                    erros.append(erro)
+                            except:
+                                erro = f"Erro ao verificar resposta da limpeza do slot {i}"
+                                erros.append(erro)
+                        
+                        # Pequena pausa entre escritas
+                        time.sleep(0.1)
+                        
+                    except Exception as e:
+                        erro = f"Erro ao limpar slot {i}: {str(e)}"
+                        erros.append(erro)
+                        sucesso = False
             
             self.logger.info(f"Processo de escrita concluído: {feriados_escritos}/{len(dados['feriados'])} feriados escritos com sucesso")
             

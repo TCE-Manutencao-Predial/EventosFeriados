@@ -389,9 +389,6 @@
                     <button class="sync-button" onclick="atualizarStatus()" id="btn-atualizar">
                         Atualizar Status
                     </button>
-                    <button class="sync-button" onclick="testarTag()" id="btn-teste-tag">
-                        Testar Tag N33:0
-                    </button>
                     <button class="sync-button" onclick="limparFeriados()" id="btn-limpar">
                         Limpar Feriados CLP
                     </button>
@@ -715,58 +712,6 @@ async function atualizarStatus() {
 function limparLog() {
     document.getElementById('log-container').innerHTML = '<div>Log limpo...</div>';
     logCount = 0;
-}
-
-// Função para testar tag N33:0
-async function testarTag() {
-    adicionarLog('Testando conectividade com tag N33:0...', 'info');
-    
-    try {
-        // Primeiro, ler o valor atual
-        const responseLeitura = await fetch('{{ url_for("api_clp.teste_tag") }}?tag=N33:0');
-        const resultadoLeitura = await responseLeitura.json();
-        
-        if (responseLeitura.ok) {
-            adicionarLog(`Leitura N33:0 = ${resultadoLeitura.valor_lido}`, 'success');
-            
-            // Agora testar escrita (escrever 99 e depois voltar ao valor original)
-            const valorOriginal = resultadoLeitura.valor_lido;
-            const valorTeste = 99;
-            
-            const responseEscrita = await fetch(`{{ url_for("api_clp.teste_tag") }}?tag=N33:0&valor=${valorTeste}`);
-            const resultadoEscrita = await responseEscrita.json();
-            
-            if (responseEscrita.ok && resultadoEscrita.sucesso) {
-                adicionarLog(`Escrita N33:0 = ${valorTeste} → sucesso`, 'success');
-                
-                // Aguardar um pouco e restaurar valor original
-                setTimeout(async () => {
-                    try {
-                        const responseRestore = await fetch(`{{ url_for("api_clp.teste_tag") }}?tag=N33:0&valor=${valorOriginal}`);
-                        const resultadoRestore = await responseRestore.json();
-                        
-                        if (responseRestore.ok && resultadoRestore.sucesso) {
-                            adicionarLog(`Valor original restaurado: N33:0 = ${valorOriginal}`, 'success');
-                            mostrarMensagem('Teste de conectividade realizado com sucesso!', 'success');
-                        }
-                    } catch (error) {
-                        adicionarLog(`Erro ao restaurar valor: ${error.message}`, 'warning');
-                    }
-                }, 1000);
-                
-            } else {
-                adicionarLog(`Falha na escrita: ${resultadoEscrita.erro || 'sucesso=false'}`, 'error');
-                mostrarMensagem('Falha no teste de escrita', 'error');
-            }
-        } else {
-            adicionarLog(`Falha na leitura: ${resultadoLeitura.erro}`, 'error');
-            mostrarMensagem('Falha no teste de leitura', 'error');
-        }
-        
-    } catch (error) {
-        adicionarLog(`Erro no teste de tag: ${error.message}`, 'error');
-        mostrarMensagem('Erro no teste de conectividade', 'error');
-    }
 }
 
 // Função para testar tag customizada
