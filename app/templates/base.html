@@ -13,12 +13,28 @@
     
     <!-- FullCalendar CSS -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.css' rel='stylesheet' />
+    <!-- Fallback para FullCalendar CSS local caso CDN falhe -->
+    <script>
+    if (!window.getComputedStyle(document.documentElement).getPropertyValue('--fc-border-color')) {
+        console.warn('FullCalendar CSS não carregou do CDN, usando fallback básico');
+        var fallbackCSS = document.createElement('style');
+        fallbackCSS.textContent = `
+            .fc { font-family: Arial, sans-serif; }
+            .fc-event { background: #007bff; border: 1px solid #0056b3; }
+            .fc-button { background: #007bff; border: 1px solid #0056b3; color: white; }
+        `;
+        document.head.appendChild(fallbackCSS);
+    }
+    </script>
     
     <!-- CSS Base (padrão do sistema) -->
     <link href="{{ url_for('static', filename='css/base_layout.css') }}" rel="stylesheet">
     
     <!-- Custom CSS -->
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    
+    <!-- Fallback CSS para CDNs -->
+    <link href="{{ url_for('static', filename='css/fallback.css') }}" rel="stylesheet">
     
     {% block extra_css %}{% endblock %}
 </head>

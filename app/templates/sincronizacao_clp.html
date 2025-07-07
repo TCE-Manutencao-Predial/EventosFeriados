@@ -2,90 +2,327 @@
 
 {% block title %}Sincronização CLP{% endblock %}
 
-{% block extra_head %}
+{% block extra_css %}
 <style>
+/* Reset e base */
+* {
+    box-sizing: border-box;
+}
+
+/* Container principal */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Cards de status */
 .status-card {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
     border-radius: 8px;
     padding: 20px;
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
 }
 
+.status-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.status-card h5 {
+    margin: 0 0 15px 0;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #343a40;
+    border-bottom: 2px solid #f8f9fa;
+    padding-bottom: 8px;
+}
+
+/* Indicadores de status */
 .status-indicator {
     display: inline-block;
     width: 12px;
     height: 12px;
     border-radius: 50%;
     margin-right: 8px;
+    vertical-align: middle;
 }
 
-.status-online { background-color: #28a745; }
-.status-offline { background-color: #dc3545; }
-.status-warning { background-color: #ffc107; }
+.status-online { 
+    background-color: #28a745; 
+    box-shadow: 0 0 6px rgba(40, 167, 69, 0.5);
+}
 
+.status-offline { 
+    background-color: #dc3545; 
+    box-shadow: 0 0 6px rgba(220, 53, 69, 0.5);
+}
+
+.status-warning { 
+    background-color: #ffc107; 
+    box-shadow: 0 0 6px rgba(255, 193, 7, 0.5);
+}
+
+/* Botões de sincronização */
 .sync-button {
-    background: #007bff;
+    background: linear-gradient(135deg, #007bff, #0056b3);
     color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 5px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
+    font-weight: 500;
     margin: 5px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.sync-button:hover { background: #0056b3; }
+.sync-button:hover:not(:disabled) { 
+    background: linear-gradient(135deg, #0056b3, #004085);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+}
+
+.sync-button:active:not(:disabled) {
+    transform: translateY(0);
+}
+
 .sync-button:disabled { 
     background: #6c757d; 
     cursor: not-allowed; 
+    opacity: 0.6;
+    transform: none;
+    box-shadow: none;
 }
 
+/* Container de botões */
+.d-flex {
+    display: flex;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.align-items-center {
+    align-items: center;
+}
+
+/* Container de log */
 .log-container {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
-    border-radius: 5px;
+    border-radius: 6px;
     padding: 15px;
-    font-family: monospace;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
     max-height: 300px;
     overflow-y: auto;
+    line-height: 1.4;
 }
 
+.log-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Barra de progresso */
 .progress-bar {
     width: 100%;
-    height: 20px;
+    height: 24px;
     background: #e9ecef;
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
+    position: relative;
 }
 
 .progress-fill {
     height: 100%;
-    background: #28a745;
-    transition: width 0.3s ease;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    transition: width 0.4s ease;
+    border-radius: 12px;
 }
 
+/* Timestamps e textos pequenos */
 .timestamp {
     color: #6c757d;
-    font-size: 0.9em;
+    font-size: 0.85em;
+    margin-top: 5px;
 }
 
+/* Mensagens de erro e sucesso */
 .error-message {
-    color: #dc3545;
+    color: #721c24;
     background: #f8d7da;
     border: 1px solid #f5c6cb;
-    padding: 10px;
-    border-radius: 5px;
+    padding: 12px;
+    border-radius: 6px;
     margin: 10px 0;
+    border-left: 4px solid #dc3545;
 }
 
 .success-message {
     color: #155724;
     background: #d4edda;
     border: 1px solid #c3e6cb;
-    padding: 10px;
-    border-radius: 5px;
+    padding: 12px;
+    border-radius: 6px;
     margin: 10px 0;
+    border-left: 4px solid #28a745;
+}
+
+/* Grid responsivo */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -15px;
+}
+
+.col-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding: 0 15px;
+}
+
+.col-md-4 {
+    flex: 0 0 33.333333%;
+    max-width: 33.333333%;
+    padding: 0 15px;
+}
+
+.col-md-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+    padding: 0 15px;
+}
+
+/* Inputs do formulário */
+.form-control {
+    display: inline-block;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #555;
+    background-color: #fff;
+    background-image: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075);
+    transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
+}
+
+.form-control:focus {
+    border-color: #007bff;
+    outline: 0;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 0 0.2rem rgba(0,123,255,.25);
+}
+
+/* Botões do Bootstrap */
+.btn {
+    display: inline-block;
+    font-weight: 400;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: middle;
+    user-select: none;
+    border: 1px solid transparent;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    border-radius: 0.25rem;
+    transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border-radius: 0.2rem;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    color: #fff;
+    background-color: #0069d9;
+    border-color: #0062cc;
+}
+
+.btn-secondary {
+    color: #fff;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    color: #fff;
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .col-md-4, .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .sync-button {
+        width: 100%;
+        margin: 3px 0;
+        justify-content: center;
+    }
+    
+    .d-flex {
+        flex-direction: column;
+    }
+    
+    .form-control[style*="display:inline"] {
+        display: block !important;
+        width: 100% !important;
+        margin: 5px 0 !important;
+    }
+}
+
+/* Utilitários */
+.mt-2 { margin-top: 0.5rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.float-right { float: right; }
+.text-muted { color: #6c757d; }
+
+/* Animations */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.status-card.syncing {
+    animation: pulse 2s infinite;
 }
 </style>
 {% endblock %}
@@ -628,6 +865,44 @@ setInterval(atualizarStatus, 30000); // A cada 30 segundos
 
 // Carregar status inicial
 document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se os estilos carregaram corretamente
+    const statusCard = document.querySelector('.status-card');
+    if (statusCard) {
+        const computedStyle = window.getComputedStyle(statusCard);
+        if (computedStyle.backgroundColor === 'rgba(0, 0, 0, 0)' || computedStyle.backgroundColor === 'transparent') {
+            console.warn('CSS não carregou completamente, aplicando estilos de emergência');
+            // Aplicar estilos básicos via JavaScript como fallback
+            const emergencyStyle = document.createElement('style');
+            emergencyStyle.textContent = `
+                .status-card { 
+                    background: white !important; 
+                    border: 1px solid #ccc !important; 
+                    padding: 20px !important; 
+                    margin: 10px 0 !important; 
+                    border-radius: 5px !important; 
+                }
+                .sync-button { 
+                    background: #007bff !important; 
+                    color: white !important; 
+                    padding: 10px 20px !important; 
+                    border: none !important; 
+                    border-radius: 5px !important; 
+                    margin: 5px !important; 
+                    cursor: pointer !important; 
+                }
+                .log-container { 
+                    background: #f8f9fa !important; 
+                    border: 1px solid #ccc !important; 
+                    padding: 15px !important; 
+                    font-family: monospace !important; 
+                    max-height: 300px !important; 
+                    overflow-y: auto !important; 
+                }
+            `;
+            document.head.appendChild(emergencyStyle);
+        }
+    }
+    
     adicionarLog('Página de sincronização CLP carregada', 'info');
     atualizarStatus();
 });
