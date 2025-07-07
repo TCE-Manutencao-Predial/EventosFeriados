@@ -4,7 +4,15 @@ import time
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
-from .SincronizadorCLP import SincronizadorCLP
+
+# Importação condicional do SincronizadorCLP
+try:
+    from .SincronizadorCLP import SincronizadorCLP
+    CLP_DISPONIVEL = True
+except ImportError as e:
+    logging.getLogger('EventosFeriados.AgendadorCLP').warning(f"SincronizadorCLP não disponível: {e}")
+    SincronizadorCLP = None
+    CLP_DISPONIVEL = False
 
 class AgendadorCLP:
     """
@@ -17,7 +25,13 @@ class AgendadorCLP:
     
     def __init__(self):
         self.logger = logging.getLogger('EventosFeriados.AgendadorCLP')
-        self.sincronizador = SincronizadorCLP.get_instance()
+        
+        if not CLP_DISPONIVEL:
+            self.logger.warning("Agendador CLP iniciado em modo degradado (dependências não disponíveis)")
+            self.sincronizador = None
+        else:
+            self.sincronizador = SincronizadorCLP.get_instance()
+            
         self.thread_agendador: Optional[threading.Thread] = None
         self.executando = False
         self.gerenciador_feriados = None
@@ -44,6 +58,12 @@ class AgendadorCLP:
         
         while self.executando:
             try:
+                # Verificar se o CLP está disponível
+                if not CLP_DISPONIVEL or not self.sincronizador:
+                    self.logger.debug("CLP não disponível, aguardando...")
+                    time.sleep(300)  # Aguardar 5 minutos
+                    continue
+                
                 # Verificar se deve executar sincronização
                 if self.sincronizador.deve_sincronizar_automaticamente():
                     if self.gerenciador_feriados and self.gerenciador_eventos:
@@ -71,6 +91,10 @@ class AgendadorCLP:
     
     def iniciar(self):
         """Inicia o agendador em thread separada"""
+        if not CLP_DISPONIVEL:
+            self.logger.warning("Agendador CLP não pode ser iniciado - dependências não disponíveis")
+            return
+            
         if self.executando:
             self.logger.warning("Agendador já está executando")
             return
@@ -102,11 +126,15 @@ class AgendadorCLP:
             'executando': self.executando,
             'thread_ativa': self.thread_agendador.is_alive() if self.thread_agendador else False,
             'gerenciadores_inicializados': bool(self.gerenciador_feriados and self.gerenciador_eventos),
+            'clp_disponivel': CLP_DISPONIVEL,
             'proximo_horario': self._calcular_proximo_horario()
         }
     
     def _calcular_proximo_horario(self) -> Optional[str]:
         """Calcula o próximo horário de sincronização"""
+        if not CLP_DISPONIVEL or not self.sincronizador:
+            return "CLP não disponível"
+            
         if not self.sincronizador.config['SYNC_ENABLED']:
             return None
         

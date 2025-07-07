@@ -1,7 +1,5 @@
 # app/utils/SincronizadorCLP.py
 import json
-import requests
-from requests.auth import HTTPBasicAuth
 import logging
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Tuple
@@ -9,6 +7,17 @@ from threading import Lock
 import os
 import time
 from ..config import CLP_CONFIG, DATA_DIR
+
+# Importação condicional do requests
+try:
+    import requests
+    from requests.auth import HTTPBasicAuth
+    REQUESTS_DISPONIVEL = True
+except ImportError as e:
+    logging.getLogger('EventosFeriados.SincronizadorCLP').warning(f"Módulo requests não disponível: {e}")
+    requests = None
+    HTTPBasicAuth = None
+    REQUESTS_DISPONIVEL = False
 
 class SincronizadorCLP:
     """
@@ -26,6 +35,10 @@ class SincronizadorCLP:
         self.backup_file = self.config['BACKUP_FILE']
         self.ultimo_status = self._carregar_status()
         self._sincronizacao_em_andamento = False
+        
+        if not REQUESTS_DISPONIVEL:
+            self.logger.error("SincronizadorCLP iniciado em modo degradado - módulo 'requests' não disponível")
+            self.logger.error("Para usar funcionalidades CLP, instale: pip install requests")
         
     @classmethod
     def get_instance(cls):
@@ -82,6 +95,9 @@ class SincronizadorCLP:
     
     def verificar_conectividade_clp(self) -> Tuple[bool, str]:
         """Verifica se o CLP está acessível"""
+        if not REQUESTS_DISPONIVEL:
+            return False, "Módulo 'requests' não disponível. Execute: pip install requests"
+            
         if not self.config['API_BASE_URL']:
             return False, "URL da API não configurada"
         
@@ -118,6 +134,9 @@ class SincronizadorCLP:
     
     def ler_dados_clp(self) -> Tuple[bool, Dict]:
         """Lê os dados atuais do CLP para comparação"""
+        if not REQUESTS_DISPONIVEL:
+            return False, {"erro": "Módulo 'requests' não disponível. Execute: pip install requests"}
+            
         try:
             if not self.config['API_BASE_URL']:
                 return False, {"erro": "URL da API não configurada"}
@@ -206,6 +225,9 @@ class SincronizadorCLP:
     
     def _escrever_dados_sequencial(self, dados: Dict) -> Tuple[bool, List[str]]:
         """Escreve dados no CLP de forma sequencial usando a API do TCE"""
+        if not REQUESTS_DISPONIVEL:
+            return False, ["Módulo 'requests' não disponível. Execute: pip install requests"]
+            
         erros = []
         sucesso = True
         
