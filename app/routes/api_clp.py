@@ -383,3 +383,61 @@ def limpar_feriados():
     except Exception as e:
         logger.error(f"Erro ao limpar feriados: {e}")
         return jsonify({'erro': 'Erro interno'}), 500
+
+@api_clp_bp.route('/clp/limpar-completo', methods=['POST'])
+def limpar_dados_completo():
+    """Limpa todos os dados do CLP (feriados e eventos)"""
+    try:
+        integracao = get_integracao_clp()
+        if not integracao:
+            return jsonify({'erro': 'Serviço indisponível'}), 503
+        
+        resultado = integracao.limpar_todos_dados_clp()
+        
+        if resultado['sucesso']:
+            return jsonify({
+                'sucesso': True,
+                'mensagem': 'Todos os dados do CLP foram limpos com sucesso',
+                'timestamp': resultado['timestamp']
+            })
+        else:
+            return jsonify({
+                'sucesso': False,
+                'erro': 'Falha na limpeza dos dados',
+                'detalhes': resultado['erros'],
+                'timestamp': resultado['timestamp']
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"Erro ao limpar dados completos: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+@api_clp_bp.route('/clp/eventos-plenario', methods=['GET'])
+def listar_eventos_plenario_clp():
+    """Lista eventos do Plenário armazenados no CLP"""
+    try:
+        integracao = get_integracao_clp()
+        if not integracao:
+            return jsonify({'erro': 'Serviço indisponível'}), 503
+        
+        resultado = integracao.ler_dados_do_clp()
+        
+        if resultado['sucesso']:
+            eventos = resultado['dados'].get('eventos_plenario', [])
+            return jsonify({
+                'sucesso': True,
+                'total': len(eventos),
+                'eventos': eventos,
+                'timestamp': resultado['timestamp']
+            })
+        else:
+            return jsonify({
+                'sucesso': False,
+                'erro': 'Falha ao ler dados do CLP',
+                'detalhes': resultado['dados'],
+                'timestamp': resultado['timestamp']
+            }), 500
+    
+    except Exception as e:
+        logger.error(f"Erro ao listar eventos do Plenário: {e}")
+        return jsonify({'erro': str(e)}), 500

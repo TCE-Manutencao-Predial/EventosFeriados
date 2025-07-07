@@ -318,3 +318,12 @@ class IntegracaoCLP:
         except Exception as e:
             self.logger.error(f"Erro ao exportar dados para CLP: {e}")
             raise
+        
+    def limpar_todos_dados_clp(self) -> Dict:
+        """Limpa todos os dados do CLP (feriados e eventos)"""
+        sucesso, erros = self.sincronizador.limpar_todos_dados_clp()
+        return {
+            'sucesso': sucesso,
+            'erros': erros,
+            'timestamp': datetime.now().isoformat()
+        }
