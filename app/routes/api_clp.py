@@ -268,17 +268,25 @@ def status_agendador():
 def teste_tag():
     """Testa leitura/escrita de uma tag específica do CLP"""
     try:
+        from requests.auth import HTTPBasicAuth
+        
         tag = request.args.get('tag', 'N33:0')
         valor = request.args.get('valor', type=int)
         
-        # URL base da API TCE
-        api_base = 'https://automacao.tce.go.gov.br/scadaweb/api'
-        clp_ip = '172.17.85.104'
+        # Obter configurações do integrador
+        integracao = get_integracao_clp()
+        if not integracao:
+            return jsonify({'erro': 'Serviço indisponível'}), 503
+        
+        sincronizador = integracao.sincronizador
+        api_base = sincronizador.config['API_BASE_URL']
+        clp_ip = sincronizador.config['CLP_IP']
+        auth = HTTPBasicAuth(sincronizador.config['AUTH_USER'], sincronizador.config['AUTH_PASS'])
         
         if valor is not None:
             # Escrever valor na tag
             url_escrita = f"{api_base}/tag_write/{clp_ip}/{tag.replace(':', '%253A')}/{valor}"
-            response = requests.get(url_escrita, timeout=30)
+            response = requests.get(url_escrita, auth=auth, timeout=30)
             
             if response.status_code == 200:
                 data = response.json()
@@ -298,7 +306,7 @@ def teste_tag():
         else:
             # Ler valor da tag
             url_leitura = f"{api_base}/tag_read/{clp_ip}/{tag.replace(':', '%253A')}"
-            response = requests.get(url_leitura, timeout=30)
+            response = requests.get(url_leitura, auth=auth, timeout=30)
             
             if response.status_code == 200:
                 data = response.json()
@@ -322,6 +330,8 @@ def teste_tag():
 def limpar_feriados():
     """Limpa todos os feriados do CLP (zera N33 e N34)"""
     try:
+        from requests.auth import HTTPBasicAuth
+        
         integracao = get_integracao_clp()
         if not integracao:
             return jsonify({'erro': 'Serviço indisponível'}), 503
@@ -331,6 +341,7 @@ def limpar_feriados():
         api_base = sincronizador.config['API_BASE_URL']
         clp_ip = sincronizador.config['CLP_IP']
         max_feriados = sincronizador.config['MAX_FERIADOS']
+        auth = HTTPBasicAuth(sincronizador.config['AUTH_USER'], sincronizador.config['AUTH_PASS'])
         
         slots_limpos = 0
         erros = []
@@ -339,11 +350,11 @@ def limpar_feriados():
             try:
                 # Limpar dia (N33:i)
                 url_dia = f"{api_base}/tag_write/{clp_ip}/N33%253A{i}/0"
-                response_dia = requests.get(url_dia, timeout=30)
+                response_dia = requests.get(url_dia, auth=auth, timeout=30)
                 
                 # Limpar mês (N34:i)
                 url_mes = f"{api_base}/tag_write/{clp_ip}/N34%253A{i}/0"
-                response_mes = requests.get(url_mes, timeout=30)
+                response_mes = requests.get(url_mes, auth=auth, timeout=30)
                 
                 if response_dia.status_code == 200 and response_mes.status_code == 200:
                     data_dia = response_dia.json()
