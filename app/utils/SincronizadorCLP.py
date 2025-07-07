@@ -1,5 +1,7 @@
 # app/utils/SincronizadorCLP.py
 import json
+import requests
+from requests.auth import HTTPBasicAuth
 import logging
 from datetime import datetime, date, timedelta
 from typing import Dict, List, Optional, Tuple
@@ -7,17 +9,6 @@ from threading import Lock
 import os
 import time
 from ..config import CLP_CONFIG, DATA_DIR
-
-# Importação condicional do requests
-try:
-    import requests
-    from requests.auth import HTTPBasicAuth
-    REQUESTS_DISPONIVEL = True
-except ImportError as e:
-    logging.getLogger('EventosFeriados.SincronizadorCLP').warning(f"Módulo requests não disponível: {e}")
-    requests = None
-    HTTPBasicAuth = None
-    REQUESTS_DISPONIVEL = False
 
 class SincronizadorCLP:
     """
@@ -35,10 +26,6 @@ class SincronizadorCLP:
         self.backup_file = self.config['BACKUP_FILE']
         self.ultimo_status = self._carregar_status()
         self._sincronizacao_em_andamento = False
-        
-        if not REQUESTS_DISPONIVEL:
-            self.logger.error("SincronizadorCLP iniciado em modo degradado - módulo 'requests' não disponível")
-            self.logger.error("Para usar funcionalidades CLP, instale: pip install requests")
         
     @classmethod
     def get_instance(cls):
@@ -95,9 +82,6 @@ class SincronizadorCLP:
     
     def verificar_conectividade_clp(self) -> Tuple[bool, str]:
         """Verifica se o CLP está acessível"""
-        if not REQUESTS_DISPONIVEL:
-            return False, "Módulo 'requests' não disponível. Execute: pip install requests"
-            
         if not self.config['API_BASE_URL']:
             return False, "URL da API não configurada"
         
@@ -134,9 +118,6 @@ class SincronizadorCLP:
     
     def ler_dados_clp(self) -> Tuple[bool, Dict]:
         """Lê os dados atuais do CLP para comparação"""
-        if not REQUESTS_DISPONIVEL:
-            return False, {"erro": "Módulo 'requests' não disponível. Execute: pip install requests"}
-            
         try:
             if not self.config['API_BASE_URL']:
                 return False, {"erro": "URL da API não configurada"}
@@ -188,34 +169,68 @@ class SincronizadorCLP:
             return False, {"erro": erro}
     
     def _preparar_dados_para_clp(self, gerenciador_feriados, gerenciador_eventos) -> Dict:
-        """Prepara os dados do ano atual para envio ao CLP"""
-        ano_atual = datetime.now().year
+        """Prepara os dados para envio ao CLP com filtros otimizados"""
+        agora = datetime.now()
+        ano_atual = agora.year
+        data_atual = agora.date()
+        uma_semana_atras = data_atual - timedelta(days=7)
+        
         dados_clp = {
             'ano': ano_atual,
             'feriados': [],
-            'timestamp': datetime.now().isoformat()
+            'timestamp': agora.isoformat()
         }
         
         try:
-            # Obter feriados do ano atual
-            feriados = gerenciador_feriados.listar_feriados(ano=ano_atual)
+            # Obter todos os feriados do ano atual
+            todos_feriados = gerenciador_feriados.listar_feriados(ano=ano_atual)
             
-            # Limitar ao máximo de slots disponíveis no CLP
-            max_feriados = min(len(feriados), self.config['MAX_FERIADOS'])
+            feriados_filtrados = []
             
-            for i, feriado in enumerate(feriados[:max_feriados]):
+            for feriado in todos_feriados:
+                try:
+                    data_feriado = date(ano_atual, feriado['mes'], feriado['dia'])
+                    
+                    # Incluir feriados da última semana (para documentação)
+                    if uma_semana_atras <= data_feriado <= data_atual:
+                        feriados_filtrados.append((feriado, data_feriado, 'passado'))
+                    
+                    # Incluir feriados futuros até o fim do ano
+                    elif data_feriado > data_atual:
+                        feriados_filtrados.append((feriado, data_feriado, 'futuro'))
+                        
+                except ValueError:
+                    # Data inválida (ex: 29/02 em ano não bissexto)
+                    self.logger.warning(f"Data inválida ignorada: {feriado['dia']}/{feriado['mes']}/{ano_atual}")
+                    continue
+            
+            # Ordenar por data (passados primeiro, depois futuros)
+            feriados_filtrados.sort(key=lambda x: (x[2] == 'futuro', x[1]))
+            
+            # Limitar a 10 feriados para não ocupar desnecessariamente o CLP
+            max_feriados = min(len(feriados_filtrados), 10)
+            
+            for i, (feriado, data_feriado, categoria) in enumerate(feriados_filtrados[:max_feriados]):
                 dados_clp['feriados'].append({
                     'slot': i,
                     'dia': feriado['dia'],
                     'mes': feriado['mes'],
                     'nome': feriado['nome'][:30],  # Para log/debug
-                    'tipo': feriado['tipo']
+                    'tipo': feriado['tipo'],
+                    'categoria': categoria,  # 'passado' ou 'futuro'
+                    'data': data_feriado.strftime('%Y-%m-%d')
                 })
             
-            self.logger.info(f"Dados preparados: {len(dados_clp['feriados'])} feriados (máx: {self.config['MAX_FERIADOS']})")
+            passados = len([f for f in dados_clp['feriados'] if f['categoria'] == 'passado'])
+            futuros = len([f for f in dados_clp['feriados'] if f['categoria'] == 'futuro'])
             
-            if len(feriados) > self.config['MAX_FERIADOS']:
-                self.logger.warning(f"Existem {len(feriados)} feriados, mas o CLP suporta apenas {self.config['MAX_FERIADOS']}. Os primeiros {self.config['MAX_FERIADOS']} serão sincronizados.")
+            self.logger.info(f"Dados preparados: {len(dados_clp['feriados'])} feriados "
+                           f"({passados} passados, {futuros} futuros) - "
+                           f"limitado a 10/{self.config['MAX_FERIADOS']} slots")
+            
+            if len(feriados_filtrados) > 10:
+                self.logger.info(f"Filtrados {len(feriados_filtrados)} feriados relevantes, "
+                               f"enviando apenas os 10 mais próximos/recentes para otimizar o CLP")
             
             return dados_clp
             
@@ -225,9 +240,6 @@ class SincronizadorCLP:
     
     def _escrever_dados_sequencial(self, dados: Dict) -> Tuple[bool, List[str]]:
         """Escreve dados no CLP de forma sequencial usando a API do TCE"""
-        if not REQUESTS_DISPONIVEL:
-            return False, ["Módulo 'requests' não disponível. Execute: pip install requests"]
-            
         erros = []
         sucesso = True
         
@@ -237,9 +249,11 @@ class SincronizadorCLP:
             
             auth = HTTPBasicAuth(self.config['AUTH_USER'], self.config['AUTH_PASS'])
             
-            # Primeiro: Limpar todas as tags (zerar slots não utilizados)
-            self.logger.info("Limpando tags de feriados no CLP...")
-            for i in range(self.config['MAX_FERIADOS']):
+            # Primeiro: Limpar apenas os primeiros 10 slots (otimização)
+            slots_a_limpar = min(10, self.config['MAX_FERIADOS'])
+            self.logger.info(f"Limpando {slots_a_limpar} slots de feriados no CLP...")
+            
+            for i in range(slots_a_limpar):
                 try:
                     # Limpar dia (N33:i)
                     url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N33%253A{i}/0"
