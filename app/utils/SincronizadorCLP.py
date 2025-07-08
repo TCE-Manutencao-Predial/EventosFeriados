@@ -27,6 +27,15 @@ class SincronizadorCLP:
         self.ultimo_status = self._carregar_status()
         self._sincronizacao_em_andamento = False
         
+        # Configurar sessão HTTP com configurações específicas
+        self.session = requests.Session()
+        self.session.auth = HTTPBasicAuth(self.config['AUTH_USER'], self.config['AUTH_PASS'])
+        
+        # Log da configuração inicial
+        self.logger.info(f"SincronizadorCLP inicializado com API_BASE_URL: {self.config['API_BASE_URL']}")
+        self.logger.info(f"CLP_IP: {self.config['CLP_IP']}")
+        self.logger.info(f"AUTH_USER: {self.config['AUTH_USER']}")
+        
     @classmethod
     def get_instance(cls):
         """Retorna a instância única do sincronizador (Singleton)"""
@@ -86,17 +95,28 @@ class SincronizadorCLP:
             return False, "URL da API não configurada"
         
         try:
+            # Log da configuração para debug
+            self.logger.info(f"Configuração API_BASE_URL: {self.config['API_BASE_URL']}")
+            
             # Testa lendo uma tag simples (N33:0)
             url_teste = f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N33%253A0"
-            auth = HTTPBasicAuth(self.config['AUTH_USER'], self.config['AUTH_PASS'])
             
-            self.logger.debug(f"Testando conectividade com: {url_teste}")
+            self.logger.info(f"Testando conectividade com URL completa: {url_teste}")
             
-            response = requests.get(
+            response = self.session.get(
                 url_teste, 
-                auth=auth,
-                timeout=self.config['TIMEOUT']
+                timeout=self.config['TIMEOUT'],
+                allow_redirects=False
             )
+            
+            # Verificar redirecionamento
+            if response.status_code in [301, 302, 303, 307, 308]:
+                redirect_url = response.headers.get('Location', 'N/A')
+                self.logger.error(f"Redirecionamento detectado na conectividade: {redirect_url}")
+                if 'automacao.tce.go.gov.br' in redirect_url:
+                    response = self.session.get(redirect_url, timeout=self.config['TIMEOUT'])
+                else:
+                    return False, f"Redirecionamento inválido para: {redirect_url}"
             
             self.logger.debug(f"Resposta da conectividade: Status {response.status_code}")
             
@@ -262,8 +282,6 @@ class SincronizadorCLP:
             if not self.config['API_BASE_URL']:
                 return False, ["URL da API não configurada"]
             
-            auth = HTTPBasicAuth(self.config['AUTH_USER'], self.config['AUTH_PASS'])
-            
             # Primeiro: Escrever feriados nos slots correspondentes
             self.logger.info(f"Escrevendo {len(dados['feriados'])} feriados no CLP...")
             feriados_escritos = 0
@@ -277,11 +295,27 @@ class SincronizadorCLP:
                 try:
                     # Escrever dia (N33:slot)
                     url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N33%253A{slot}/{dia}"
-                    response_dia = requests.get(url_dia, auth=auth, timeout=self.config['TIMEOUT'])
+                    self.logger.info(f"Escrevendo feriado {feriado['nome']} - URL dia: {url_dia}")
+                    response_dia = self.session.get(url_dia, timeout=self.config['TIMEOUT'], allow_redirects=False)
+                    
+                    # Verificar redirecionamento para dia
+                    if response_dia.status_code in [301, 302, 303, 307, 308]:
+                        redirect_url = response_dia.headers.get('Location', 'N/A')
+                        self.logger.error(f"Redirecionamento detectado para dia: {redirect_url}")
+                        if 'automacao.tce.go.gov.br' in redirect_url:
+                            response_dia = self.session.get(redirect_url, timeout=self.config['TIMEOUT'])
                     
                     # Escrever mês (N34:slot)
                     url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N34%253A{slot}/{mes}"
-                    response_mes = requests.get(url_mes, auth=auth, timeout=self.config['TIMEOUT'])
+                    self.logger.info(f"Escrevendo feriado {feriado['nome']} - URL mês: {url_mes}")
+                    response_mes = self.session.get(url_mes, timeout=self.config['TIMEOUT'], allow_redirects=False)
+                    
+                    # Verificar redirecionamento para mês
+                    if response_mes.status_code in [301, 302, 303, 307, 308]:
+                        redirect_url = response_mes.headers.get('Location', 'N/A')
+                        self.logger.error(f"Redirecionamento detectado para mês: {redirect_url}")
+                        if 'automacao.tce.go.gov.br' in redirect_url:
+                            response_mes = self.session.get(redirect_url, timeout=self.config['TIMEOUT'])
                     
                     if response_dia.status_code == 401 or response_mes.status_code == 401:
                         erro = f"Erro de autenticação ao escrever feriado {feriado['nome']}"
@@ -326,11 +360,11 @@ class SincronizadorCLP:
                     try:
                         # Limpar dia (N33:i)
                         url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N33%253A{i}/0"
-                        response_dia = requests.get(url_dia, auth=auth, timeout=self.config['TIMEOUT'])
+                        response_dia = self.session.get(url_dia, timeout=self.config['TIMEOUT'])
                         
                         # Limpar mês (N34:i)
                         url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N34%253A{i}/0"
-                        response_mes = requests.get(url_mes, auth=auth, timeout=self.config['TIMEOUT'])
+                        response_mes = self.session.get(url_mes, timeout=self.config['TIMEOUT'])
                         
                         if response_dia.status_code == 401 or response_mes.status_code == 401:
                             return False, ["Erro de autenticação ao limpar dados"]
@@ -392,7 +426,7 @@ class SincronizadorCLP:
                         for url, desc in urls_dados:
                             try:
                                 self.logger.debug(f"Escrevendo {desc} na URL: {url}")
-                                response = requests.get(url, auth=auth, timeout=self.config['TIMEOUT'])
+                                response = self.session.get(url, timeout=self.config['TIMEOUT'])
                                 responses.append((response, desc))
                                 self.logger.debug(f"{desc}: Status {response.status_code}")
                                 
@@ -474,8 +508,28 @@ class SincronizadorCLP:
                             
                             for url_limpar, tag_nome in tags_limpar:
                                 try:
-                                    self.logger.debug(f"Limpando tag {tag_nome}: {url_limpar}")
-                                    response = requests.get(url_limpar, auth=auth, timeout=self.config['TIMEOUT'])
+                                    self.logger.info(f"Limpando tag {tag_nome} com URL: {url_limpar}")
+                                    self.logger.info(f"Base URL configurada: {self.config['API_BASE_URL']}")
+                                    
+                                    # Fazer requisição sem seguir redirects automáticos para debug
+                                    response = self.session.get(
+                                        url_limpar, 
+                                        timeout=self.config['TIMEOUT'],
+                                        allow_redirects=False
+                                    )
+                                    
+                                    # Log detalhado da resposta
+                                    self.logger.info(f"Status da resposta: {response.status_code}")
+                                    if response.status_code in [301, 302, 303, 307, 308]:
+                                        redirect_url = response.headers.get('Location', 'N/A')
+                                        self.logger.error(f"Redirecionamento detectado para: {redirect_url}")
+                                        # Tentar seguir o redirect manualmente se for para o domínio correto
+                                        if 'automacao.tce.go.gov.br' in redirect_url:
+                                            response = self.session.get(redirect_url, timeout=self.config['TIMEOUT'])
+                                        else:
+                                            self.logger.error(f"Redirecionamento para domínio incorreto: {redirect_url}")
+                                            erros.append(f"Redirecionamento inválido para {tag_nome}: {redirect_url}")
+                                            continue
                                     
                                     if response.status_code == 401:
                                         return False, ["Erro de autenticação ao limpar dados de eventos"]
@@ -652,8 +706,6 @@ class SincronizadorCLP:
             if not self.config['API_BASE_URL']:
                 return False, ["URL da API não configurada"]
             
-            auth = HTTPBasicAuth(self.config['AUTH_USER'], self.config['AUTH_PASS'])
-            
             self.logger.info("Iniciando limpeza completa de dados no CLP...")
             
             # Limpar todos os slots de feriados (N33 e N34)
@@ -662,11 +714,11 @@ class SincronizadorCLP:
                 try:
                     # Limpar dia (N33:i)
                     url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N33%253A{i}/0"
-                    response_dia = requests.get(url_dia, auth=auth, timeout=self.config['TIMEOUT'])
+                    response_dia = self.session.get(url_dia, timeout=self.config['TIMEOUT'])
                     
                     # Limpar mês (N34:i)
                     url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N34%253A{i}/0"
-                    response_mes = requests.get(url_mes, auth=auth, timeout=self.config['TIMEOUT'])
+                    response_mes = self.session.get(url_mes, timeout=self.config['TIMEOUT'])
                     
                     if response_dia.status_code == 401 or response_mes.status_code == 401:
                         return False, ["Erro de autenticação ao limpar feriados"]
@@ -714,7 +766,7 @@ class SincronizadorCLP:
                     for url_limpar, tag_nome in tags_limpar:
                         try:
                             self.logger.debug(f"Limpando {tag_nome}: {url_limpar}")
-                            response = requests.get(url_limpar, auth=auth, timeout=self.config['TIMEOUT'])
+                            response = self.session.get(url_limpar, timeout=self.config['TIMEOUT'])
                             
                             if response.status_code == 401:
                                 return False, ["Erro de autenticação ao limpar eventos"]

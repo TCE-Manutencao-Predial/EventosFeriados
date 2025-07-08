@@ -18,7 +18,7 @@ LOG_FILE = os.path.join(LOG_DIR, 'eventos_feriados.log')
 
 # Configurações CLP TCE
 CLP_CONFIG = {
-    'API_BASE_URL': 'https://automacao.tce.go.gov.br/scadaweb/api',
+    'API_BASE_URL': os.environ.get('CLP_API_URL', 'https://automacao.tce.go.gov.br/scadaweb/api'),
     'CLP_IP': '172.17.85.104',  # IP do CLP Térreo B1
     'AUTH_USER': 'eventosferiados',  # Usuário para autenticação básica
     'AUTH_PASS': 'WzPcMMFU',  # Senha para autenticação básica
