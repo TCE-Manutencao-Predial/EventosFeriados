@@ -370,6 +370,36 @@ class SincronizadorCLP:
             url_batch = f"{self.config['API_BASE_URL']}/api/tag_write_batch"
             headers = {'Content-Type': 'application/json'}
             
+            # DEBUG COMPLETO PARA DIAGNOSTICAR ERRO 405
+            self.logger.info("=== DEBUG API BATCH - INÍCIO ===")
+            self.logger.info(f"URL completa: {url_batch}")
+            self.logger.info(f"Método HTTP: POST")
+            self.logger.info(f"Headers enviados: {headers}")
+            self.logger.info(f"CLP Address: {payload['clp_address']}")
+            self.logger.info(f"Número de operações: {len(operations)}")
+            self.logger.info(f"Tamanho do payload: {len(json.dumps(payload))} bytes")
+            self.logger.info(f"Auth configurado: {self.config['AUTH_USER']}")
+            self.logger.info(f"Sessão tem auth: {hasattr(self.session, 'auth') and self.session.auth is not None}")
+            
+            # Verificar URL parseada
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(url_batch)
+                self.logger.info(f"URL parseada - Scheme: {parsed.scheme}, Host: {parsed.netloc}, Path: {parsed.path}")
+            except Exception as e:
+                self.logger.error(f"Erro ao fazer parse da URL: {e}")
+            
+            # Teste HEAD para verificar se endpoint existe
+            try:
+                self.logger.info("Testando endpoint com HEAD request...")
+                head_resp = self.session.head(url_batch, headers=headers, timeout=10, allow_redirects=False)
+                self.logger.info(f"HEAD response: Status {head_resp.status_code}")
+                self.logger.info(f"HEAD headers: {dict(head_resp.headers)}")
+            except Exception as e:
+                self.logger.error(f"Erro no HEAD request: {e}")
+            
+            self.logger.info("Fazendo requisição POST...")
+            
             response = self.session.post(
                 url_batch, 
                 json=payload, 
@@ -405,6 +435,56 @@ class SincronizadorCLP:
                     return False, [f"Redirecionamento inválido: {redirect_url}"]
             
             self.logger.info(f"Resposta da API batch: Status {response.status_code}")
+            
+            # DEBUG COMPLETO DA RESPOSTA
+            self.logger.info("=== DEBUG RESPOSTA API ===")
+            self.logger.info(f"Status Code: {response.status_code}")
+            self.logger.info(f"Response Headers: {dict(response.headers)}")
+            self.logger.info(f"Response URL: {response.url}")
+            self.logger.info(f"Request URL: {response.request.url}")
+            self.logger.info(f"Request Method: {response.request.method}")
+            self.logger.info(f"Request Headers: {dict(response.request.headers)}")
+            
+            # Diagnóstico específico para erro 405
+            if response.status_code == 405:
+                self.logger.error("=== DIAGNÓSTICO ERRO 405 METHOD NOT ALLOWED ===")
+                self.logger.error("CAUSAS POSSÍVEIS:")
+                self.logger.error("1. Endpoint /api/tag_write_batch não existe na API externa")
+                self.logger.error("2. API externa não aceita método POST neste endpoint")
+                self.logger.error("3. Endpoint requer parâmetros ou formato diferente")
+                self.logger.error("4. Problema de autenticação impedindo acesso ao endpoint")
+                
+                # Verificar Allow header
+                allow_methods = response.headers.get('Allow', 'não especificado')
+                self.logger.error(f"Métodos permitidos pelo servidor: {allow_methods}")
+                
+                # Log do conteúdo completo
+                response_content = response.text
+                self.logger.error(f"Conteúdo completo da resposta 405:")
+                self.logger.error("--- INÍCIO RESPOSTA ---")
+                self.logger.error(response_content)
+                self.logger.error("--- FIM RESPOSTA ---")
+                
+                # Tentar GET no mesmo endpoint
+                try:
+                    self.logger.info("Testando GET no mesmo endpoint...")
+                    get_resp = self.session.get(url_batch, timeout=10, allow_redirects=False)
+                    self.logger.info(f"GET response: Status {get_resp.status_code}")
+                    if get_resp.status_code != 405:
+                        self.logger.info(f"GET content: {get_resp.text[:200]}...")
+                except Exception as e:
+                    self.logger.error(f"Erro no teste GET: {e}")
+                
+                # Tentar API raiz
+                try:
+                    self.logger.info("Testando API raiz...")
+                    root_url = f"{self.config['API_BASE_URL']}"
+                    root_resp = self.session.get(root_url, timeout=10, allow_redirects=False)
+                    self.logger.info(f"API raiz response: Status {root_resp.status_code}")
+                    if root_resp.status_code == 200:
+                        self.logger.info(f"API raiz content: {root_resp.text[:300]}...")
+                except Exception as e:
+                    self.logger.error(f"Erro no teste API raiz: {e}")
             
             if response.status_code == 401:
                 return False, ["Erro de autenticação na operação batch"]
@@ -446,7 +526,28 @@ class SincronizadorCLP:
                     self.logger.error(f"{erro} - Conteúdo: {response.text[:500]}...")
                     return False, erros
             else:
-                erro = f"Erro HTTP na operação batch: {response.status_code}"
+                # DEBUG PARA ERROS HTTP DIFERENTES DE 200/401
+                self.logger.error("=== DEBUG ERRO HTTP ===")
+                self.logger.error(f"Status Code: {response.status_code}")
+                self.logger.error(f"URL requisição: {response.url}")
+                self.logger.error(f"Método: {response.request.method}")
+                self.logger.error(f"Headers resposta: {dict(response.headers)}")
+                
+                # Mapear códigos de erro
+                error_map = {
+                    400: "Bad Request - Payload inválido",
+                    404: "Not Found - Endpoint não existe",
+                    405: "Method Not Allowed - Método POST não permitido",
+                    415: "Unsupported Media Type - Content-Type inválido",
+                    500: "Internal Server Error - Erro interno da API",
+                    502: "Bad Gateway - Problema proxy/gateway",
+                    503: "Service Unavailable - Serviço indisponível"
+                }
+                
+                error_desc = error_map.get(response.status_code, "Erro HTTP desconhecido")
+                self.logger.error(f"Descrição: {error_desc}")
+                
+                erro = f"Erro HTTP na operação batch: {response.status_code} - {error_desc}"
                 erros.append(erro)
                 self.logger.error(f"{erro} - Conteúdo: {response.text[:500]}...")
                 return False, erros
