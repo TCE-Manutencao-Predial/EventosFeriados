@@ -289,115 +289,43 @@ class SincronizadorCLP:
             self.logger.error(f"Erro ao preparar dados: {e}")
             raise
     
-    def _escrever_dados_sequencial(self, dados: Dict) -> Tuple[bool, List[str]]:
-        """Escreve dados no CLP de forma sequencial usando a API do TCE"""
+    def _escrever_dados_batch(self, dados: Dict) -> Tuple[bool, List[str]]:
+        """Escreve dados no CLP usando a nova API batch para evitar timeouts"""
         erros = []
-        sucesso = True
         
         try:
             if not self.config['API_BASE_URL']:
                 return False, ["URL da API não configurada"]
             
-            # Primeiro: Escrever feriados nos slots correspondentes
-            self.logger.info(f"Escrevendo {len(dados['feriados'])} feriados no CLP...")
-            feriados_escritos = 0
-            slots_utilizados = len(dados['feriados'])
+            # Montar todas as operações em um único payload
+            operations = []
+            
+            # Adicionar operações de feriados
+            feriados_count = len(dados['feriados'])
+            self.logger.info(f"Preparando escrita de {feriados_count} feriados no CLP...")
             
             for feriado in dados['feriados']:
                 slot = feriado['slot']
                 dia = feriado['dia']
                 mes = feriado['mes']
                 
-                try:
-                    # Escrever dia (N33:slot)
-                    url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N33%253A{slot}/{dia}"
-                    self.logger.info(f"Escrevendo feriado {feriado['nome']} - URL dia: {url_dia}")
-                    response_dia = self._fazer_requisicao_com_correcao_redirect(url_dia, f"feriado dia {feriado['nome']}")
-                    
-                    # Escrever mês (N34:slot)
-                    url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N34%253A{slot}/{mes}"
-                    self.logger.info(f"Escrevendo feriado {feriado['nome']} - URL mês: {url_mes}")
-                    response_mes = self._fazer_requisicao_com_correcao_redirect(url_mes, f"feriado mês {feriado['nome']}")
-                    
-                    if response_dia.status_code == 401 or response_mes.status_code == 401:
-                        erro = f"Erro de autenticação ao escrever feriado {feriado['nome']}"
-                        erros.append(erro)
-                        sucesso = False
-                    elif response_dia.status_code == 200 and response_mes.status_code == 200:
-                        # Verificar se ambas as escritas retornaram {"sucesso":true}
-                        try:
-                            data_dia = response_dia.json()
-                            data_mes = response_mes.json()
-                            
-                            if data_dia.get('sucesso') and data_mes.get('sucesso'):
-                                feriados_escritos += 1
-                                self.logger.debug(f"Feriado {feriado['nome']} escrito no slot {slot}: {dia:02d}/{mes:02d}")
-                            else:
-                                erro = f"Falha ao escrever feriado {feriado['nome']} no slot {slot}: sucesso=false"
-                                erros.append(erro)
-                                sucesso = False
-                        except:
-                            erro = f"Resposta inválida ao escrever feriado {feriado['nome']} no slot {slot}"
-                            erros.append(erro)
-                            sucesso = False
-                    else:
-                        erro = f"Erro HTTP ao escrever feriado {feriado['nome']} no slot {slot}: dia={response_dia.status_code}, mês={response_mes.status_code}"
-                        erros.append(erro)
-                        sucesso = False
-                    
-                    # Pequena pausa entre escritas
-                    time.sleep(0.2)
-                    
-                except Exception as e:
-                    erro = f"Erro ao escrever feriado {feriado['nome']} no slot {slot}: {str(e)}"
-                    erros.append(erro)
-                    sucesso = False
+                # Adicionar operações para dia e mês
+                operations.append({"tag_address": f"N33:{slot}", "value": str(dia)})
+                operations.append({"tag_address": f"N34:{slot}", "value": str(mes)})
             
-            # Segundo: Limpar apenas os slots não utilizados (otimização)
+            # Adicionar operações de limpeza para slots de feriados não utilizados
             slots_a_limpar = min(10, self.config['MAX_FERIADOS'])
-            if slots_utilizados < slots_a_limpar:
-                self.logger.info(f"Limpando slots não utilizados {slots_utilizados} a {slots_a_limpar-1}...")
+            if feriados_count < slots_a_limpar:
+                self.logger.info(f"Preparando limpeza de slots não utilizados {feriados_count} a {slots_a_limpar-1}...")
                 
-                for i in range(slots_utilizados, slots_a_limpar):
-                    try:
-                        # Limpar dia (N33:i)
-                        url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N33%253A{i}/0"
-                        response_dia = self._fazer_requisicao_com_correcao_redirect(url_dia, f"limpeza slot feriado {i} dia")
-                        
-                        # Limpar mês (N34:i)
-                        url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N34%253A{i}/0"
-                        response_mes = self._fazer_requisicao_com_correcao_redirect(url_mes, f"limpeza slot feriado {i} mês")
-                        
-                        if response_dia.status_code == 401 or response_mes.status_code == 401:
-                            return False, ["Erro de autenticação ao limpar dados"]
-                        elif response_dia.status_code != 200 or response_mes.status_code != 200:
-                            erro = f"Erro ao limpar slot {i}: dia={response_dia.status_code}, mês={response_mes.status_code}"
-                            erros.append(erro)
-                            self.logger.warning(erro)
-                        else:
-                            # Verificar se retornou {"sucesso":true}
-                            try:
-                                data_dia = response_dia.json()
-                                data_mes = response_mes.json()
-                                if not (data_dia.get('sucesso') and data_mes.get('sucesso')):
-                                    erro = f"Falha na limpeza do slot {i}: respostas inválidas"
-                                    erros.append(erro)
-                            except:
-                                erro = f"Erro ao verificar resposta da limpeza do slot {i}"
-                                erros.append(erro)
-                        
-                        # Pequena pausa entre escritas
-                        time.sleep(0.1)
-                        
-                    except Exception as e:
-                        erro = f"Erro ao limpar slot {i}: {str(e)}"
-                        erros.append(erro)
-                        sucesso = False
+                for i in range(feriados_count, slots_a_limpar):
+                    operations.append({"tag_address": f"N33:{i}", "value": "0"})
+                    operations.append({"tag_address": f"N34:{i}", "value": "0"})
             
-            # Terceiro: Escrever eventos do Plenário
-            eventos_escritos = 0
-            if 'eventos_plenario' in dados and len(dados['eventos_plenario']) > 0:
-                self.logger.info(f"Escrevendo {len(dados['eventos_plenario'])} eventos do Plenário no CLP...")
+            # Adicionar operações de eventos do Plenário
+            eventos_count = len(dados.get('eventos_plenario', []))
+            if eventos_count > 0:
+                self.logger.info(f"Preparando escrita de {eventos_count} eventos do Plenário no CLP...")
                 
                 for evento in dados['eventos_plenario']:
                     slot = evento['slot']
@@ -408,159 +336,136 @@ class SincronizadorCLP:
                     hora_fim = evento['hora_fim']
                     minuto_fim = evento['minuto_fim']
                     
-                    try:
-                        self.logger.debug(f"Escrevendo evento {evento.get('nome', 'sem nome')} no slot {slot}: {dia:02d}/{mes:02d} {hora_inicio:02d}:{minuto_inicio:02d}-{hora_fim:02d}:{minuto_fim:02d}")
-                        
-                        # Estrutura de tags: N60:slot (dia), N61:slot (mês), N62:slot (hora início), 
-                        # N63:slot (minuto início), N64:slot (hora fim), N65:slot (minuto fim)
-                        
-                        # Criar URLs para escrita
-                        urls_dados = [
-                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N60%253A{slot}/{dia}", "dia"),
-                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N61%253A{slot}/{mes}", "mês"),
-                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N62%253A{slot}/{hora_inicio}", "hora início"),
-                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N63%253A{slot}/{minuto_inicio}", "minuto início"),
-                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N64%253A{slot}/{hora_fim}", "hora fim"),
-                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N65%253A{slot}/{minuto_fim}", "minuto fim")
-                        ]
-                        
-                        responses = []
-                        for url, desc in urls_dados:
-                            try:
-                                self.logger.debug(f"Escrevendo {desc} na URL: {url}")
-                                response = self._fazer_requisicao_com_correcao_redirect(url, f"evento {desc}")
-                                responses.append((response, desc))
-                                self.logger.debug(f"{desc}: Status {response.status_code}")
-                                
-                                # Pequena pausa entre operações para evitar sobrecarga
-                                time.sleep(0.1)
-                                
-                            except Exception as e:
-                                self.logger.error(f"Erro ao escrever {desc}: {e}")
-                                responses.append((None, desc))
-                        
-                        # Verificar se todas as respostas foram bem-sucedidas
-                        if any(r is None for r, _ in responses):
-                            erro = f"Falha de conexão ao escrever evento {evento.get('nome', 'sem nome')} no slot {slot}"
-                            erros.append(erro)
-                            sucesso = False
-                        elif any(r.status_code == 401 for r, _ in responses if r):
-                            erro = f"Erro de autenticação ao escrever evento {evento.get('nome', 'sem nome')}"
-                            erros.append(erro)
-                            sucesso = False
-                        elif all(r.status_code == 200 for r, _ in responses if r):
-                            # Verificar se todas as escritas retornaram {"sucesso":true}
-                            try:
-                                all_success = True
-                                for response, desc in responses:
-                                    if response:
-                                        try:
-                                            data = response.json()
-                                            if not data.get('sucesso'):
-                                                self.logger.error(f"Falha ao escrever {desc}: resposta = {data}")
-                                                all_success = False
-                                        except Exception as e:
-                                            self.logger.error(f"Erro ao fazer parse JSON de {desc}: {e}")
-                                            self.logger.error(f"Conteúdo da resposta: {response.text[:200]}...")
-                                            all_success = False
-                                
-                                if all_success:
-                                    eventos_escritos += 1
-                                    self.logger.info(f"Evento {evento.get('nome', 'sem nome')} escrito com sucesso no slot {slot}")
-                                else:
-                                    erro = f"Falha ao escrever evento {evento.get('nome', 'sem nome')} no slot {slot}: algumas operações falharam"
-                                    erros.append(erro)
-                                    sucesso = False
-                            except Exception as e:
-                                erro = f"Erro ao verificar respostas do evento {evento.get('nome', 'sem nome')}: {e}"
-                                erros.append(erro)
-                                sucesso = False
-                        else:
-                            status_codes = [r.status_code if r else "None" for r, _ in responses]
-                            erro = f"Erro HTTP ao escrever evento {evento.get('nome', 'sem nome')} no slot {slot}: códigos={status_codes}"
-                            erros.append(erro)
-                            sucesso = False
-                        
-                        # Pausa maior entre eventos
-                        time.sleep(0.3)
-                        
-                    except Exception as e:
-                        erro = f"Erro ao escrever evento {evento.get('nome', 'sem nome')} no slot {slot}: {str(e)}"
-                        erros.append(erro)
-                        sucesso = False
+                    # Adicionar operações para evento completo
+                    operations.append({"tag_address": f"N60:{slot}", "value": str(dia)})
+                    operations.append({"tag_address": f"N61:{slot}", "value": str(mes)})
+                    operations.append({"tag_address": f"N62:{slot}", "value": str(hora_inicio)})
+                    operations.append({"tag_address": f"N63:{slot}", "value": str(minuto_inicio)})
+                    operations.append({"tag_address": f"N64:{slot}", "value": str(hora_fim)})
+                    operations.append({"tag_address": f"N65:{slot}", "value": str(minuto_fim)})
+            
+            # Adicionar operações de limpeza para slots de eventos não utilizados
+            max_eventos = self.config.get('MAX_EVENTOS', 10)
+            if eventos_count < max_eventos:
+                self.logger.info(f"Preparando limpeza de slots de eventos não utilizados {eventos_count} a {max_eventos-1}...")
                 
-                # Quarto: Limpar slots de eventos não utilizados
-                eventos_utilizados = len(dados['eventos_plenario'])
-                max_eventos = min(10, self.config.get('MAX_EVENTOS', 10))
+                for i in range(eventos_count, max_eventos):
+                    operations.append({"tag_address": f"N60:{i}", "value": "0"})
+                    operations.append({"tag_address": f"N61:{i}", "value": "0"})
+                    operations.append({"tag_address": f"N62:{i}", "value": "0"})
+                    operations.append({"tag_address": f"N63:{i}", "value": "0"})
+                    operations.append({"tag_address": f"N64:{i}", "value": "0"})
+                    operations.append({"tag_address": f"N65:{i}", "value": "0"})
+            
+            # Preparar payload para API batch
+            payload = {
+                "clp_address": self.config['CLP_IP'],
+                "operations": operations
+            }
+            
+            self.logger.info(f"Enviando {len(operations)} operações em lote para o CLP")
+            self.logger.debug(f"Payload batch: {json.dumps(payload, indent=2)}")
+            
+            # Fazer requisição POST para API batch
+            url_batch = f"{self.config['API_BASE_URL']}/api/tag_write_batch"
+            headers = {'Content-Type': 'application/json'}
+            
+            response = self.session.post(
+                url_batch, 
+                json=payload, 
+                headers=headers, 
+                timeout=self.config['TIMEOUT'] * 3,  # Timeout maior para operação batch
+                allow_redirects=False
+            )
+            
+            # Verificar redirecionamento
+            if response.status_code in [301, 302, 303, 307, 308]:
+                redirect_url = response.headers.get('Location', '')
+                self.logger.warning(f"Redirecionamento detectado na operação batch: {redirect_url}")
                 
-                if eventos_utilizados < max_eventos:
-                    self.logger.info(f"Limpando slots de eventos não utilizados {eventos_utilizados} a {max_eventos-1}...")
+                # Corrigir domínio incorreto se necessário
+                if 'automacao.tce.go.br' in redirect_url and 'automacao.tce.go.gov.br' not in redirect_url:
+                    corrected_url = redirect_url.replace('automacao.tce.go.br', 'automacao.tce.go.gov.br')
+                    self.logger.warning(f"Corrigindo domínio na operação batch: {corrected_url}")
+                    response = self.session.post(
+                        corrected_url, 
+                        json=payload, 
+                        headers=headers, 
+                        timeout=self.config['TIMEOUT'] * 3
+                    )
+                elif 'automacao.tce.go.gov.br' in redirect_url:
+                    response = self.session.post(
+                        redirect_url, 
+                        json=payload, 
+                        headers=headers, 
+                        timeout=self.config['TIMEOUT'] * 3
+                    )
+                else:
+                    self.logger.error(f"Redirecionamento para domínio desconhecido: {redirect_url}")
+                    return False, [f"Redirecionamento inválido: {redirect_url}"]
+            
+            self.logger.info(f"Resposta da API batch: Status {response.status_code}")
+            
+            if response.status_code == 401:
+                return False, ["Erro de autenticação na operação batch"]
+            elif response.status_code == 200:
+                # Processar resposta batch
+                try:
+                    batch_result = response.json()
+                    self.logger.debug(f"Resultado batch: {json.dumps(batch_result, indent=2)}")
                     
-                    for i in range(eventos_utilizados, max_eventos):
-                        try:
-                            # Limpar todas as 6 tags do evento (N60:i a N65:i)
-                            tags_limpar = [
-                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N60%253A{i}/0", f"N60:{i}"),
-                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N61%253A{i}/0", f"N61:{i}"),
-                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N62%253A{i}/0", f"N62:{i}"),
-                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N63%253A{i}/0", f"N63:{i}"),
-                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N64%253A{i}/0", f"N64:{i}"),
-                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N65%253A{i}/0", f"N65:{i}")
-                            ]
-                            
-                            for url_limpar, tag_nome in tags_limpar:
-                                try:
-                                    self.logger.info(f"Limpando tag {tag_nome} com URL: {url_limpar}")
-                                    self.logger.info(f"Base URL configurada: {self.config['API_BASE_URL']}")
-                                    
-                                    response = self._fazer_requisicao_com_correcao_redirect(url_limpar, f"limpeza {tag_nome}")
-                                    
-                                    if response.status_code == 401:
-                                        return False, ["Erro de autenticação ao limpar dados de eventos"]
-                                    elif response.status_code != 200:
-                                        erro = f"Erro ao limpar tag {tag_nome} do slot de evento {i}: {response.status_code}"
-                                        erros.append(erro)
-                                        self.logger.warning(erro)
-                                    else:
-                                        # Verificar se retornou {"sucesso":true}
-                                        try:
-                                            data = response.json()
-                                            if not data.get('sucesso'):
-                                                erro = f"Falha na limpeza da tag {tag_nome} do slot de evento {i}: resposta inválida"
-                                                erros.append(erro)
-                                                self.logger.warning(erro)
-                                            else:
-                                                self.logger.debug(f"Tag {tag_nome} limpa com sucesso")
-                                        except Exception as e:
-                                            erro = f"Erro ao verificar resposta da limpeza da tag {tag_nome} do slot de evento {i}: {e}"
-                                            erros.append(erro)
-                                            self.logger.error(f"Conteúdo da resposta: {response.text[:200]}...")
-                                    
-                                    # Pequena pausa entre limpezas
-                                    time.sleep(0.1)
-                                    
-                                except Exception as e:
-                                    erro = f"Erro ao limpar tag {tag_nome}: {e}"
+                    if batch_result.get('success'):
+                        summary = batch_result.get('summary', {})
+                        total = summary.get('total', 0)
+                        successful = summary.get('successful', 0)
+                        failed = summary.get('failed', 0)
+                        
+                        self.logger.info(f"Operação batch concluída: {successful}/{total} operações bem-sucedidas")
+                        
+                        if failed > 0:
+                            # Coletar erros específicos
+                            results = batch_result.get('results', {})
+                            for tag_address, result in results.items():
+                                if not result.get('success'):
+                                    erro = f"Falha na tag {tag_address}: {result.get('error', 'erro desconhecido')}"
                                     erros.append(erro)
                                     self.logger.error(erro)
                             
-                        except Exception as e:
-                            erro = f"Erro ao limpar slot de evento {i}: {str(e)}"
-                            erros.append(erro)
-                            sucesso = False
-
-            self.logger.info(f"Processo de escrita concluído: {feriados_escritos}/{len(dados['feriados'])} feriados e {eventos_escritos}/{len(dados.get('eventos_plenario', []))} eventos escritos com sucesso")
-            
-            if len(erros) == 0:
-                sucesso = True
-            
-            return sucesso, erros
-            
-        except Exception as e:
-            erro = f"Erro geral na escrita sequencial: {str(e)}"
+                            return failed == 0, erros  # Sucesso apenas se nenhuma operação falhou
+                        else:
+                            return True, []
+                    else:
+                        erro = f"Operação batch falhou: {batch_result.get('error', 'erro desconhecido')}"
+                        erros.append(erro)
+                        self.logger.error(erro)
+                        return False, erros
+                
+                except Exception as e:
+                    erro = f"Erro ao processar resposta batch: {str(e)}"
+                    erros.append(erro)
+                    self.logger.error(f"{erro} - Conteúdo: {response.text[:500]}...")
+                    return False, erros
+            else:
+                erro = f"Erro HTTP na operação batch: {response.status_code}"
+                erros.append(erro)
+                self.logger.error(f"{erro} - Conteúdo: {response.text[:500]}...")
+                return False, erros
+                
+        except requests.exceptions.Timeout:
+            erro = "Timeout na operação batch"
+            erros.append(erro)
             self.logger.error(erro)
-            return False, [erro]
-    
+            return False, erros
+        except requests.exceptions.ConnectionError as e:
+            erro = f"Erro de conexão na operação batch: {str(e)}"
+            erros.append(erro)
+            self.logger.error(erro)
+            return False, erros
+        except Exception as e:
+            erro = f"Erro geral na operação batch: {str(e)}"
+            erros.append(erro)
+            self.logger.error(erro)
+            return False, erros
     
     def sincronizar_manual(self, gerenciador_feriados, gerenciador_eventos) -> Dict:
         """Executa sincronização manual com CLP"""
@@ -590,8 +495,8 @@ class SincronizadorCLP:
             # Fazer backup
             self._fazer_backup_dados(dados)
             
-            # Escrever dados
-            sucesso_escrita, erros_escrita = self._escrever_dados_sequencial(dados)
+            # Escrever dados usando API batch
+            sucesso_escrita, erros_escrita = self._escrever_dados_batch(dados)
             
             # Atualizar status
             sucesso_total = sucesso_escrita
@@ -682,121 +587,153 @@ class SincronizadorCLP:
         return False
     
     def limpar_todos_dados_clp(self) -> Tuple[bool, List[str]]:
-        """Limpa todos os dados do CLP (feriados e eventos do Plenário)"""
+        """Limpa todos os dados do CLP usando a nova API batch"""
         erros = []
-        sucesso = True
         
         try:
             if not self.config['API_BASE_URL']:
                 return False, ["URL da API não configurada"]
             
-            self.logger.info("Iniciando limpeza completa de dados no CLP...")
+            self.logger.info("Iniciando limpeza completa do CLP usando API batch...")
+            
+            # Preparar todas as operações de limpeza em lote
+            operations = []
             
             # Limpar todos os slots de feriados (N33 e N34)
             max_feriados = self.config['MAX_FERIADOS']
-            for i in range(max_feriados):
-                try:
-                    # Limpar dia (N33:i)
-                    url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N33%253A{i}/0"
-                    response_dia = self._fazer_requisicao_com_correcao_redirect(url_dia, f"limpeza completa feriado {i} dia")
-                    
-                    # Limpar mês (N34:i)
-                    url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N34%253A{i}/0"
-                    response_mes = self._fazer_requisicao_com_correcao_redirect(url_mes, f"limpeza completa feriado {i} mês")
-                    
-                    if response_dia.status_code == 401 or response_mes.status_code == 401:
-                        return False, ["Erro de autenticação ao limpar feriados"]
-                    elif response_dia.status_code != 200 or response_mes.status_code != 200:
-                        erro = f"Erro ao limpar feriado slot {i}: dia={response_dia.status_code}, mês={response_mes.status_code}"
-                        erros.append(erro)
-                        sucesso = False
-                    else:
-                        # Verificar se retornou {"sucesso":true}
-                        try:
-                            data_dia = response_dia.json()
-                            data_mes = response_mes.json()
-                            if not (data_dia.get('sucesso') and data_mes.get('sucesso')):
-                                erro = f"Falha na limpeza do feriado slot {i}: respostas inválidas"
-                                erros.append(erro)
-                                sucesso = False
-                        except:
-                            erro = f"Erro ao verificar resposta da limpeza do feriado slot {i}"
-                            erros.append(erro)
-                            sucesso = False
-                    
-                    time.sleep(0.1)
-                    
-                except Exception as e:
-                    erro = f"Erro ao limpar feriado slot {i}: {str(e)}"
-                    erros.append(erro)
-                    sucesso = False
+            self.logger.info(f"Preparando limpeza de {max_feriados} slots de feriados...")
             
-            # Limpar todos os slots de eventos do Plenário (N60:0-N65:9)
+            for i in range(max_feriados):
+                operations.append({"tag_address": f"N33:{i}", "value": "0"})
+                operations.append({"tag_address": f"N34:{i}", "value": "0"})
+            
+            # Limpar todos os slots de eventos do Plenário (N60-N65)
             max_eventos = self.config.get('MAX_EVENTOS', 10)
-            self.logger.info(f"Limpando eventos do Plenário no CLP...")
+            self.logger.info(f"Preparando limpeza de {max_eventos} slots de eventos do Plenário...")
             
             for i in range(max_eventos):
+                operations.append({"tag_address": f"N60:{i}", "value": "0"})
+                operations.append({"tag_address": f"N61:{i}", "value": "0"})
+                operations.append({"tag_address": f"N62:{i}", "value": "0"})
+                operations.append({"tag_address": f"N63:{i}", "value": "0"})
+                operations.append({"tag_address": f"N64:{i}", "value": "0"})
+                operations.append({"tag_address": f"N65:{i}", "value": "0"})
+            
+            # Preparar payload para API batch
+            payload = {
+                "clp_address": self.config['CLP_IP'],
+                "operations": operations
+            }
+            
+            self.logger.info(f"Enviando {len(operations)} operações de limpeza em lote para o CLP")
+            self.logger.debug(f"Payload de limpeza: {json.dumps(payload, indent=2)}")
+            
+            # Fazer requisição POST para API batch
+            url_batch = f"{self.config['API_BASE_URL']}/api/tag_write_batch"
+            headers = {'Content-Type': 'application/json'}
+            
+            response = self.session.post(
+                url_batch, 
+                json=payload, 
+                headers=headers, 
+                timeout=self.config['TIMEOUT'] * 3,  # Timeout maior para operação batch
+                allow_redirects=False
+            )
+            
+            # Verificar redirecionamento
+            if response.status_code in [301, 302, 303, 307, 308]:
+                redirect_url = response.headers.get('Location', '')
+                self.logger.warning(f"Redirecionamento detectado na limpeza batch: {redirect_url}")
+                
+                # Corrigir domínio incorreto se necessário
+                if 'automacao.tce.go.br' in redirect_url and 'automacao.tce.go.gov.br' not in redirect_url:
+                    corrected_url = redirect_url.replace('automacao.tce.go.br', 'automacao.tce.go.gov.br')
+                    self.logger.warning(f"Corrigindo domínio na limpeza batch: {corrected_url}")
+                    response = self.session.post(
+                        corrected_url, 
+                        json=payload, 
+                        headers=headers, 
+                        timeout=self.config['TIMEOUT'] * 3
+                    )
+                elif 'automacao.tce.go.gov.br' in redirect_url:
+                    response = self.session.post(
+                        redirect_url, 
+                        json=payload, 
+                        headers=headers, 
+                        timeout=self.config['TIMEOUT'] * 3
+                    )
+                else:
+                    self.logger.error(f"Redirecionamento para domínio desconhecido: {redirect_url}")
+                    return False, [f"Redirecionamento inválido: {redirect_url}"]
+            
+            self.logger.info(f"Resposta da API batch de limpeza: Status {response.status_code}")
+            
+            if response.status_code == 401:
+                return False, ["Erro de autenticação na limpeza batch"]
+            elif response.status_code == 200:
+                # Processar resposta batch
                 try:
-                    # Limpar todas as 6 tags do evento (N60:i a N65:i)
-                    tags_limpar = [
-                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N60%253A{i}/0", f"N60:{i}"),
-                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N61%253A{i}/0", f"N61:{i}"),
-                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N62%253A{i}/0", f"N62:{i}"),
-                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N63%253A{i}/0", f"N63:{i}"),
-                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N64%253A{i}/0", f"N64:{i}"),
-                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N65%253A{i}/0", f"N65:{i}")
-                    ]
+                    batch_result = response.json()
+                    self.logger.debug(f"Resultado da limpeza batch: {json.dumps(batch_result, indent=2)}")
                     
-                    for url_limpar, tag_nome in tags_limpar:
-                        try:
-                            self.logger.debug(f"Limpando {tag_nome}: {url_limpar}")
-                            response = self._fazer_requisicao_com_correcao_redirect(url_limpar, f"limpeza completa {tag_nome}")
-                            
-                            if response.status_code == 401:
-                                return False, ["Erro de autenticação ao limpar eventos"]
-                            elif response.status_code != 200:
-                                erro = f"Erro ao limpar {tag_nome}: HTTP {response.status_code}"
-                                erros.append(erro)
-                                sucesso = False
-                                self.logger.error(erro)
-                            else:
-                                # Verificar se retornou {"sucesso":true}
-                                try:
-                                    data = response.json()
-                                    if not data.get('sucesso'):
-                                        erro = f"Falha na limpeza de {tag_nome}: resposta inválida - {data}"
-                                        erros.append(erro)
-                                        sucesso = False
-                                        self.logger.error(erro)
-                                    else:
-                                        self.logger.debug(f"{tag_nome} limpo com sucesso")
-                                except Exception as e:
-                                    erro = f"Erro ao fazer parse JSON da resposta de {tag_nome}: {e}"
+                    if batch_result.get('success'):
+                        summary = batch_result.get('summary', {})
+                        total = summary.get('total', 0)
+                        successful = summary.get('successful', 0)
+                        failed = summary.get('failed', 0)
+                        
+                        self.logger.info(f"Limpeza batch concluída: {successful}/{total} operações bem-sucedidas")
+                        
+                        if failed > 0:
+                            # Coletar erros específicos
+                            results = batch_result.get('results', {})
+                            for tag_address, result in results.items():
+                                if not result.get('success'):
+                                    erro = f"Falha na limpeza da tag {tag_address}: {result.get('error', 'erro desconhecido')}"
                                     erros.append(erro)
-                                    sucesso = False
-                                    self.logger.error(f"{erro} - Conteúdo: {response.text[:200]}...")
+                                    self.logger.error(erro)
                             
-                            time.sleep(0.1)
-                            
-                        except Exception as e:
-                            erro = f"Erro ao limpar {tag_nome}: {str(e)}"
-                            erros.append(erro)
-                            sucesso = False
-                            self.logger.error(erro)
-                    
+                            return failed == 0, erros  # Sucesso apenas se nenhuma operação falhou
+                        else:
+                            self.logger.info(f"Limpeza completa concluída: {max_feriados} slots de feriados e {max_eventos} slots de eventos limpos")
+                            return True, []
+                    else:
+                        erro = f"Operação de limpeza batch falhou: {batch_result.get('error', 'erro desconhecido')}"
+                        erros.append(erro)
+                        self.logger.error(erro)
+                        return False, erros
+                
                 except Exception as e:
-                    erro = f"Erro ao limpar evento slot {i}: {str(e)}"
+                    erro = f"Erro ao processar resposta da limpeza batch: {str(e)}"
                     erros.append(erro)
-                    sucesso = False
-            
-            if sucesso:
-                self.logger.info(f"Limpeza completa concluída: {max_feriados} slots de feriados e {max_eventos} slots de eventos limpos")
+                    self.logger.error(f"{erro} - Conteúdo: {response.text[:500]}...")
+                    return False, erros
             else:
-                self.logger.error(f"Limpeza completa falhou com {len(erros)} erros")
-            
-            return sucesso, erros
-            
-        except Exception as e:
-            erro = f"Erro geral na limpeza completa: {str(e)}"
+                erro = f"Erro HTTP na limpeza batch: {response.status_code}"
+                erros.append(erro)
+                self.logger.error(f"{erro} - Conteúdo: {response.text[:500]}...")
+                return False, erros
+                
+        except requests.exceptions.Timeout:
+            erro = "Timeout na limpeza batch"
+            erros.append(erro)
             self.logger.error(erro)
-            return False, [erro]
+            return False, erros
+        except requests.exceptions.ConnectionError as e:
+            erro = f"Erro de conexão na limpeza batch: {str(e)}"
+            erros.append(erro)
+            self.logger.error(erro)
+            return False, erros
+        except Exception as e:
+            erro = f"Erro geral na limpeza batch: {str(e)}"
+            erros.append(erro)
+            self.logger.error(erro)
+            return False, erros
+    
+    def get_status(self) -> Dict:
+        """Retorna o status atual da sincronização"""
+        return self.ultimo_status.copy()
+    
+    def is_sincronizacao_em_andamento(self) -> bool:
+        """Verifica se há sincronização em andamento"""
+        return self._sincronizacao_em_andamento
