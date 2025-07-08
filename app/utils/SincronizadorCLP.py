@@ -367,7 +367,7 @@ class SincronizadorCLP:
             self.logger.debug(f"Payload batch: {json.dumps(payload, indent=2)}")
             
             # Fazer requisição POST para API batch
-            url_batch = f"{self.config['API_BASE_URL']}/api/tag_write_batch"
+            url_batch = f"{self.config['API_BASE_URL']}/tag_write_batch"
             headers = {'Content-Type': 'application/json'}
             
             # DEBUG COMPLETO PARA DIAGNOSTICAR ERRO 405
@@ -730,7 +730,7 @@ class SincronizadorCLP:
             self.logger.debug(f"Payload de limpeza: {json.dumps(payload, indent=2)}")
             
             # Fazer requisição POST para API batch
-            url_batch = f"{self.config['API_BASE_URL']}/api/tag_write_batch"
+            url_batch = f"{self.config['API_BASE_URL']}/tag_write_batch"
             headers = {'Content-Type': 'application/json'}
             
             response = self.session.post(
