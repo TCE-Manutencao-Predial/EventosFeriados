@@ -36,6 +36,15 @@ class IntegracaoCLP:
             'timestamp': datetime.now().isoformat()
         }
     
+    def ler_dados_do_clp(self) -> Dict:
+        """Lê dados atuais do CLP"""
+        sucesso, dados = self.sincronizador.ler_dados_clp()
+        return {
+            'sucesso': sucesso,
+            'dados': dados,
+            'timestamp': datetime.now().isoformat()
+        }
+    
     def obter_status_data(self, dia: int, mes: int, ano: int) -> Dict:
         """
         Obtém status completo de uma data específica

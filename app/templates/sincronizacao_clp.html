@@ -383,7 +383,9 @@
                     <button class="sync-button" onclick="verificarConectividade()" id="btn-conectividade">
                         Testar Conexão
                     </button>
-
+                    <button class="sync-button" onclick="lerDadosCLP()" id="btn-ler-dados">
+                        Ler Todos os Dados
+                    </button>
                     <button class="sync-button" onclick="atualizarStatus()" id="btn-atualizar">
                         Atualizar Status
                     </button>
@@ -407,12 +409,15 @@
                     <p><strong>Último envio:</strong> <span id="feriados-ultimo">-</span></p>
                 </div>
                 <div class="d-flex flex-wrap align-items-center">
+                    <button class="sync-button" onclick="lerFeriados()" id="btn-ler-feriados">
+                        Ler Feriados
+                    </button>
                     <button class="sync-button" onclick="limparFeriados()" id="btn-limpar-feriados" style="background: linear-gradient(135deg, #ffc107, #e0a800);">
                         Limpar Feriados
                     </button>
                 </div>
                 <div id="feriados-dados" class="mt-3" style="display: none;">
-                    <small><strong>Dados enviados para o CLP:</strong></small>
+                    <small><strong>Dados no CLP:</strong></small>
                     <div id="feriados-lista" class="log-container" style="max-height: 200px;"></div>
                 </div>
             </div>
@@ -428,12 +433,15 @@
                     <p><strong>Último envio:</strong> <span id="eventos-ultimo">-</span></p>
                 </div>
                 <div class="d-flex flex-wrap align-items-center">
+                    <button class="sync-button" onclick="lerEventosPlenario()" id="btn-ler-eventos">
+                        Ler Eventos
+                    </button>
                     <button class="sync-button" onclick="limparEventosPlenario()" id="btn-limpar-eventos" style="background: linear-gradient(135deg, #ffc107, #e0a800);">
                         Limpar Eventos
                     </button>
                 </div>
                 <div id="eventos-dados" class="mt-3" style="display: none;">
-                    <small><strong>Dados enviados para o CLP:</strong></small>
+                    <small><strong>Dados no CLP:</strong></small>
                     <div id="eventos-lista" class="log-container" style="max-height: 200px;"></div>
                 </div>
             </div>
@@ -494,11 +502,11 @@
         
         <div class="col-md-6">
             <div class="status-card">
-                <h5>Status de Sincronização</h5>
-                <div id="sync-data">
-                    <div>Feriados sincronizados: <span id="sync-feriados">-</span></div>
-                    <div>Eventos sincronizados: <span id="sync-eventos">-</span></div>
-                    <div>Última sincronização: <span id="sync-timestamp">-</span></div>
+                <h5>Dados no CLP</h5>
+                <div id="clp-data">
+                    <div>Feriados: <span id="clp-feriados">-</span></div>
+                    <div>Eventos: <span id="clp-eventos">-</span></div>
+                    <div>Última leitura: <span id="clp-timestamp">-</span></div>
                 </div>
             </div>
         </div>
@@ -698,6 +706,32 @@ async function verificarConectividade() {
     }
 }
 
+// Função para ler dados do CLP
+async function lerDadosCLP() {
+    adicionarLog('Lendo dados do CLP...', 'info');
+    
+    try {
+        const response = await fetch('{{ url_for("api_clp.obter_dados_clp") }}');
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+            const dados = resultado.dados;
+            adicionarLog(`Dados lidos do CLP: ${dados.feriados?.length || 0} feriados, ${dados.eventos?.length || 0} eventos`, 'success');
+            
+            document.getElementById('clp-feriados').textContent = dados.feriados?.length || 0;
+            document.getElementById('clp-eventos').textContent = dados.eventos?.length || 0;
+            document.getElementById('clp-timestamp').textContent = new Date(resultado.timestamp).toLocaleString();
+            
+            mostrarMensagem('Dados do CLP lidos com sucesso!', 'success');
+        } else {
+            adicionarLog(`Erro ao ler dados do CLP: ${resultado.dados.erro}`, 'error');
+            mostrarMensagem(`Erro ao ler dados do CLP: ${resultado.dados.erro}`, 'error');
+        }
+    } catch (error) {
+        adicionarLog(`Erro ao ler dados do CLP: ${error.message}`, 'error');
+        mostrarMensagem('Erro ao ler dados do CLP', 'error');
+    }
+}
 
 // Função para atualizar status geral
 async function atualizarStatus() {
@@ -718,11 +752,6 @@ async function atualizarStatus() {
             // Atualizar contadores
             document.getElementById('feriados-slots').textContent = `${feriados}/20`;
             document.getElementById('eventos-slots').textContent = `${eventos}/10`;
-            
-            // Atualizar dados de sincronização
-            document.getElementById('sync-feriados').textContent = feriados;
-            document.getElementById('sync-eventos').textContent = eventos;
-            document.getElementById('sync-timestamp').textContent = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
         }
         
         // Status da conexão
@@ -861,9 +890,89 @@ async function limparFeriados() {
     }
 }
 
+// Função para ler especificamente feriados
+async function lerFeriados() {
+    adicionarLog('Lendo feriados do CLP...', 'info');
+    
+    try {
+        const response = await fetch('{{ url_for("api_clp.obter_dados_clp") }}');
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+            const feriados = resultado.dados.feriados || [];
+            adicionarLog(`Lidos ${feriados.length} feriados do CLP`, 'success');
+            
+            document.getElementById('feriados-slots').textContent = `${feriados.length}/20`;
+            
+            // Mostrar dados dos feriados
+            const feriadosDiv = document.getElementById('feriados-dados');
+            const feriadosLista = document.getElementById('feriados-lista');
+            
+            if (feriados.length > 0) {
+                let html = '';
+                feriados.forEach(feriado => {
+                    html += `Slot ${feriado.slot}: ${feriado.dia.toString().padStart(2, '0')}/${feriado.mes.toString().padStart(2, '0')}\n`;
+                });
+                feriadosLista.textContent = html;
+                feriadosDiv.style.display = 'block';
+            } else {
+                feriadosLista.textContent = 'Nenhum feriado encontrado no CLP.';
+                feriadosDiv.style.display = 'block';
+            }
+            
+            mostrarMensagem('Feriados lidos com sucesso!', 'success');
+        } else {
+            adicionarLog(`Erro ao ler feriados: ${resultado.dados.erro}`, 'error');
+            mostrarMensagem(`Erro ao ler feriados: ${resultado.dados.erro}`, 'error');
+        }
+    } catch (error) {
+        adicionarLog(`Erro ao ler feriados: ${error.message}`, 'error');
+        mostrarMensagem('Erro ao ler feriados', 'error');
+    }
+}
 
-
-
+// Função para ler especificamente eventos do Plenário
+async function lerEventosPlenario() {
+    adicionarLog('Lendo eventos do Plenário do CLP...', 'info');
+    
+    try {
+        const response = await fetch('{{ url_for("api_clp.listar_eventos_plenario_clp") }}');
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+            const eventos = resultado.eventos || [];
+            adicionarLog(`Lidos ${eventos.length} eventos do Plenário do CLP`, 'success');
+            
+            document.getElementById('eventos-slots').textContent = `${eventos.length}/10`;
+            
+            // Mostrar dados dos eventos
+            const eventosDiv = document.getElementById('eventos-dados');
+            const eventosLista = document.getElementById('eventos-lista');
+            
+            if (eventos.length > 0) {
+                let html = '';
+                eventos.forEach(evento => {
+                    const horaInicio = `${evento.hora_inicio.toString().padStart(2, '0')}:${evento.minuto_inicio.toString().padStart(2, '0')}`;
+                    const horaFim = `${evento.hora_fim.toString().padStart(2, '0')}:${evento.minuto_fim.toString().padStart(2, '0')}`;
+                    html += `Slot ${evento.slot}: ${evento.dia.toString().padStart(2, '0')}/${evento.mes.toString().padStart(2, '0')} ${horaInicio}-${horaFim}\n`;
+                });
+                eventosLista.textContent = html;
+                eventosDiv.style.display = 'block';
+            } else {
+                eventosLista.textContent = 'Nenhum evento encontrado no CLP.';
+                eventosDiv.style.display = 'block';
+            }
+            
+            mostrarMensagem('Eventos do Plenário lidos com sucesso!', 'success');
+        } else {
+            adicionarLog(`Erro ao ler eventos do Plenário: ${resultado.erro}`, 'error');
+            mostrarMensagem(`Erro ao ler eventos do Plenário: ${resultado.erro}`, 'error');
+        }
+    } catch (error) {
+        adicionarLog(`Erro ao ler eventos do Plenário: ${error.message}`, 'error');
+        mostrarMensagem('Erro ao ler eventos do Plenário', 'error');
+    }
+}
 
 // Função para limpar eventos do Plenário (utilizando a limpeza geral por enquanto)
 async function limparEventosPlenario() {

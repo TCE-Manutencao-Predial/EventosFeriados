@@ -132,6 +132,130 @@ class SincronizadorCLP:
             self.logger.error(f"Erro inesperado na verificação de conectividade: {e}")
             return False, f"Erro inesperado: {str(e)}"
     
+    def ler_dados_clp(self) -> Tuple[bool, Dict]:
+        """Lê os dados atuais do CLP para comparação"""
+        try:
+            if not self.config['API_BASE_URL']:
+                return False, {"erro": "URL da API não configurada"}
+            
+            auth = HTTPBasicAuth(self.config['AUTH_USER'], self.config['AUTH_PASS'])
+            dados_clp = {
+                'feriados': [],
+                'eventos_plenario': [],
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            # Ler todas as tags de feriados (N33:0-19 para dias e N34:0-19 para meses)
+            for i in range(self.config['MAX_FERIADOS']):
+                try:
+                    # Ler dia (N33:i)
+                    url_dia = f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N33%253A{i}"
+                    response_dia = requests.get(url_dia, auth=auth, timeout=self.config['TIMEOUT'])
+                    
+                    # Ler mês (N34:i)
+                    url_mes = f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N34%253A{i}"
+                    response_mes = requests.get(url_mes, auth=auth, timeout=self.config['TIMEOUT'])
+                    
+                    if response_dia.status_code == 200 and response_mes.status_code == 200:
+                        data_dia = response_dia.json()
+                        data_mes = response_mes.json()
+                        
+                        dia = data_dia.get('valor', 0)
+                        mes = data_mes.get('valor', 0)
+                        
+                        # Se dia e mês são válidos (não zero), adicionar como feriado
+                        if dia > 0 and mes > 0 and dia <= 31 and mes <= 12:
+                            dados_clp['feriados'].append({
+                                'slot': i,
+                                'dia': dia,
+                                'mes': mes
+                            })
+                    elif response_dia.status_code == 401 or response_mes.status_code == 401:
+                        return False, {"erro": "Erro de autenticação ao ler dados"}
+                    
+                except Exception as e:
+                    self.logger.warning(f"Erro ao ler slot {i}: {e}")
+                    continue
+            
+            # Ler eventos do Plenário (tags N60:0-N65:9 para até 10 eventos)
+            max_eventos = min(10, self.config.get('MAX_EVENTOS', 10))
+            for i in range(max_eventos):
+                try:
+                    # Estrutura de tags: N60:i (dia), N61:i (mês), N62:i (hora início), 
+                    # N63:i (minuto início), N64:i (hora fim), N65:i (minuto fim)
+                    self.logger.debug(f"Lendo evento slot {i} do CLP...")
+                    
+                    # Ler todas as 6 tags do evento
+                    urls = [
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N60%253A{i}",      # dia
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N61%253A{i}",      # mês
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N62%253A{i}",      # hora início
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N63%253A{i}",      # minuto início
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N64%253A{i}",      # hora fim
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N65%253A{i}"       # minuto fim
+                    ]
+                    
+                    responses = []
+                    for j, url in enumerate(urls):
+                        try:
+                            response = requests.get(url, auth=auth, timeout=self.config['TIMEOUT'])
+                            responses.append(response)
+                            self.logger.debug(f"URL {j}: {url} -> Status: {response.status_code}")
+                        except Exception as e:
+                            self.logger.error(f"Erro ao fazer requisição para URL {j}: {e}")
+                            responses.append(None)
+                    
+                    # Verificar se todas as respostas foram bem-sucedidas
+                    if all(r is not None and r.status_code == 200 for r in responses):
+                        valores = []
+                        for j, response in enumerate(responses):
+                            try:
+                                data = response.json()
+                                valor = data.get('valor', 0)
+                                valores.append(valor)
+                                self.logger.debug(f"Tag {j} valor: {valor}")
+                            except Exception as e:
+                                self.logger.error(f"Erro ao fazer parse JSON da resposta {j}: {e}")
+                                self.logger.error(f"Conteúdo da resposta: {response.text[:200]}...")
+                                valores.append(0)
+                        
+                        dia, mes, hora_inicio, minuto_inicio, hora_fim, minuto_fim = valores
+                        
+                        # Se dia e mês são válidos (não zero), adicionar como evento
+                        if (dia > 0 and mes > 0 and dia <= 31 and mes <= 12 and 
+                            hora_inicio >= 0 and hora_inicio <= 23 and
+                            minuto_inicio >= 0 and minuto_inicio <= 59 and
+                            hora_fim >= 0 and hora_fim <= 23 and
+                            minuto_fim >= 0 and minuto_fim <= 59):
+                            
+                            dados_clp['eventos_plenario'].append({
+                                'slot': i,
+                                'dia': dia,
+                                'mes': mes,
+                                'hora_inicio': hora_inicio,
+                                'minuto_inicio': minuto_inicio,
+                                'hora_fim': hora_fim,
+                                'minuto_fim': minuto_fim
+                            })
+                            self.logger.debug(f"Evento válido encontrado no slot {i}: {dia:02d}/{mes:02d} {hora_inicio:02d}:{minuto_inicio:02d}-{hora_fim:02d}:{minuto_fim:02d}")
+                    elif any(r is not None and r.status_code == 401 for r in responses if r):
+                        return False, {"erro": "Erro de autenticação ao ler dados de eventos"}
+                    else:
+                        status_codes = [r.status_code if r else "timeout" for r in responses]
+                        self.logger.warning(f"Erro ao ler evento slot {i}: códigos={status_codes}")
+                    
+                except Exception as e:
+                    self.logger.error(f"Erro ao ler slot de evento {i}: {e}")
+                    continue
+
+            self.logger.info(f"Lidos {len(dados_clp['feriados'])} feriados e {len(dados_clp['eventos_plenario'])} eventos do CLP")
+            return True, dados_clp
+                
+        except Exception as e:
+            erro = f"Erro ao ler dados do CLP: {str(e)}"
+            self.logger.error(erro)
+            return False, {"erro": erro}
+    
     def _preparar_dados_para_clp(self, gerenciador_feriados, gerenciador_eventos) -> Dict:
         """Prepara os dados para envio ao CLP com filtros otimizados"""
         agora = datetime.now()
@@ -523,6 +647,86 @@ class SincronizadorCLP:
             self.logger.error(erro)
             return False, [erro]
     
+    def _verificar_integridade_dados(self, dados_enviados: Dict) -> Tuple[bool, List[str]]:
+        """Verifica se os dados foram escritos corretamente no CLP"""
+        try:
+            sucesso_leitura, dados_clp = self.ler_dados_clp()
+            if not sucesso_leitura:
+                return False, ["Não foi possível ler dados do CLP para verificação"]
+            
+            erros_integridade = []
+            
+            # Verificar feriados
+            feriados_enviados = len(dados_enviados['feriados'])
+            feriados_clp = len(dados_clp.get('feriados', []))
+            
+            if feriados_enviados != feriados_clp:
+                erros_integridade.append(f"Quantidade de feriados: enviados {feriados_enviados}, no CLP {feriados_clp}")
+            else:
+                # Verificar cada feriado individualmente
+                for feriado_enviado in dados_enviados['feriados']:
+                    slot = feriado_enviado['slot']
+                    dia_enviado = feriado_enviado['dia']
+                    mes_enviado = feriado_enviado['mes']
+                    
+                    # Procurar o feriado correspondente no CLP
+                    feriado_encontrado = False
+                    for feriado_clp in dados_clp['feriados']:
+                        if (feriado_clp['slot'] == slot and 
+                            feriado_clp['dia'] == dia_enviado and 
+                            feriado_clp['mes'] == mes_enviado):
+                            feriado_encontrado = True
+                            break
+                    
+                    if not feriado_encontrado:
+                        erros_integridade.append(f"Feriado {dia_enviado:02d}/{mes_enviado:02d} não encontrado no slot {slot} do CLP")
+            
+            # Verificar eventos do Plenário
+            eventos_enviados = len(dados_enviados.get('eventos_plenario', []))
+            eventos_clp = len(dados_clp.get('eventos_plenario', []))
+            
+            if eventos_enviados != eventos_clp:
+                erros_integridade.append(f"Quantidade de eventos Plenário: enviados {eventos_enviados}, no CLP {eventos_clp}")
+            else:
+                # Verificar cada evento individualmente
+                for evento_enviado in dados_enviados.get('eventos_plenario', []):
+                    slot = evento_enviado['slot']
+                    dia_enviado = evento_enviado['dia']
+                    mes_enviado = evento_enviado['mes']
+                    hora_inicio_enviada = evento_enviado['hora_inicio']
+                    minuto_inicio_enviado = evento_enviado['minuto_inicio']
+                    hora_fim_enviada = evento_enviado['hora_fim']
+                    minuto_fim_enviado = evento_enviado['minuto_fim']
+                    
+                    # Procurar o evento correspondente no CLP
+                    evento_encontrado = False
+                    for evento_clp in dados_clp.get('eventos_plenario', []):
+                        if (evento_clp['slot'] == slot and 
+                            evento_clp['dia'] == dia_enviado and 
+                            evento_clp['mes'] == mes_enviado and
+                            evento_clp['hora_inicio'] == hora_inicio_enviada and
+                            evento_clp['minuto_inicio'] == minuto_inicio_enviado and
+                            evento_clp['hora_fim'] == hora_fim_enviada and
+                            evento_clp['minuto_fim'] == minuto_fim_enviado):
+                            evento_encontrado = True
+                            break
+                    
+                    if not evento_encontrado:
+                        erros_integridade.append(f"Evento {dia_enviado:02d}/{mes_enviado:02d} {hora_inicio_enviada:02d}:{minuto_inicio_enviado:02d}-{hora_fim_enviada:02d}:{minuto_fim_enviado:02d} não encontrado no slot {slot} do CLP")
+
+            sucesso = len(erros_integridade) == 0
+            
+            if sucesso:
+                self.logger.info(f"Verificação de integridade passou: {feriados_clp} feriados e {eventos_clp} eventos confirmados no CLP")
+            else:
+                self.logger.error(f"Verificação de integridade falhou: {len(erros_integridade)} problemas encontrados")
+            
+            return sucesso, erros_integridade
+            
+        except Exception as e:
+            erro = f"Erro ao verificar integridade: {str(e)}"
+            self.logger.error(erro)
+            return False, [erro]
     
     def sincronizar_manual(self, gerenciador_feriados, gerenciador_eventos) -> Dict:
         """Executa sincronização manual com CLP"""
@@ -555,13 +759,16 @@ class SincronizadorCLP:
             # Escrever dados
             sucesso_escrita, erros_escrita = self._escrever_dados_sequencial(dados)
             
+            # Verificar integridade
+            sucesso_verificacao, erros_verificacao = self._verificar_integridade_dados(dados)
+            
             # Atualizar status
-            sucesso_total = sucesso_escrita
+            sucesso_total = sucesso_escrita and sucesso_verificacao
             novo_status = self.ultimo_status.copy()
             novo_status.update({
                 'ultima_tentativa': datetime.now().isoformat(),
                 'clp_disponivel': conectado,
-                'erros': erros_escrita
+                'erros': erros_escrita + erros_verificacao
             })
             
             if sucesso_total:
@@ -588,7 +795,7 @@ class SincronizadorCLP:
                 'eventos_plenario': len(dados.get('eventos_plenario', [])),
                 'slots_utilizados_feriados': f"{len(dados['feriados'])}/{self.config['MAX_FERIADOS']}",
                 'slots_utilizados_eventos': f"{len(dados.get('eventos_plenario', []))}/{self.config.get('MAX_EVENTOS', 10)}",
-                'erros': erros_escrita,
+                'erros': erros_escrita + erros_verificacao,
                 'timestamp': datetime.now().isoformat()
             }
             
