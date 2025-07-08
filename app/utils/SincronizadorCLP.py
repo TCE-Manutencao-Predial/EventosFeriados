@@ -89,6 +89,8 @@ class SincronizadorCLP:
             'status': 'nunca_sincronizado',
             'erros': [],
             'dados_sincronizados': 0,
+            'feriados_sincronizados': 0,
+            'eventos_sincronizados': 0,
             'clp_disponivel': False,
             'versao_dados': 0
         }

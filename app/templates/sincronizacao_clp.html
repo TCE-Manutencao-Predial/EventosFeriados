@@ -646,7 +646,7 @@ async function executarSincronizacao() {
         
         if (resultado.sucesso) {
             mostrarProgresso(true, 'Sincronização concluída!', 100);
-            adicionarLog(`Sincronização concluída: ${resultado.dados_sincronizados} itens (${resultado.feriados} feriados, ${resultado.eventos} eventos)`, 'success');
+            adicionarLog(`Sincronização concluída: ${resultado.dados_sincronizados} itens (${resultado.feriados} feriados, ${resultado.eventos_plenario} eventos)`, 'success');
             mostrarMensagem('Sincronização realizada com sucesso!', 'success');
             
             setTimeout(() => {
