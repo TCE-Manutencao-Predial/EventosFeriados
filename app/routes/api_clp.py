@@ -441,3 +441,95 @@ def listar_eventos_plenario_clp():
     except Exception as e:
         logger.error(f"Erro ao listar eventos do Plenário: {e}")
         return jsonify({'erro': str(e)}), 500
+
+@api_clp_bp.route('/clp/limpar-eventos', methods=['POST'])
+def limpar_eventos_plenario():
+    """Limpa apenas os eventos do Plenário do CLP (N60:0-N65:9)"""
+    try:
+        from requests.auth import HTTPBasicAuth
+        
+        integracao = get_integracao_clp()
+        if not integracao:
+            return jsonify({'erro': 'Serviço indisponível'}), 503
+        
+        # Acessar o sincronizador diretamente
+        sincronizador = integracao.sincronizador
+        api_base = sincronizador.config['API_BASE_URL']
+        clp_ip = sincronizador.config['CLP_IP']
+        max_eventos = sincronizador.config.get('MAX_EVENTOS', 10)
+        auth = HTTPBasicAuth(sincronizador.config['AUTH_USER'], sincronizador.config['AUTH_PASS'])
+        
+        eventos_limpos = 0
+        erros = []
+        
+        logger.info(f"Limpando eventos do Plenário no CLP...")
+        
+        for i in range(max_eventos):
+            try:
+                # Limpar todas as 6 tags do evento (N60:i a N65:i)
+                tags_limpar = [
+                    (f"{api_base}/tag_write/{clp_ip}/N60%253A{i}/0", f"N60:{i}"),
+                    (f"{api_base}/tag_write/{clp_ip}/N61%253A{i}/0", f"N61:{i}"),
+                    (f"{api_base}/tag_write/{clp_ip}/N62%253A{i}/0", f"N62:{i}"),
+                    (f"{api_base}/tag_write/{clp_ip}/N63%253A{i}/0", f"N63:{i}"),
+                    (f"{api_base}/tag_write/{clp_ip}/N64%253A{i}/0", f"N64:{i}"),
+                    (f"{api_base}/tag_write/{clp_ip}/N65%253A{i}/0", f"N65:{i}")
+                ]
+                
+                slot_ok = True
+                for url_limpar, tag_nome in tags_limpar:
+                    try:
+                        logger.debug(f"Limpando {tag_nome}: {url_limpar}")
+                        response = requests.get(url_limpar, auth=auth, timeout=30)
+                        
+                        if response.status_code == 401:
+                            return jsonify({'erro': 'Erro de autenticação'}), 401
+                        elif response.status_code != 200:
+                            erro = f"Erro HTTP ao limpar {tag_nome}: {response.status_code}"
+                            erros.append(erro)
+                            logger.error(erro)
+                            slot_ok = False
+                        else:
+                            # Verificar se retornou {"sucesso":true}
+                            try:
+                                data = response.json()
+                                if data.get('sucesso'):
+                                    logger.debug(f"{tag_nome} limpo com sucesso")
+                                else:
+                                    erro = f"Falha na limpeza de {tag_nome}: {data}"
+                                    erros.append(erro)
+                                    logger.error(erro)
+                                    slot_ok = False
+                            except Exception as e:
+                                erro = f"Erro ao fazer parse JSON de {tag_nome}: {e}"
+                                erros.append(erro)
+                                logger.error(f"{erro} - Resposta: {response.text[:200]}...")
+                                slot_ok = False
+                        
+                        time.sleep(0.1)
+                        
+                    except Exception as e:
+                        erro = f"Erro ao limpar {tag_nome}: {str(e)}"
+                        erros.append(erro)
+                        logger.error(erro)
+                        slot_ok = False
+                
+                if slot_ok:
+                    eventos_limpos += 1
+                    
+            except Exception as e:
+                erro = f"Erro ao limpar evento slot {i}: {str(e)}"
+                erros.append(erro)
+                logger.error(erro)
+        
+        return jsonify({
+            'sucesso': len(erros) == 0,
+            'eventos_limpos': eventos_limpos,
+            'total_slots': max_eventos,
+            'erros': erros,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Erro ao limpar eventos: {e}")
+        return jsonify({'erro': str(e)}), 500

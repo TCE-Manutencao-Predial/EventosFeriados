@@ -35,12 +35,12 @@ CLP_CONFIG = {
         'MES': 'N34'    # N34:0 a N34:19 - meses dos feriados
     },
     'TAGS_EVENTOS_PLENARIO': {
-        'DIA': 'N60',          # N60, N66, N72, etc. - dias dos eventos (a cada 6 tags)
-        'MES': 'N61',          # N61, N67, N73, etc. - meses dos eventos
-        'HORA_INICIO': 'N62',  # N62, N68, N74, etc. - hora de início
-        'MIN_INICIO': 'N63',   # N63, N69, N75, etc. - minuto de início
-        'HORA_FIM': 'N64',     # N64, N70, N76, etc. - hora de fim
-        'MIN_FIM': 'N65'       # N65, N71, N77, etc. - minuto de fim
+        'DIA': 'N60',          # N60:0-9 - dias dos eventos  
+        'MES': 'N61',          # N61:0-9 - meses dos eventos
+        'HORA_INICIO': 'N62',  # N62:0-9 - hora de início
+        'MIN_INICIO': 'N63',   # N63:0-9 - minuto de início
+        'HORA_FIM': 'N64',     # N64:0-9 - hora de fim
+        'MIN_FIM': 'N65'       # N65:0-9 - minuto de fim
     },
     'MAX_EVENTOS': 10  # Máximo de eventos do Plenário
 }

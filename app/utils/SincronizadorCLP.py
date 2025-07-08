@@ -90,30 +90,46 @@ class SincronizadorCLP:
             url_teste = f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N33%253A0"
             auth = HTTPBasicAuth(self.config['AUTH_USER'], self.config['AUTH_PASS'])
             
+            self.logger.debug(f"Testando conectividade com: {url_teste}")
+            
             response = requests.get(
                 url_teste, 
                 auth=auth,
                 timeout=self.config['TIMEOUT']
             )
             
+            self.logger.debug(f"Resposta da conectividade: Status {response.status_code}")
+            
             if response.status_code == 200:
-                data = response.json()
-                if 'valor' in data:
-                    return True, "CLP conectado e responsivo"
-                else:
-                    return False, "CLP respondeu mas formato inesperado"
+                try:
+                    data = response.json()
+                    if 'valor' in data:
+                        self.logger.debug(f"CLP conectado - valor lido: {data.get('valor')}")
+                        return True, "CLP conectado e responsivo"
+                    else:
+                        self.logger.error(f"CLP respondeu mas formato inesperado: {data}")
+                        return False, "CLP respondeu mas formato inesperado"
+                except Exception as e:
+                    self.logger.error(f"Erro ao fazer parse JSON da conectividade: {e}")
+                    self.logger.error(f"Conteúdo da resposta: {response.text[:200]}...")
+                    return False, f"Erro no parse da resposta: {str(e)}"
             elif response.status_code == 401:
                 return False, "Erro de autenticação (credenciais inválidas)"
             elif response.status_code == 403:
                 return False, "Acesso negado (sem permissão)"
             else:
+                self.logger.error(f"CLP respondeu com status inesperado: {response.status_code}")
+                self.logger.error(f"Conteúdo da resposta: {response.text[:200]}...")
                 return False, f"CLP respondeu com status {response.status_code}"
                 
         except requests.exceptions.Timeout:
+            self.logger.error("Timeout na verificação de conectividade")
             return False, "Timeout na conexão com CLP"
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.ConnectionError as e:
+            self.logger.error(f"Erro de conexão na verificação: {e}")
             return False, "Erro de conexão com CLP"
         except Exception as e:
+            self.logger.error(f"Erro inesperado na verificação de conectividade: {e}")
             return False, f"Erro inesperado: {str(e)}"
     
     def ler_dados_clp(self) -> Tuple[bool, Dict]:
@@ -161,34 +177,47 @@ class SincronizadorCLP:
                     self.logger.warning(f"Erro ao ler slot {i}: {e}")
                     continue
             
-            # Ler eventos do Plenário (tags N60-N119 para até 10 eventos)
+            # Ler eventos do Plenário (tags N60:0-N65:9 para até 10 eventos)
             max_eventos = min(10, self.config.get('MAX_EVENTOS', 10))
             for i in range(max_eventos):
                 try:
-                    # Cada evento usa 6 tags consecutivas
-                    base_tag = 60 + (i * 6)
+                    # Estrutura de tags: N60:i (dia), N61:i (mês), N62:i (hora início), 
+                    # N63:i (minuto início), N64:i (hora fim), N65:i (minuto fim)
+                    self.logger.debug(f"Lendo evento slot {i} do CLP...")
                     
                     # Ler todas as 6 tags do evento
                     urls = [
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag}",      # dia
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+1}",    # mês
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+2}",    # hora início
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+3}",    # minuto início
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+4}",    # hora fim
-                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N{base_tag+5}"     # minuto fim
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N60%253A{i}",      # dia
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N61%253A{i}",      # mês
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N62%253A{i}",      # hora início
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N63%253A{i}",      # minuto início
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N64%253A{i}",      # hora fim
+                        f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N65%253A{i}"       # minuto fim
                     ]
                     
                     responses = []
-                    for url in urls:
-                        response = requests.get(url, auth=auth, timeout=self.config['TIMEOUT'])
-                        responses.append(response)
+                    for j, url in enumerate(urls):
+                        try:
+                            response = requests.get(url, auth=auth, timeout=self.config['TIMEOUT'])
+                            responses.append(response)
+                            self.logger.debug(f"URL {j}: {url} -> Status: {response.status_code}")
+                        except Exception as e:
+                            self.logger.error(f"Erro ao fazer requisição para URL {j}: {e}")
+                            responses.append(None)
                     
                     # Verificar se todas as respostas foram bem-sucedidas
-                    if all(r.status_code == 200 for r in responses):
+                    if all(r is not None and r.status_code == 200 for r in responses):
                         valores = []
-                        for response in responses:
-                            data = response.json()
-                            valores.append(data.get('valor', 0))
+                        for j, response in enumerate(responses):
+                            try:
+                                data = response.json()
+                                valor = data.get('valor', 0)
+                                valores.append(valor)
+                                self.logger.debug(f"Tag {j} valor: {valor}")
+                            except Exception as e:
+                                self.logger.error(f"Erro ao fazer parse JSON da resposta {j}: {e}")
+                                self.logger.error(f"Conteúdo da resposta: {response.text[:200]}...")
+                                valores.append(0)
                         
                         dia, mes, hora_inicio, minuto_inicio, hora_fim, minuto_fim = valores
                         
@@ -208,11 +237,15 @@ class SincronizadorCLP:
                                 'hora_fim': hora_fim,
                                 'minuto_fim': minuto_fim
                             })
-                    elif any(r.status_code == 401 for r in responses):
+                            self.logger.debug(f"Evento válido encontrado no slot {i}: {dia:02d}/{mes:02d} {hora_inicio:02d}:{minuto_inicio:02d}-{hora_fim:02d}:{minuto_fim:02d}")
+                    elif any(r is not None and r.status_code == 401 for r in responses if r):
                         return False, {"erro": "Erro de autenticação ao ler dados de eventos"}
+                    else:
+                        status_codes = [r.status_code if r else "timeout" for r in responses]
+                        self.logger.warning(f"Erro ao ler evento slot {i}: códigos={status_codes}")
                     
                 except Exception as e:
-                    self.logger.warning(f"Erro ao ler slot de evento {i}: {e}")
+                    self.logger.error(f"Erro ao ler slot de evento {i}: {e}")
                     continue
 
             self.logger.info(f"Lidos {len(dados_clp['feriados'])} feriados e {len(dados_clp['eventos_plenario'])} eventos do CLP")
@@ -464,73 +497,83 @@ class SincronizadorCLP:
                     minuto_fim = evento['minuto_fim']
                     
                     try:
-                        # Escrever dados do evento usando tags N60-N65 (6 tags por evento)
-                        # N60: dia, N61: mês, N62: hora início, N63: minuto início, N64: hora fim, N65: minuto fim
-                        base_tag = 60 + (slot * 6)  # Cada evento usa 6 tags consecutivas
+                        self.logger.debug(f"Escrevendo evento {evento.get('nome', 'sem nome')} no slot {slot}: {dia:02d}/{mes:02d} {hora_inicio:02d}:{minuto_inicio:02d}-{hora_fim:02d}:{minuto_fim:02d}")
                         
-                        # Escrever dia (N(60+slot*6))
-                        url_dia = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag}/{dia}"
-                        response_dia = requests.get(url_dia, auth=auth, timeout=self.config['TIMEOUT'])
+                        # Estrutura de tags: N60:slot (dia), N61:slot (mês), N62:slot (hora início), 
+                        # N63:slot (minuto início), N64:slot (hora fim), N65:slot (minuto fim)
                         
-                        # Escrever mês (N(61+slot*6))
-                        url_mes = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+1}/{mes}"
-                        response_mes = requests.get(url_mes, auth=auth, timeout=self.config['TIMEOUT'])
+                        # Criar URLs para escrita
+                        urls_dados = [
+                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N60%253A{slot}/{dia}", "dia"),
+                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N61%253A{slot}/{mes}", "mês"),
+                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N62%253A{slot}/{hora_inicio}", "hora início"),
+                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N63%253A{slot}/{minuto_inicio}", "minuto início"),
+                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N64%253A{slot}/{hora_fim}", "hora fim"),
+                            (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N65%253A{slot}/{minuto_fim}", "minuto fim")
+                        ]
                         
-                        # Escrever hora início (N(62+slot*6))
-                        url_h_ini = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+2}/{hora_inicio}"
-                        response_h_ini = requests.get(url_h_ini, auth=auth, timeout=self.config['TIMEOUT'])
-                        
-                        # Escrever minuto início (N(63+slot*6))
-                        url_m_ini = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+3}/{minuto_inicio}"
-                        response_m_ini = requests.get(url_m_ini, auth=auth, timeout=self.config['TIMEOUT'])
-                        
-                        # Escrever hora fim (N(64+slot*6))
-                        url_h_fim = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+4}/{hora_fim}"
-                        response_h_fim = requests.get(url_h_fim, auth=auth, timeout=self.config['TIMEOUT'])
-                        
-                        # Escrever minuto fim (N(65+slot*6))
-                        url_m_fim = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{base_tag+5}/{minuto_fim}"
-                        response_m_fim = requests.get(url_m_fim, auth=auth, timeout=self.config['TIMEOUT'])
-                        
-                        responses = [response_dia, response_mes, response_h_ini, response_m_ini, response_h_fim, response_m_fim]
+                        responses = []
+                        for url, desc in urls_dados:
+                            try:
+                                self.logger.debug(f"Escrevendo {desc} na URL: {url}")
+                                response = requests.get(url, auth=auth, timeout=self.config['TIMEOUT'])
+                                responses.append((response, desc))
+                                self.logger.debug(f"{desc}: Status {response.status_code}")
+                                
+                                # Pequena pausa entre operações para evitar sobrecarga
+                                time.sleep(0.1)
+                                
+                            except Exception as e:
+                                self.logger.error(f"Erro ao escrever {desc}: {e}")
+                                responses.append((None, desc))
                         
                         # Verificar se todas as respostas foram bem-sucedidas
-                        if any(r.status_code == 401 for r in responses):
-                            erro = f"Erro de autenticação ao escrever evento {evento['nome']}"
+                        if any(r is None for r, _ in responses):
+                            erro = f"Falha de conexão ao escrever evento {evento.get('nome', 'sem nome')} no slot {slot}"
                             erros.append(erro)
                             sucesso = False
-                        elif all(r.status_code == 200 for r in responses):
+                        elif any(r.status_code == 401 for r, _ in responses if r):
+                            erro = f"Erro de autenticação ao escrever evento {evento.get('nome', 'sem nome')}"
+                            erros.append(erro)
+                            sucesso = False
+                        elif all(r.status_code == 200 for r, _ in responses if r):
                             # Verificar se todas as escritas retornaram {"sucesso":true}
                             try:
                                 all_success = True
-                                for response in responses:
-                                    data = response.json()
-                                    if not data.get('sucesso'):
-                                        all_success = False
-                                        break
+                                for response, desc in responses:
+                                    if response:
+                                        try:
+                                            data = response.json()
+                                            if not data.get('sucesso'):
+                                                self.logger.error(f"Falha ao escrever {desc}: resposta = {data}")
+                                                all_success = False
+                                        except Exception as e:
+                                            self.logger.error(f"Erro ao fazer parse JSON de {desc}: {e}")
+                                            self.logger.error(f"Conteúdo da resposta: {response.text[:200]}...")
+                                            all_success = False
                                 
                                 if all_success:
                                     eventos_escritos += 1
-                                    self.logger.debug(f"Evento {evento['nome']} escrito no slot {slot}: {dia:02d}/{mes:02d} {hora_inicio:02d}:{minuto_inicio:02d}-{hora_fim:02d}:{minuto_fim:02d}")
+                                    self.logger.info(f"Evento {evento.get('nome', 'sem nome')} escrito com sucesso no slot {slot}")
                                 else:
-                                    erro = f"Falha ao escrever evento {evento['nome']} no slot {slot}: sucesso=false"
+                                    erro = f"Falha ao escrever evento {evento.get('nome', 'sem nome')} no slot {slot}: algumas operações falharam"
                                     erros.append(erro)
                                     sucesso = False
-                            except:
-                                erro = f"Resposta inválida ao escrever evento {evento['nome']} no slot {slot}"
+                            except Exception as e:
+                                erro = f"Erro ao verificar respostas do evento {evento.get('nome', 'sem nome')}: {e}"
                                 erros.append(erro)
                                 sucesso = False
                         else:
-                            status_codes = [r.status_code for r in responses]
-                            erro = f"Erro HTTP ao escrever evento {evento['nome']} no slot {slot}: códigos={status_codes}"
+                            status_codes = [r.status_code if r else "None" for r, _ in responses]
+                            erro = f"Erro HTTP ao escrever evento {evento.get('nome', 'sem nome')} no slot {slot}: códigos={status_codes}"
                             erros.append(erro)
                             sucesso = False
                         
-                        # Pequena pausa entre escritas
+                        # Pausa maior entre eventos
                         time.sleep(0.3)
                         
                     except Exception as e:
-                        erro = f"Erro ao escrever evento {evento['nome']} no slot {slot}: {str(e)}"
+                        erro = f"Erro ao escrever evento {evento.get('nome', 'sem nome')} no slot {slot}: {str(e)}"
                         erros.append(erro)
                         sucesso = False
                 
@@ -543,33 +586,49 @@ class SincronizadorCLP:
                     
                     for i in range(eventos_utilizados, max_eventos):
                         try:
-                            # Limpar todas as 6 tags do evento
-                            base_tag = 60 + (i * 6)
+                            # Limpar todas as 6 tags do evento (N60:i a N65:i)
+                            tags_limpar = [
+                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N60%253A{i}/0", f"N60:{i}"),
+                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N61%253A{i}/0", f"N61:{i}"),
+                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N62%253A{i}/0", f"N62:{i}"),
+                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N63%253A{i}/0", f"N63:{i}"),
+                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N64%253A{i}/0", f"N64:{i}"),
+                                (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N65%253A{i}/0", f"N65:{i}")
+                            ]
                             
-                            for j in range(6):  # 6 tags por evento
-                                tag_num = base_tag + j
-                                url_limpar = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{tag_num}/0"
-                                response = requests.get(url_limpar, auth=auth, timeout=self.config['TIMEOUT'])
-                                
-                                if response.status_code == 401:
-                                    return False, ["Erro de autenticação ao limpar dados de eventos"]
-                                elif response.status_code != 200:
-                                    erro = f"Erro ao limpar tag N{tag_num} do slot de evento {i}: {response.status_code}"
-                                    erros.append(erro)
-                                    self.logger.warning(erro)
-                                else:
-                                    # Verificar se retornou {"sucesso":true}
-                                    try:
-                                        data = response.json()
-                                        if not data.get('sucesso'):
-                                            erro = f"Falha na limpeza da tag N{tag_num} do slot de evento {i}: resposta inválida"
-                                            erros.append(erro)
-                                    except:
-                                        erro = f"Erro ao verificar resposta da limpeza da tag N{tag_num} do slot de evento {i}"
+                            for url_limpar, tag_nome in tags_limpar:
+                                try:
+                                    self.logger.debug(f"Limpando tag {tag_nome}: {url_limpar}")
+                                    response = requests.get(url_limpar, auth=auth, timeout=self.config['TIMEOUT'])
+                                    
+                                    if response.status_code == 401:
+                                        return False, ["Erro de autenticação ao limpar dados de eventos"]
+                                    elif response.status_code != 200:
+                                        erro = f"Erro ao limpar tag {tag_nome} do slot de evento {i}: {response.status_code}"
                                         erros.append(erro)
-                                
-                                # Pequena pausa entre limpezas
-                                time.sleep(0.1)
+                                        self.logger.warning(erro)
+                                    else:
+                                        # Verificar se retornou {"sucesso":true}
+                                        try:
+                                            data = response.json()
+                                            if not data.get('sucesso'):
+                                                erro = f"Falha na limpeza da tag {tag_nome} do slot de evento {i}: resposta inválida"
+                                                erros.append(erro)
+                                                self.logger.warning(erro)
+                                            else:
+                                                self.logger.debug(f"Tag {tag_nome} limpa com sucesso")
+                                        except Exception as e:
+                                            erro = f"Erro ao verificar resposta da limpeza da tag {tag_nome} do slot de evento {i}: {e}"
+                                            erros.append(erro)
+                                            self.logger.error(f"Conteúdo da resposta: {response.text[:200]}...")
+                                    
+                                    # Pequena pausa entre limpezas
+                                    time.sleep(0.1)
+                                    
+                                except Exception as e:
+                                    erro = f"Erro ao limpar tag {tag_nome}: {e}"
+                                    erros.append(erro)
+                                    self.logger.error(erro)
                             
                         except Exception as e:
                             erro = f"Erro ao limpar slot de evento {i}: {str(e)}"
@@ -843,38 +902,58 @@ class SincronizadorCLP:
                     erros.append(erro)
                     sucesso = False
             
-            # Limpar todos os slots de eventos do Plenário
+            # Limpar todos os slots de eventos do Plenário (N60:0-N65:9)
             max_eventos = self.config.get('MAX_EVENTOS', 10)
+            self.logger.info(f"Limpando eventos do Plenário no CLP...")
+            
             for i in range(max_eventos):
                 try:
-                    # Cada evento usa 6 tags consecutivas (N60-N119 para 10 eventos)
-                    base_tag = 60 + (i * 6)
+                    # Limpar todas as 6 tags do evento (N60:i a N65:i)
+                    tags_limpar = [
+                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N60%253A{i}/0", f"N60:{i}"),
+                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N61%253A{i}/0", f"N61:{i}"),
+                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N62%253A{i}/0", f"N62:{i}"),
+                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N63%253A{i}/0", f"N63:{i}"),
+                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N64%253A{i}/0", f"N64:{i}"),
+                        (f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N65%253A{i}/0", f"N65:{i}")
+                    ]
                     
-                    for j in range(6):  # 6 tags por evento
-                        tag_num = base_tag + j
-                        url_limpar = f"{self.config['API_BASE_URL']}/tag_write/{self.config['CLP_IP']}/N{tag_num}/0"
-                        response = requests.get(url_limpar, auth=auth, timeout=self.config['TIMEOUT'])
-                        
-                        if response.status_code == 401:
-                            return False, ["Erro de autenticação ao limpar eventos"]
-                        elif response.status_code != 200:
-                            erro = f"Erro ao limpar evento tag N{tag_num} do slot {i}: {response.status_code}"
-                            erros.append(erro)
-                            sucesso = False
-                        else:
-                            # Verificar se retornou {"sucesso":true}
-                            try:
-                                data = response.json()
-                                if not data.get('sucesso'):
-                                    erro = f"Falha na limpeza da tag N{tag_num} do evento slot {i}: resposta inválida"
-                                    erros.append(erro)
-                                    sucesso = False
-                            except:
-                                erro = f"Erro ao verificar resposta da limpeza da tag N{tag_num} do evento slot {i}"
+                    for url_limpar, tag_nome in tags_limpar:
+                        try:
+                            self.logger.debug(f"Limpando {tag_nome}: {url_limpar}")
+                            response = requests.get(url_limpar, auth=auth, timeout=self.config['TIMEOUT'])
+                            
+                            if response.status_code == 401:
+                                return False, ["Erro de autenticação ao limpar eventos"]
+                            elif response.status_code != 200:
+                                erro = f"Erro ao limpar {tag_nome}: HTTP {response.status_code}"
                                 erros.append(erro)
                                 sucesso = False
-                        
-                        time.sleep(0.1)
+                                self.logger.error(erro)
+                            else:
+                                # Verificar se retornou {"sucesso":true}
+                                try:
+                                    data = response.json()
+                                    if not data.get('sucesso'):
+                                        erro = f"Falha na limpeza de {tag_nome}: resposta inválida - {data}"
+                                        erros.append(erro)
+                                        sucesso = False
+                                        self.logger.error(erro)
+                                    else:
+                                        self.logger.debug(f"{tag_nome} limpo com sucesso")
+                                except Exception as e:
+                                    erro = f"Erro ao fazer parse JSON da resposta de {tag_nome}: {e}"
+                                    erros.append(erro)
+                                    sucesso = False
+                                    self.logger.error(f"{erro} - Conteúdo: {response.text[:200]}...")
+                            
+                            time.sleep(0.1)
+                            
+                        except Exception as e:
+                            erro = f"Erro ao limpar {tag_nome}: {str(e)}"
+                            erros.append(erro)
+                            sucesso = False
+                            self.logger.error(erro)
                     
                 except Exception as e:
                     erro = f"Erro ao limpar evento slot {i}: {str(e)}"
