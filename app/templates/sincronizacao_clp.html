@@ -911,8 +911,11 @@ async function limparEventosAuditorio() {
         const resultado = await response.json();
         
         if (resultado.sucesso) {
-            adicionarLog(`Eventos do Auditório limpos: ${resultado.slots_limpos}/${resultado.total_slots} slots`, 'success');
-            mostrarMensagem(`Eventos do Auditório limpos com sucesso! ${resultado.slots_limpos} slots zerados.`, 'success');
+            const slotsLimpos = resultado.slots_limpos || 0;
+            const totalSlots = resultado.total_slots || 10;
+            
+            adicionarLog(`Eventos do Auditório limpos: ${slotsLimpos}/${totalSlots} slots`, 'success');
+            mostrarMensagem(`Eventos do Auditório limpos com sucesso! ${slotsLimpos} slots zerados.`, 'success');
             
             // Atualizar display
             document.getElementById('eventos-auditorio-slots').textContent = '0/10';
@@ -920,8 +923,9 @@ async function limparEventosAuditorio() {
             
             atualizarStatusAuditorio();
         } else {
-            adicionarLog(`Erro ao limpar eventos do Auditório: ${resultado.erro}`, 'error');
-            mostrarMensagem(`Erro ao limpar eventos do Auditório: ${resultado.erro}`, 'error');
+            const erro = resultado.erro || resultado.error || 'Erro desconhecido';
+            adicionarLog(`Erro ao limpar eventos do Auditório: ${erro}`, 'error');
+            mostrarMensagem(`Erro ao limpar eventos do Auditório: ${erro}`, 'error');
         }
     } catch (error) {
         adicionarLog(`Erro ao limpar eventos do Auditório: ${error.message}`, 'error');
@@ -949,17 +953,18 @@ async function sincronizarAuditorio() {
         const resultado = await response.json();
         
         if (resultado.sucesso) {
-            adicionarLog(`Sincronização do Auditório concluída: ${resultado.dados_sincronizados} eventos`, 'success');
+            const dadosSincronizados = resultado.dados_sincronizados || 0;
+            adicionarLog(`Sincronização do Auditório concluída: ${dadosSincronizados} eventos`, 'success');
             mostrarMensagem('Sincronização do Auditório realizada com sucesso!', 'success');
             
             // Atualizar display
-            const eventosCount = resultado.dados_sincronizados;
-            document.getElementById('eventos-auditorio-slots').textContent = `${eventosCount}/10`;
+            document.getElementById('eventos-auditorio-slots').textContent = `${dadosSincronizados}/10`;
             
             atualizarStatusAuditorio();
         } else {
-            adicionarLog(`Erro na sincronização do Auditório: ${resultado.erro}`, 'error');
-            mostrarMensagem(`Erro na sincronização do Auditório: ${resultado.erro}`, 'error');
+            const erro = resultado.erro || resultado.error || 'Erro desconhecido';
+            adicionarLog(`Erro na sincronização do Auditório: ${erro}`, 'error');
+            mostrarMensagem(`Erro na sincronização do Auditório: ${erro}`, 'error');
         }
     } catch (error) {
         adicionarLog(`Erro de conexão com CLP Auditório: ${error.message}`, 'error');
@@ -988,16 +993,16 @@ async function atualizarStatusAuditorio() {
             document.getElementById('auditorio-sync').textContent = new Date(statusData.ultima_sincronizacao).toLocaleString();
             document.getElementById('eventos-auditorio-ultimo').textContent = new Date(statusData.ultima_sincronizacao).toLocaleString();
             
-            if (statusData.eventos_sincronizados !== undefined) {
-                document.getElementById('eventos-auditorio-slots').textContent = `${statusData.eventos_sincronizados}/10`;
-            }
+            const eventosSincronizados = statusData.eventos_sincronizados || 0;
+            document.getElementById('eventos-auditorio-slots').textContent = `${eventosSincronizados}/10`;
         } else {
             document.getElementById('auditorio-sync').textContent = 'Nunca sincronizado';
             document.getElementById('eventos-auditorio-ultimo').textContent = '-';
+            document.getElementById('eventos-auditorio-slots').textContent = '0/10';
         }
         
         // Próxima sincronização
-        if (statusData.sync_automatica_habilitada) {
+        if (statusData.sync_automatica_habilitada && statusData.horarios_sincronizacao) {
             document.getElementById('auditorio-proxima').textContent = `Automática (${statusData.horarios_sincronizacao.join(', ')})`;
         } else {
             document.getElementById('auditorio-proxima').textContent = 'Desabilitada';

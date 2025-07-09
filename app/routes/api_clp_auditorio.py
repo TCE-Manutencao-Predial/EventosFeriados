@@ -221,17 +221,26 @@ def limpar_eventos_auditorio():
         # Usar a funcionalidade de limpeza completa do sincronizador
         sucesso, erros = integracao.sincronizador.limpar_todos_dados_clp()
         
+        max_eventos = integracao.sincronizador.config['MAX_EVENTOS']
+        slots_limpos = max_eventos if sucesso and len(erros) == 0 else (max_eventos - len(erros) if len(erros) < max_eventos else 0)
+        
         return jsonify({
             'sucesso': sucesso,
-            'eventos_limpos': integracao.sincronizador.config['MAX_EVENTOS'] if sucesso else 0,
-            'total_slots': integracao.sincronizador.config['MAX_EVENTOS'],
+            'slots_limpos': slots_limpos,
+            'total_slots': max_eventos,
             'erros': erros,
             'timestamp': datetime.now().isoformat()
         })
         
     except Exception as e:
         logger.error(f"Erro ao limpar eventos CLP Auditório: {e}")
-        return jsonify({'erro': str(e)}), 500
+        return jsonify({
+            'sucesso': False,
+            'slots_limpos': 0,
+            'total_slots': 10,
+            'erro': str(e),
+            'timestamp': datetime.now().isoformat()
+        }), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/limpar-completo', methods=['POST'])
 def limpar_dados_completo_auditorio():

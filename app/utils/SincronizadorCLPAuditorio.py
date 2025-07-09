@@ -600,6 +600,10 @@ class SincronizadorCLPAuditorio:
         conectado, msg_conectividade = self.verificar_conectividade_clp()
         
         status = self.ultimo_status.copy()
+        
+        # Normalizar o campo de eventos sincronizados para compatibilidade com o frontend
+        eventos_sincronizados = status.get('eventos_auditorio_sincronizados', 0)
+        
         status.update({
             'clp_online': conectado,
             'msg_conectividade': msg_conectividade,
@@ -607,7 +611,8 @@ class SincronizadorCLPAuditorio:
             'horarios_sincronizacao': self.config['SYNC_TIMES'],
             'max_eventos': self.config['MAX_EVENTOS'],
             'locais_gerenciados': self.config['LOCAIS_GERENCIADOS'],
-            'clp_ip': self.config['CLP_IP']
+            'clp_ip': self.config['CLP_IP'],
+            'eventos_sincronizados': eventos_sincronizados  # Campo normalizado para o frontend
         })
         
         return status
