@@ -127,16 +127,16 @@ class SincronizadorCLP:
         
         try:
             # Log da configuração para debug
-            self.logger.info(f"Configuração API_BASE_URL: {self.config['API_BASE_URL']}")
+            #self.logger.info(f"Configuração API_BASE_URL: {self.config['API_BASE_URL']}")
             
             # Testa lendo uma tag simples (N33:0)
             url_teste = f"{self.config['API_BASE_URL']}/tag_read/{self.config['CLP_IP']}/N33%253A0"
             
-            self.logger.info(f"Testando conectividade com URL completa: {url_teste}")
+            #self.logger.info(f"Testando conectividade com URL completa: {url_teste}")
             
             response = self._fazer_requisicao_com_correcao_redirect(url_teste, "teste de conectividade")
             
-            self.logger.debug(f"Resposta da conectividade: Status {response.status_code}")
+            #self.logger.debug(f"Resposta da conectividade: Status {response.status_code}")
             
             if response.status_code == 200:
                 try:
