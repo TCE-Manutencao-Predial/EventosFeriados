@@ -398,7 +398,7 @@
     <!-- Seções Separadas -->
     <div class="row">
         <!-- Seção Feriados -->
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="status-card">
                 <h5>📅 Feriados (CLP Térreo B1)</h5>
                 <div id="feriados-info">
@@ -419,7 +419,7 @@
         </div>
 
         <!-- Seção Eventos Plenário -->
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="status-card">
                 <h5>🏛️ Eventos Plenário (CLP Térreo B1)</h5>
                 <div id="eventos-info">
@@ -438,26 +438,53 @@
                 </div>
             </div>
         </div>
+
+        <!-- Seção Eventos Auditório -->
+        <div class="col-md-4">
+            <div class="status-card">
+                <h5>🎭 Eventos Auditório (CLP AR)</h5>
+                <div id="eventos-auditorio-info">
+                    <p><strong>Slots utilizados:</strong> <span id="eventos-auditorio-slots">0/10</span></p>
+                    <p><strong>Tags:</strong> N91-N96 (6 tags por evento)</p>
+                    <p><strong>Último envio:</strong> <span id="eventos-auditorio-ultimo">-</span></p>
+                    <p><strong>Locais:</strong> Auditório Nobre, Foyer</p>
+                </div>
+                <div class="d-flex flex-wrap align-items-center">
+                    <button class="sync-button" onclick="limparEventosAuditorio()" id="btn-limpar-eventos-auditorio" style="background: linear-gradient(135deg, #ffc107, #e0a800);">
+                        Limpar Eventos
+                    </button>
+                    <button class="sync-button" onclick="sincronizarAuditorio()" id="btn-sync-auditorio" style="background: linear-gradient(135deg, #28a745, #1e7e34);">
+                        Sincronizar
+                    </button>
+                </div>
+                <div id="eventos-auditorio-dados" class="mt-3" style="display: none;">
+                    <small><strong>Dados enviados para o CLP:</strong></small>
+                    <div id="eventos-auditorio-lista" class="log-container" style="max-height: 200px;"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Planejamento para CLPs Futuros -->
+    <!-- Status dos CLPs -->
     <div class="row">
-        <div class="col-12">
-            <div class="status-card" style="border: 2px dashed #dee2e6; background: #f8f9fa;">
-                <h5 style="color: #6c757d;">🚧 CLPs Futuros (Em Planejamento)</h5>
-                <div class="row">
-                    <div class="col-md-4">
-                        <p><strong>Eventos Auditório Nobre</strong></p>
-                        <small class="text-muted">CLP: A definir<br>Tags: A definir</small>
-                    </div>
-                    <div class="col-md-4">
-                        <p><strong>Eventos Átrio</strong></p>
-                        <small class="text-muted">CLP: A definir<br>Tags: A definir</small>
-                    </div>
-                    <div class="col-md-4">
-                        <p><strong>Outros Locais</strong></p>
-                        <small class="text-muted">Creche, Foyer, etc.<br>CLPs: A definir</small>
-                    </div>
+        <div class="col-md-6">
+            <div class="status-card">
+                <h5>Status CLP Térreo B1 (172.17.85.104)</h5>
+                <div id="status-plenario">
+                    <div><strong>Conexão:</strong> <span id="plenario-conexao">Verificando...</span></div>
+                    <div><strong>Última Sincronização:</strong> <span id="plenario-sync">-</span></div>
+                    <div><strong>Próxima Automática:</strong> <span id="plenario-proxima">-</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="status-card">
+                <h5>Status CLP Auditório AR (172.17.85.123)</h5>
+                <div id="status-auditorio">
+                    <div><strong>Conexão:</strong> <span id="auditorio-conexao">Verificando...</span></div>
+                    <div><strong>Última Sincronização:</strong> <span id="auditorio-sync">-</span></div>
+                    <div><strong>Próxima Automática:</strong> <span id="auditorio-proxima">-</span></div>
                 </div>
             </div>
         </div>
@@ -865,6 +892,124 @@ async function limparFeriados() {
 
 
 
+// Função para limpar eventos do Auditório
+async function limparEventosAuditorio() {
+    if (!confirm('Tem certeza que deseja limpar todos os eventos do Auditório no CLP?')) {
+        return;
+    }
+    
+    adicionarLog('Limpando eventos do Auditório no CLP...', 'info');
+    
+    try {
+        const response = await fetch('{{ url_for("api_clp_auditorio.limpar_eventos_auditorio") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+            adicionarLog(`Eventos do Auditório limpos: ${resultado.slots_limpos}/${resultado.total_slots} slots`, 'success');
+            mostrarMensagem(`Eventos do Auditório limpos com sucesso! ${resultado.slots_limpos} slots zerados.`, 'success');
+            
+            // Atualizar display
+            document.getElementById('eventos-auditorio-slots').textContent = '0/10';
+            document.getElementById('eventos-auditorio-dados').style.display = 'none';
+            
+            atualizarStatusAuditorio();
+        } else {
+            adicionarLog(`Erro ao limpar eventos do Auditório: ${resultado.erro}`, 'error');
+            mostrarMensagem(`Erro ao limpar eventos do Auditório: ${resultado.erro}`, 'error');
+        }
+    } catch (error) {
+        adicionarLog(`Erro ao limpar eventos do Auditório: ${error.message}`, 'error');
+        mostrarMensagem('Erro ao limpar eventos do Auditório', 'error');
+    }
+}
+
+// Função para sincronizar apenas o CLP Auditório
+async function sincronizarAuditorio() {
+    if (syncInProgress) return;
+    
+    syncInProgress = true;
+    document.getElementById('btn-sync-auditorio').disabled = true;
+    
+    adicionarLog('Iniciando sincronização do CLP Auditório...', 'info');
+    
+    try {
+        const response = await fetch('{{ url_for("api_clp_auditorio.executar_sincronizacao_auditorio") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const resultado = await response.json();
+        
+        if (resultado.sucesso) {
+            adicionarLog(`Sincronização do Auditório concluída: ${resultado.dados_sincronizados} eventos`, 'success');
+            mostrarMensagem('Sincronização do Auditório realizada com sucesso!', 'success');
+            
+            // Atualizar display
+            const eventosCount = resultado.dados_sincronizados;
+            document.getElementById('eventos-auditorio-slots').textContent = `${eventosCount}/10`;
+            
+            atualizarStatusAuditorio();
+        } else {
+            adicionarLog(`Erro na sincronização do Auditório: ${resultado.erro}`, 'error');
+            mostrarMensagem(`Erro na sincronização do Auditório: ${resultado.erro}`, 'error');
+        }
+    } catch (error) {
+        adicionarLog(`Erro de conexão com CLP Auditório: ${error.message}`, 'error');
+        mostrarMensagem('Erro de conexão com CLP Auditório', 'error');
+    } finally {
+        syncInProgress = false;
+        document.getElementById('btn-sync-auditorio').disabled = false;
+    }
+}
+
+// Função para atualizar status específico do CLP Auditório
+async function atualizarStatusAuditorio() {
+    try {
+        // Status de conectividade
+        const conectResponse = await fetch('{{ url_for("api_clp_auditorio.verificar_conectividade_auditorio") }}');
+        const conectData = await conectResponse.json();
+        
+        document.getElementById('auditorio-conexao').textContent = conectData.conectado ? 'Online' : 'Offline';
+        document.getElementById('auditorio-conexao').style.color = conectData.conectado ? '#28a745' : '#dc3545';
+        
+        // Status de sincronização
+        const statusResponse = await fetch('{{ url_for("api_clp_auditorio.obter_status_auditorio") }}');
+        const statusData = await statusResponse.json();
+        
+        if (statusData.ultima_sincronizacao) {
+            document.getElementById('auditorio-sync').textContent = new Date(statusData.ultima_sincronizacao).toLocaleString();
+            document.getElementById('eventos-auditorio-ultimo').textContent = new Date(statusData.ultima_sincronizacao).toLocaleString();
+            
+            if (statusData.eventos_sincronizados !== undefined) {
+                document.getElementById('eventos-auditorio-slots').textContent = `${statusData.eventos_sincronizados}/10`;
+            }
+        } else {
+            document.getElementById('auditorio-sync').textContent = 'Nunca sincronizado';
+            document.getElementById('eventos-auditorio-ultimo').textContent = '-';
+        }
+        
+        // Próxima sincronização
+        if (statusData.sync_automatica_habilitada) {
+            document.getElementById('auditorio-proxima').textContent = `Automática (${statusData.horarios_sincronizacao.join(', ')})`;
+        } else {
+            document.getElementById('auditorio-proxima').textContent = 'Desabilitada';
+        }
+        
+    } catch (error) {
+        console.error('Erro ao atualizar status do Auditório:', error);
+        document.getElementById('auditorio-conexao').textContent = 'Erro';
+        document.getElementById('auditorio-conexao').style.color = '#dc3545';
+    }
+}
+
 // Função para limpar eventos do Plenário (utilizando a limpeza geral por enquanto)
 async function limparEventosPlenario() {
     if (!confirm('Tem certeza que deseja limpar todos os eventos do Plenário no CLP?')) {
@@ -944,10 +1089,12 @@ async function limparTodosDados() {
 window.addEventListener('DOMContentLoaded', function() {
     // Carregar status inicial
     atualizarStatus();
+    atualizarStatusAuditorio();
     
     // Atualizar status automaticamente a cada 30 segundos
     setInterval(() => {
         atualizarStatus();
+        atualizarStatusAuditorio();
     }, 30000);
 });
 </script>

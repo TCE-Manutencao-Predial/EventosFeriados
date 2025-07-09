@@ -5,11 +5,13 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 from .SincronizadorCLP import SincronizadorCLP
+from .SincronizadorCLPAuditorio import SincronizadorCLPAuditorio
 
 class AgendadorCLP:
     """
-    Classe responsável por agendar e executar sincronizações automáticas com CLP
+    Classe responsável por agendar e executar sincronizações automáticas com CLPs
     Executa em thread separada para não bloquear a aplicação
+    Gerencia tanto o CLP do Plenário quanto o CLP do Auditório
     """
     
     _instance = None
@@ -17,7 +19,8 @@ class AgendadorCLP:
     
     def __init__(self):
         self.logger = logging.getLogger('EventosFeriados.AgendadorCLP')
-        self.sincronizador = SincronizadorCLP.get_instance()
+        self.sincronizador_plenario = SincronizadorCLP.get_instance()
+        self.sincronizador_auditorio = SincronizadorCLPAuditorio.get_instance()
         self.thread_agendador: Optional[threading.Thread] = None
         self.executando = False
         self.gerenciador_feriados = None
@@ -40,25 +43,64 @@ class AgendadorCLP:
     
     def _loop_agendador(self):
         """Loop principal do agendador executado em thread separada"""
-        self.logger.info("Agendador CLP iniciado")
+        self.logger.info("Agendador CLP iniciado (Plenário + Auditório)")
         
         while self.executando:
             try:
-                # Verificar se deve executar sincronização
-                if self.sincronizador.deve_sincronizar_automaticamente():
+                # Verificar se deve executar sincronização do CLP Plenário
+                if self.sincronizador_plenario.deve_sincronizar_automaticamente():
                     if self.gerenciador_feriados and self.gerenciador_eventos:
-                        self.logger.info("Executando sincronização automática")
-                        resultado = self.sincronizador.sincronizar_manual(
+                        self.logger.info("Executando sincronização automática CLP Plenário")
+                        resultado = self.sincronizador_plenario.sincronizar_manual(
                             self.gerenciador_feriados, 
                             self.gerenciador_eventos
                         )
                         
                         if resultado['sucesso']:
-                            self.logger.info(f"Sincronização automática concluída: {resultado['dados_sincronizados']} itens")
+                            self.logger.info(f"Sincronização automática CLP Plenário concluída: {resultado['dados_sincronizados']} itens")
                         else:
-                            self.logger.error(f"Falha na sincronização automática: {resultado.get('erro', 'Erro desconhecido')}")
+                            self.logger.error(f"Falha na sincronização automática CLP Plenário: {resultado.get('erro', 'Erro desconhecido')}")
                     else:
-                        self.logger.warning("Gerenciadores não inicializados para sincronização automática")
+                        self.logger.warning("Gerenciadores não inicializados para sincronização automática CLP Plenário")
+                
+                # Verificar se deve executar sincronização do CLP Auditório
+                if self.sincronizador_auditorio.config['SYNC_ENABLED']:
+                    # Usar a mesma lógica de horários do CLP Plenário
+                    deve_sincronizar = False
+                    agora = datetime.now()
+                    
+                    for horario in self.sincronizador_auditorio.config['SYNC_TIMES']:
+                        try:
+                            hora_sync = datetime.strptime(horario.strip(), '%H:%M').time()
+                            
+                            # Verificar se estamos no horário de sincronização (com tolerância de 1 minuto)
+                            if (agora.time().hour == hora_sync.hour and 
+                                abs(agora.time().minute - hora_sync.minute) <= 1):
+                                
+                                # Verificar se já sincronizou hoje neste horário
+                                ultima_sync = self.sincronizador_auditorio.ultimo_status.get('ultima_sincronizacao')
+                                if ultima_sync:
+                                    try:
+                                        dt_ultima = datetime.fromisoformat(ultima_sync)
+                                        if (dt_ultima.date() == agora.date() and 
+                                            dt_ultima.time().hour == hora_sync.hour):
+                                            continue  # Já sincronizou hoje neste horário
+                                    except:
+                                        pass  # Se der erro no parse, continua para sincronizar
+                                
+                                deve_sincronizar = True
+                                break
+                        except Exception as e:
+                            self.logger.error(f"Erro ao processar horário de sincronização '{horario}': {e}")
+                    
+                    if deve_sincronizar and self.gerenciador_eventos:
+                        self.logger.info("Executando sincronização automática CLP Auditório")
+                        resultado = self.sincronizador_auditorio.sincronizar_manual(self.gerenciador_eventos)
+                        
+                        if resultado['sucesso']:
+                            self.logger.info(f"Sincronização automática CLP Auditório concluída: {resultado['dados_sincronizados']} itens")
+                        else:
+                            self.logger.error(f"Falha na sincronização automática CLP Auditório: {resultado.get('erro', 'Erro desconhecido')}")
                 
                 # Dormir por 1 minuto antes da próxima verificação
                 time.sleep(60)
@@ -102,16 +144,24 @@ class AgendadorCLP:
             'executando': self.executando,
             'thread_ativa': self.thread_agendador.is_alive() if self.thread_agendador else False,
             'gerenciadores_inicializados': bool(self.gerenciador_feriados and self.gerenciador_eventos),
-            'proximo_horario': self._calcular_proximo_horario()
+            'proximo_horario_plenario': self._calcular_proximo_horario('plenario'),
+            'proximo_horario_auditorio': self._calcular_proximo_horario('auditorio'),
+            'status_plenario': self.sincronizador_plenario.ultimo_status,
+            'status_auditorio': self.sincronizador_auditorio.ultimo_status
         }
     
-    def _calcular_proximo_horario(self) -> Optional[str]:
+    def _calcular_proximo_horario(self, clp_tipo: str) -> Optional[str]:
         """Calcula o próximo horário de sincronização"""
-        if not self.sincronizador.config['SYNC_ENABLED']:
+        if clp_tipo == 'plenario':
+            sincronizador = self.sincronizador_plenario
+        else:  # auditorio
+            sincronizador = self.sincronizador_auditorio
+            
+        if not sincronizador.config['SYNC_ENABLED']:
             return None
         
         agora = datetime.now()
-        horarios = self.sincronizador.config['SYNC_TIMES']
+        horarios = sincronizador.config['SYNC_TIMES']
         
         for horario in horarios:
             hora, minuto = map(int, horario.split(':'))

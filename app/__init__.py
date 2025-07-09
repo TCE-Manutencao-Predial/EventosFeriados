@@ -30,6 +30,37 @@ def create_app():
         eventos_logger.error(f"Erro ao inicializar gerenciador de eventos: {e}")
         app.config['GERENCIADOR_EVENTOS'] = None
     
+    # Inicializa integração CLP Plenário/Feriados
+    try:
+        from .utils.IntegracaoCLP import IntegracaoCLP
+        if app.config['GERENCIADOR_FERIADOS'] and app.config['GERENCIADOR_EVENTOS']:
+            app.config['INTEGRACAO_CLP'] = IntegracaoCLP(
+                app.config['GERENCIADOR_FERIADOS'],
+                app.config['GERENCIADOR_EVENTOS']
+            )
+            eventos_logger.info("Integração CLP Plenário iniciada")
+        else:
+            app.config['INTEGRACAO_CLP'] = None
+            eventos_logger.warning("Integração CLP Plenário não iniciada - gerenciadores indisponíveis")
+    except Exception as e:
+        eventos_logger.error(f"Erro ao inicializar integração CLP Plenário: {e}")
+        app.config['INTEGRACAO_CLP'] = None
+    
+    # Inicializa integração CLP Auditório
+    try:
+        from .utils.IntegracaoCLPAuditorio import IntegracaoCLPAuditorio
+        if app.config['GERENCIADOR_EVENTOS']:
+            app.config['INTEGRACAO_CLP_AUDITORIO'] = IntegracaoCLPAuditorio(
+                app.config['GERENCIADOR_EVENTOS']
+            )
+            eventos_logger.info("Integração CLP Auditório iniciada")
+        else:
+            app.config['INTEGRACAO_CLP_AUDITORIO'] = None
+            eventos_logger.warning("Integração CLP Auditório não iniciada - gerenciador de eventos indisponível")
+    except Exception as e:
+        eventos_logger.error(f"Erro ao inicializar integração CLP Auditório: {e}")
+        app.config['INTEGRACAO_CLP_AUDITORIO'] = None
+    
     # Inicializa agendador CLP
     try:
         from .utils.AgendadorCLP import AgendadorCLP
@@ -76,12 +107,14 @@ def create_app():
     from .routes.api_feriados import api_feriados_bp
     from .routes.api_eventos import api_eventos_bp
     from .routes.api_clp import api_clp_bp
+    from .routes.api_clp_auditorio import api_clp_auditorio_bp
     from .routes.web import web_bp
     
     # IMPORTANTE: Registrar com url_prefix
     app.register_blueprint(api_feriados_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_eventos_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_clp_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    app.register_blueprint(api_clp_auditorio_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(web_bp, url_prefix=ROUTES_PREFIX)
     
     # Rota de status da API
@@ -93,6 +126,10 @@ def create_app():
             'gerenciadores': {
                 'feriados': app.config['GERENCIADOR_FERIADOS'] is not None,
                 'eventos': app.config['GERENCIADOR_EVENTOS'] is not None
+            },
+            'integracao_clp': {
+                'plenario': app.config['INTEGRACAO_CLP'] is not None,
+                'auditorio': app.config['INTEGRACAO_CLP_AUDITORIO'] is not None
             }
         })
     

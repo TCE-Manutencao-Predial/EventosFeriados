@@ -45,6 +45,31 @@ CLP_CONFIG = {
     'MAX_EVENTOS': 10  # Máximo de eventos do Plenário
 }
 
+# Configurações CLP Auditório
+CLP_AUDITORIO_CONFIG = {
+    'API_BASE_URL': os.environ.get('CLP_API_URL', 'https://automacao.tce.go.gov.br/scadaweb/api'),
+    'CLP_IP': '172.17.85.123',  # IP do CLP Auditório AR
+    'AUTH_USER': 'eventosferiados',  # Usuário para autenticação básica
+    'AUTH_PASS': 'WzPcMMFU',  # Senha para autenticação básica
+    'TIMEOUT': int(os.environ.get('CLP_TIMEOUT', '30')),  # Timeout em segundos para requisições
+    'RETRY_COUNT': int(os.environ.get('CLP_RETRY_COUNT', '3')),  # Número de tentativas em caso de falha
+    'SYNC_TIMES': os.environ.get('CLP_SYNC_TIMES', '07:00,18:00').split(','),  # Horários de sincronização automática
+    'SYNC_ENABLED': os.environ.get('CLP_SYNC_ENABLED', 'true').lower() == 'true',  # Habilitar sincronização automática
+    'STATUS_FILE': os.path.join(DATA_DIR, 'clp_auditorio_status.json'),  # Arquivo de status
+    'BACKUP_FILE': os.path.join(DATA_DIR, 'clp_auditorio_backup.json'),   # Backup dos dados
+    # Mapeamento das tags do CLP Auditório para eventos
+    'TAGS_EVENTOS_AUDITORIO': {
+        'DIA': 'N91',          # N91:0-9 - dias dos eventos  
+        'MES': 'N92',          # N92:0-9 - meses dos eventos
+        'HORA_INICIO': 'N93',  # N93:0-9 - hora de início
+        'MIN_INICIO': 'N94',   # N94:0-9 - minuto de início
+        'HORA_FIM': 'N95',     # N95:0-9 - hora de fim
+        'MIN_FIM': 'N96'       # N96:0-9 - minuto de fim
+    },
+    'MAX_EVENTOS': 10,  # Máximo de eventos do Auditório
+    'LOCAIS_GERENCIADOS': ['Auditório Nobre', 'Foyer do Auditório']  # Locais gerenciados por este CLP
+}
+
 def setup_logging():
     """Configura o sistema de logging da aplicação."""
     if not os.path.exists(LOG_DIR):
