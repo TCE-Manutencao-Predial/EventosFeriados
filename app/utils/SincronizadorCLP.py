@@ -651,7 +651,11 @@ class SincronizadorCLP:
     
     def obter_status_sincronizacao(self) -> Dict:
         """Retorna o status atual da sincronização"""
+        self.logger.info("Obtendo status de sincronização...")
+        
         conectado, msg_conectividade = self.verificar_conectividade_clp()
+        
+        self.logger.info(f"Conectividade verificada: conectado={conectado}, mensagem='{msg_conectividade}'")
         
         status = self.ultimo_status.copy()
         status.update({
@@ -661,6 +665,8 @@ class SincronizadorCLP:
             'horarios_sincronizacao': self.config['SYNC_TIMES'],
             'sync_automatica_habilitada': self.config['SYNC_ENABLED']
         })
+        
+        self.logger.info(f"Status compilado: {status}")
         
         return status
     
