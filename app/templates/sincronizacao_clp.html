@@ -336,7 +336,7 @@
         </div>
     </div>
 
-    <!-- Status Geral -->
+    <!-- Status Geral comentado para evitar ambiguidade entre dois CLPs
     <div class="row">
         <div class="col-md-4">
             <div class="status-card">
@@ -370,6 +370,7 @@
             </div>
         </div>
     </div>
+    -->
 
     <!-- Controles -->
     <div class="row">
@@ -547,7 +548,7 @@
     <!-- Mensagens -->
     <div id="messages"></div>
 
-    <!-- Teste de Tags -->
+    <!-- Teste de Tags e Mapeamento TCE comentados conforme solicitado
     <div class="row">
         <div class="col-md-6">
             <div class="status-card">
@@ -582,6 +583,7 @@
             </div>
         </div>
     </div>
+    -->
 
     <!-- Scripts JavaScript -->
 <script>
@@ -715,9 +717,7 @@ async function verificarConectividade() {
             mostrarMensagem(`CLP não acessível: ${resultado.mensagem}`, 'error');
         }
         
-        atualizarIndicadorStatus('connection-indicator', resultado.conectado);
-        document.getElementById('connection-text').textContent = resultado.mensagem;
-        document.getElementById('connection-timestamp').textContent = new Date(resultado.timestamp).toLocaleString();
+        // Elementos de status geral foram removidos - agora apenas mostra nos logs
         
     } catch (error) {
         adicionarLog(`Erro ao verificar conectividade: ${error.message}`, 'error');
@@ -729,64 +729,24 @@ async function verificarConectividade() {
 // Função para atualizar status geral
 async function atualizarStatus() {
     try {
-        console.log('[DEBUG] Iniciando atualizarStatus()');
-        
-        // Status de sincronização
-        const syncUrl = '{{ url_for("api_clp.status_sincronizacao") }}';
-        console.log('[DEBUG] Fazendo fetch para:', syncUrl);
-        
-        const syncResponse = await fetch(syncUrl);
-        console.log('[DEBUG] Response status:', syncResponse.status);
-        
+        // Status de sincronização do CLP Térreo B1
+        const syncResponse = await fetch('{{ url_for("api_clp.status_sincronizacao") }}');
         const syncStatus = await syncResponse.json();
-        console.log('[DEBUG] syncStatus recebido:', syncStatus);
-        
-        // Atualizar dados na interface
-        if (syncStatus.ultima_sincronizacao) {
-            document.getElementById('last-sync-text').textContent = 'Sincronizado';
-            document.getElementById('last-sync-timestamp').textContent = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
-            
-            const feriados = syncStatus.feriados_sincronizados || 0;
-            const eventos = syncStatus.eventos_sincronizados || 0;
-            document.getElementById('sync-details').textContent = `${feriados} feriados, ${eventos} eventos Plenário`;
-            
-            // Atualizar contadores
-            document.getElementById('feriados-slots').textContent = `${feriados}/20`;
-            document.getElementById('eventos-slots').textContent = `${eventos}/10`;
-            
-            // Atualizar dados de sincronização
-            document.getElementById('sync-feriados').textContent = feriados;
-            document.getElementById('sync-eventos').textContent = eventos;
-            document.getElementById('sync-timestamp').textContent = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
-        }
-        
-        // Status da conexão
-        console.log('[DEBUG] Atualizando indicador de status. clp_online:', syncStatus.clp_online);
-        atualizarIndicadorStatus('connection-indicator', syncStatus.clp_online);
-        document.getElementById('connection-text').textContent = syncStatus.msg_conectividade;
         
         // Atualizar status específico do CLP Térreo B1
-        console.log('[DEBUG] Atualizando status específico do CLP Térreo B1');
         const plenarioConexaoElement = document.getElementById('plenario-conexao');
         if (plenarioConexaoElement) {
             plenarioConexaoElement.textContent = syncStatus.clp_online ? 'Online' : 'Offline';
             plenarioConexaoElement.style.color = syncStatus.clp_online ? '#28a745' : '#dc3545';
-            console.log('[DEBUG] plenario-conexao atualizado para:', plenarioConexaoElement.textContent);
-        } else {
-            console.error('[ERROR] Elemento plenario-conexao não encontrado!');
         }
         
         const plenarioSyncElement = document.getElementById('plenario-sync');
         if (plenarioSyncElement) {
             if (syncStatus.ultima_sincronizacao) {
                 plenarioSyncElement.textContent = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
-                console.log('[DEBUG] plenario-sync atualizado para:', plenarioSyncElement.textContent);
             } else {
                 plenarioSyncElement.textContent = 'Nunca sincronizado';
-                console.log('[DEBUG] plenario-sync: nunca sincronizado');
             }
-        } else {
-            console.error('[ERROR] Elemento plenario-sync não encontrado!');
         }
         
         const plenarioProximaElement = document.getElementById('plenario-proxima');
@@ -796,40 +756,64 @@ async function atualizarStatus() {
             } else {
                 plenarioProximaElement.textContent = 'Desabilitada';
             }
-            console.log('[DEBUG] plenario-proxima atualizado para:', plenarioProximaElement.textContent);
-        } else {
-            console.error('[ERROR] Elemento plenario-proxima não encontrado!');
         }
         
-        // Próxima sincronização
-        if (syncStatus.sync_automatica_habilitada) {
-            document.getElementById('next-sync-text').textContent = 'Automática habilitada';
-            document.getElementById('auto-sync-status').textContent = `Horários: ${syncStatus.horarios_sincronizacao.join(', ')}`;
-        } else {
-            document.getElementById('next-sync-text').textContent = 'Desabilitada';
-            document.getElementById('auto-sync-status').textContent = 'Sincronização automática desabilitada';
+        // Atualizar dados das seções de informações se existirem
+        const feriadosUltimoElement = document.getElementById('feriados-ultimo');
+        const eventosUltimoElement = document.getElementById('eventos-ultimo');
+        
+        if (syncStatus.ultima_sincronizacao) {
+            const dataFormatada = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
+            
+            if (feriadosUltimoElement) {
+                feriadosUltimoElement.textContent = dataFormatada;
+            }
+            if (eventosUltimoElement) {
+                eventosUltimoElement.textContent = dataFormatada;
+            }
+            
+            // Atualizar contadores se existirem
+            const feriados = syncStatus.feriados_sincronizados || 0;
+            const eventos = syncStatus.eventos_sincronizados || 0;
+            
+            const feriadosSlotsElement = document.getElementById('feriados-slots');
+            const eventosSlotsElement = document.getElementById('eventos-slots');
+            
+            if (feriadosSlotsElement) {
+                feriadosSlotsElement.textContent = `${feriados}/20`;
+            }
+            if (eventosSlotsElement) {
+                eventosSlotsElement.textContent = `${eventos}/10`;
+            }
         }
         
         // Obter dados do sistema atual
-        const eventosResponse = await fetch('{{ url_for("api_eventos.listar_eventos") }}?ano=' + new Date().getFullYear());
-        const eventosData = await eventosResponse.json();
-        
-        const feriadosResponse = await fetch('{{ url_for("api_feriados.listar_feriados") }}?ano=' + new Date().getFullYear());
-        const feriadosData = await feriadosResponse.json();
-        
-        document.getElementById('system-feriados').textContent = feriadosData.total || 0;
-        document.getElementById('system-eventos').textContent = eventosData.total || 0;
-        document.getElementById('system-timestamp').textContent = new Date().toLocaleString();
-        
-        // Atualizar informações específicas do TCE
-        if (syncStatus.feriados_sincronizados !== undefined) {
-            document.getElementById('sync-details').textContent = `${syncStatus.feriados_sincronizados} feriados sincronizados (slots: ${syncStatus.feriados_sincronizados}/20)`;
+        try {
+            const eventosResponse = await fetch('{{ url_for("api_eventos.listar_eventos") }}?ano=' + new Date().getFullYear());
+            const eventosData = await eventosResponse.json();
+            
+            const feriadosResponse = await fetch('{{ url_for("api_feriados.listar_feriados") }}?ano=' + new Date().getFullYear());
+            const feriadosData = await feriadosResponse.json();
+            
+            const systemFeriadosElement = document.getElementById('system-feriados');
+            const systemEventosElement = document.getElementById('system-eventos');
+            const systemTimestampElement = document.getElementById('system-timestamp');
+            
+            if (systemFeriadosElement) {
+                systemFeriadosElement.textContent = feriadosData.total || 0;
+            }
+            if (systemEventosElement) {
+                systemEventosElement.textContent = eventosData.total || 0;
+            }
+            if (systemTimestampElement) {
+                systemTimestampElement.textContent = new Date().toLocaleString();
+            }
+        } catch (e) {
+            console.warn('Erro ao obter dados do sistema:', e);
         }
         
-        console.log('[DEBUG] atualizarStatus() concluído com sucesso');
-        
     } catch (error) {
-        console.error('[ERROR] Erro ao atualizar status:', error);
+        console.error('Erro ao atualizar status:', error);
         adicionarLog(`Erro ao atualizar status: ${error.message}`, 'error');
     }
 }
@@ -840,7 +824,8 @@ function limparLog() {
     logCount = 0;
 }
 
-// Função para testar tag customizada
+// Função para testar tag customizada (comentada - elementos removidos da interface)
+/*
 async function testarTagCustom() {
     const tag = document.getElementById('input-tag').value;
     const valorInput = document.getElementById('input-valor').value;
@@ -885,6 +870,7 @@ async function testarTagCustom() {
         adicionarLog(`Erro no teste customizado: ${error.message}`, 'error');
     }
 }
+*/
 
 // Função para limpar todos os feriados do CLP
 async function limparFeriados() {
@@ -1194,35 +1180,12 @@ async function limparTodosDados() {
 
 // Inicialização da página
 window.addEventListener('DOMContentLoaded', function() {
-    console.log('[DEBUG] DOM Content Loaded - Inicializando página');
-    
-    // Debug - verificar se todos os elementos existem
-    const elementos = [
-        'connection-indicator', 'connection-text', 'connection-timestamp',
-        'plenario-conexao', 'plenario-sync', 'plenario-proxima',
-        'auditorio-conexao', 'auditorio-sync', 'auditorio-proxima',
-        'last-sync-text', 'last-sync-timestamp', 'sync-details',
-        'next-sync-text', 'auto-sync-status'
-    ];
-    
-    console.log('[DEBUG] Verificando existência dos elementos:');
-    elementos.forEach(id => {
-        const elemento = document.getElementById(id);
-        console.log(`[DEBUG] ${id}: ${elemento ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
-        if (!elemento) {
-            console.error(`[ERROR] Elemento ${id} não encontrado no DOM!`);
-        }
-    });
-    
-    // Carregar status inicial
-    console.log('[DEBUG] Carregando status inicial...');
+    // Carregar status inicial dos CLPs
     atualizarStatus();
     atualizarStatusAuditorio();
     
     // Atualizar status automaticamente a cada 30 segundos
-    console.log('[DEBUG] Configurando atualização automática a cada 30 segundos');
     setInterval(() => {
-        console.log('[DEBUG] Executando atualização automática...');
         atualizarStatus();
         atualizarStatusAuditorio();
     }, 30000);
