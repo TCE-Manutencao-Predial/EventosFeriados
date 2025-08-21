@@ -115,17 +115,29 @@ function carregarProximosEventos() {
         const container = $('#proximosEventos');
         container.empty();
         
-        if (data.eventos.length === 0) {
-            container.html('<p class="text-muted text-center">Nenhum evento este mês</p>');
+        const hoje = moment();
+        // Filtrar apenas eventos que ainda não terminaram (data >= hoje)
+        const eventosFuturosOuHoje = data.eventos.filter(function(evento) {
+            const dataEvento = moment(`${evento.ano}-${evento.mes}-${evento.dia}`);
+            return dataEvento.isSameOrAfter(hoje, 'day');
+        }).sort(function(a, b) {
+            const dA = moment(`${a.ano}-${a.mes}-${a.dia}`);
+            const dB = moment(`${b.ano}-${b.mes}-${b.dia}`);
+            if (dA.isBefore(dB)) return -1;
+            if (dA.isAfter(dB)) return 1;
+            return 0;
+        });
+
+        if (eventosFuturosOuHoje.length === 0) {
+            container.html('<p class="text-muted text-center">Sem eventos agendados</p>');
             return;
         }
-        
-        // Mostrar apenas os próximos 2 eventos
-        data.eventos.slice(0, 2).forEach(function(evento) {
+
+        // Mostrar apenas os próximos 2 eventos futuros
+        eventosFuturosOuHoje.slice(0, 2).forEach(function(evento) {
             const dataEvento = moment(`${evento.ano}-${evento.mes}-${evento.dia}`);
-            const hoje = moment();
             const diasRestantes = dataEvento.diff(hoje, 'days');
-            
+
             let badge = '';
             if (diasRestantes === 0) {
                 badge = '<span class="badge bg-danger">Hoje</span>';
@@ -134,7 +146,7 @@ function carregarProximosEventos() {
             } else if (diasRestantes <= 7) {
                 badge = `<span class="badge bg-info">${diasRestantes} dias</span>`;
             }
-            
+
             container.append(`
                 <div class="list-group-item">
                     <div class="d-flex w-100 justify-content-between">
