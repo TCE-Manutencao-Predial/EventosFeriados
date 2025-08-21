@@ -18,47 +18,30 @@ def get_integracao_clp_auditorio():
 def obter_status_auditorio():
     """Obtém status completo da sincronização com CLP Auditório"""
     try:
-        logger.info("Recebida requisição para obter_status_auditorio")
-        
         integracao = get_integracao_clp_auditorio()
         if not integracao:
-            logger.error("Integração CLP Auditório não disponível")
             return jsonify({'erro': 'Serviço indisponível'}), 503
         
-        logger.info("Obtendo status da sincronização do Auditório...")
         status = integracao.obter_status_sincronizacao()
-        
-        logger.info(f"Status Auditório obtido: clp_online={status.get('clp_online')}, "
-                   f"msg_conectividade='{status.get('msg_conectividade')}', "
-                   f"ultima_sincronizacao={status.get('ultima_sincronizacao')}")
-        
         return jsonify(status)
         
     except Exception as e:
-        logger.error(f"Erro ao obter status CLP Auditório: {e}", exc_info=True)
+        logger.error(f"Erro ao obter status CLP Auditório: {e}")
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/conectividade', methods=['GET'])
 def verificar_conectividade_auditorio():
     """Verifica conectividade com CLP Auditório"""
     try:
-        logger.info("Recebida requisição para verificar_conectividade_auditorio")
-        
         integracao = get_integracao_clp_auditorio()
         if not integracao:
-            logger.error("Integração CLP Auditório não disponível")
             return jsonify({'erro': 'Serviço indisponível'}), 503
         
-        logger.info("Verificando conectividade com CLP Auditório...")
         resultado = integracao.verificar_conectividade()
-        
-        logger.info(f"Conectividade Auditório verificada: conectado={resultado.get('conectado')}, "
-                   f"mensagem='{resultado.get('mensagem')}'")
-        
         return jsonify(resultado)
         
     except Exception as e:
-        logger.error(f"Erro ao verificar conectividade CLP Auditório: {e}", exc_info=True)
+        logger.error(f"Erro ao verificar conectividade CLP Auditório: {e}")
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/sincronizar', methods=['POST'])

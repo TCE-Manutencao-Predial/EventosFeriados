@@ -337,8 +337,6 @@
     </div>
 
     <!-- Status Geral -->
-    <!-- REMOVIDO: Seção ambígua que não deixava claro se era status consolidado ou apenas do CLP Térreo -->
-    <!--
     <div class="row">
         <div class="col-md-4">
             <div class="status-card">
@@ -372,7 +370,6 @@
             </div>
         </div>
     </div>
-    -->
 
     <!-- Controles -->
     <div class="row">
@@ -550,9 +547,7 @@
     <!-- Mensagens -->
     <div id="messages"></div>
 
-    <!-- Teste de Tags e Mapeamento TCE -->
-    <!-- COMENTADO: Seções técnicas que podem ser úteis futuramente -->
-    <!--
+    <!-- Teste de Tags -->
     <div class="row">
         <div class="col-md-6">
             <div class="status-card">
@@ -587,7 +582,6 @@
             </div>
         </div>
     </div>
-    -->
 
     <!-- Scripts JavaScript -->
 <script>
@@ -735,8 +729,6 @@ async function verificarConectividade() {
 // Função para atualizar status geral
 async function atualizarStatus() {
     try {
-        console.log('[DEBUG] Atualizando status dos CLPs...');
-        
         // Status de sincronização
         const syncResponse = await fetch('{{ url_for("api_clp.status_sincronizacao") }}');
         const syncStatus = await syncResponse.json();
@@ -760,43 +752,18 @@ async function atualizarStatus() {
             document.getElementById('sync-timestamp').textContent = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
         }
         
-        // Status da conexão - REMOVIDO: elementos não existem mais
-        // atualizarIndicadorStatus('connection-indicator', syncStatus.clp_online);
-        // document.getElementById('connection-text').textContent = syncStatus.msg_conectividade;
+        // Status da conexão
+        atualizarIndicadorStatus('connection-indicator', syncStatus.clp_online);
+        document.getElementById('connection-text').textContent = syncStatus.msg_conectividade;
         
-        // Atualizar status específico do CLP Térreo B1
-        const plenarioConexaoElement = document.getElementById('plenario-conexao');
-        if (plenarioConexaoElement) {
-            plenarioConexaoElement.textContent = syncStatus.clp_online ? 'Online' : 'Offline';
-            plenarioConexaoElement.style.color = syncStatus.clp_online ? '#28a745' : '#dc3545';
+        // Próxima sincronização
+        if (syncStatus.sync_automatica_habilitada) {
+            document.getElementById('next-sync-text').textContent = 'Automática habilitada';
+            document.getElementById('auto-sync-status').textContent = `Horários: ${syncStatus.horarios_sincronizacao.join(', ')}`;
+        } else {
+            document.getElementById('next-sync-text').textContent = 'Desabilitada';
+            document.getElementById('auto-sync-status').textContent = 'Sincronização automática desabilitada';
         }
-        
-        const plenarioSyncElement = document.getElementById('plenario-sync');
-        if (plenarioSyncElement) {
-            if (syncStatus.ultima_sincronizacao) {
-                plenarioSyncElement.textContent = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
-            } else {
-                plenarioSyncElement.textContent = 'Nunca sincronizado';
-            }
-        }
-        
-        const plenarioProximaElement = document.getElementById('plenario-proxima');
-        if (plenarioProximaElement) {
-            if (syncStatus.sync_automatica_habilitada && syncStatus.horarios_sincronizacao) {
-                plenarioProximaElement.textContent = `Automática (${syncStatus.horarios_sincronizacao.join(', ')})`;
-            } else {
-                plenarioProximaElement.textContent = 'Desabilitada';
-            }
-        }
-        
-        // Próxima sincronização - REMOVIDO: elementos não existem mais
-        // if (syncStatus.sync_automatica_habilitada) {
-        //     document.getElementById('next-sync-text').textContent = 'Automática habilitada';
-        //     document.getElementById('auto-sync-status').textContent = `Horários: ${syncStatus.horarios_sincronizacao.join(', ')}`;
-        // } else {
-        //     document.getElementById('next-sync-text').textContent = 'Desabilitada';
-        //     document.getElementById('auto-sync-status').textContent = 'Sincronização automática desabilitada';
-        // }
         
         // Obter dados do sistema atual
         const eventosResponse = await fetch('{{ url_for("api_eventos.listar_eventos") }}?ano=' + new Date().getFullYear());
@@ -815,7 +782,7 @@ async function atualizarStatus() {
         }
         
     } catch (error) {
-        console.error('[ERROR] Erro ao atualizar status:', error);
+        console.error('Erro ao atualizar status:', error);
         adicionarLog(`Erro ao atualizar status: ${error.message}`, 'error');
     }
 }
@@ -826,8 +793,7 @@ function limparLog() {
     logCount = 0;
 }
 
-// Função para testar tag customizada - COMENTADA
-/*
+// Função para testar tag customizada
 async function testarTagCustom() {
     const tag = document.getElementById('input-tag').value;
     const valorInput = document.getElementById('input-valor').value;
@@ -872,7 +838,6 @@ async function testarTagCustom() {
         adicionarLog(`Erro no teste customizado: ${error.message}`, 'error');
     }
 }
-*/
 
 // Função para limpar todos os feriados do CLP
 async function limparFeriados() {
@@ -1013,69 +978,40 @@ async function sincronizarAuditorio() {
 // Função para atualizar status específico do CLP Auditório
 async function atualizarStatusAuditorio() {
     try {
-        console.log('[DEBUG] Atualizando status do CLP Auditório...');
-        
         // Status de conectividade
         const conectResponse = await fetch('{{ url_for("api_clp_auditorio.verificar_conectividade_auditorio") }}');
         const conectData = await conectResponse.json();
         
-        const auditorioConexaoElement = document.getElementById('auditorio-conexao');
-        if (auditorioConexaoElement) {
-            auditorioConexaoElement.textContent = conectData.conectado ? 'Online' : 'Offline';
-            auditorioConexaoElement.style.color = conectData.conectado ? '#28a745' : '#dc3545';
-        }
+        document.getElementById('auditorio-conexao').textContent = conectData.conectado ? 'Online' : 'Offline';
+        document.getElementById('auditorio-conexao').style.color = conectData.conectado ? '#28a745' : '#dc3545';
         
         // Status de sincronização
         const statusResponse = await fetch('{{ url_for("api_clp_auditorio.obter_status_auditorio") }}');
         const statusData = await statusResponse.json();
         
-        const auditorioSyncElement = document.getElementById('auditorio-sync');
-        const eventosAuditorioUltimoElement = document.getElementById('eventos-auditorio-ultimo');
-        
         if (statusData.ultima_sincronizacao) {
-            const dataFormatada = new Date(statusData.ultima_sincronizacao).toLocaleString();
-            if (auditorioSyncElement) {
-                auditorioSyncElement.textContent = dataFormatada;
-            }
-            if (eventosAuditorioUltimoElement) {
-                eventosAuditorioUltimoElement.textContent = dataFormatada;
-            }
+            document.getElementById('auditorio-sync').textContent = new Date(statusData.ultima_sincronizacao).toLocaleString();
+            document.getElementById('eventos-auditorio-ultimo').textContent = new Date(statusData.ultima_sincronizacao).toLocaleString();
             
             const eventosSincronizados = statusData.eventos_sincronizados || 0;
-            const eventosAuditorioSlotsElement = document.getElementById('eventos-auditorio-slots');
-            if (eventosAuditorioSlotsElement) {
-                eventosAuditorioSlotsElement.textContent = `${eventosSincronizados}/10`;
-            }
+            document.getElementById('eventos-auditorio-slots').textContent = `${eventosSincronizados}/10`;
         } else {
-            if (auditorioSyncElement) {
-                auditorioSyncElement.textContent = 'Nunca sincronizado';
-            }
-            if (eventosAuditorioUltimoElement) {
-                eventosAuditorioUltimoElement.textContent = '-';
-            }
-            const eventosAuditorioSlotsElement = document.getElementById('eventos-auditorio-slots');
-            if (eventosAuditorioSlotsElement) {
-                eventosAuditorioSlotsElement.textContent = '0/10';
-            }
+            document.getElementById('auditorio-sync').textContent = 'Nunca sincronizado';
+            document.getElementById('eventos-auditorio-ultimo').textContent = '-';
+            document.getElementById('eventos-auditorio-slots').textContent = '0/10';
         }
         
         // Próxima sincronização
-        const auditorioProximaElement = document.getElementById('auditorio-proxima');
-        if (auditorioProximaElement) {
-            if (statusData.sync_automatica_habilitada && statusData.horarios_sincronizacao) {
-                auditorioProximaElement.textContent = `Automática (${statusData.horarios_sincronizacao.join(', ')})`;
-            } else {
-                auditorioProximaElement.textContent = 'Desabilitada';
-            }
+        if (statusData.sync_automatica_habilitada && statusData.horarios_sincronizacao) {
+            document.getElementById('auditorio-proxima').textContent = `Automática (${statusData.horarios_sincronizacao.join(', ')})`;
+        } else {
+            document.getElementById('auditorio-proxima').textContent = 'Desabilitada';
         }
         
     } catch (error) {
-        console.error('[ERROR] Erro ao atualizar status do Auditório:', error);
-        const auditorioConexaoElement = document.getElementById('auditorio-conexao');
-        if (auditorioConexaoElement) {
-            auditorioConexaoElement.textContent = 'Erro';
-            auditorioConexaoElement.style.color = '#dc3545';
-        }
+        console.error('Erro ao atualizar status do Auditório:', error);
+        document.getElementById('auditorio-conexao').textContent = 'Erro';
+        document.getElementById('auditorio-conexao').style.color = '#dc3545';
     }
 }
 
@@ -1156,8 +1092,6 @@ async function limparTodosDados() {
 
 // Inicialização da página
 window.addEventListener('DOMContentLoaded', function() {
-    console.log('[DEBUG] Inicializando página de sincronização CLP');
-    
     // Carregar status inicial
     atualizarStatus();
     atualizarStatusAuditorio();

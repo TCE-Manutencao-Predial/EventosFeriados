@@ -191,24 +191,15 @@ def listar_locais_clp():
 def status_sincronizacao():
     """Obtém status da sincronização com CLP"""
     try:
-        logger.info("Recebida requisição para status_sincronizacao")
-        
         integracao = get_integracao_clp()
         if not integracao:
-            logger.error("Integração CLP não disponível")
             return jsonify({'erro': 'Serviço indisponível'}), 503
         
-        logger.info("Obtendo status da sincronização...")
         status = integracao.obter_status_sincronizacao()
-        
-        logger.info(f"Status obtido: clp_online={status.get('clp_online')}, "
-                   f"msg_conectividade='{status.get('msg_conectividade')}', "
-                   f"ultima_sincronizacao={status.get('ultima_sincronizacao')}")
-        
         return jsonify(status)
         
     except Exception as e:
-        logger.error(f"Erro ao obter status de sincronização: {e}", exc_info=True)
+        logger.error(f"Erro ao obter status de sincronização: {e}")
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/sincronizacao/executar', methods=['POST'])
@@ -234,23 +225,15 @@ def executar_sincronizacao():
 def verificar_conectividade():
     """Verifica conectividade com CLP"""
     try:
-        logger.info("Recebida requisição para verificar_conectividade")
-        
         integracao = get_integracao_clp()
         if not integracao:
-            logger.error("Integração CLP não disponível")
             return jsonify({'erro': 'Serviço indisponível'}), 503
         
-        logger.info("Verificando conectividade com CLP...")
         conectividade = integracao.verificar_conectividade()
-        
-        logger.info(f"Conectividade verificada: conectado={conectividade.get('conectado')}, "
-                   f"mensagem='{conectividade.get('mensagem')}'")
-        
         return jsonify(conectividade)
         
     except Exception as e:
-        logger.error(f"Erro ao verificar conectividade: {e}", exc_info=True)
+        logger.error(f"Erro ao verificar conectividade: {e}")
         return jsonify({'erro': 'Erro interno'}), 500
 
 
