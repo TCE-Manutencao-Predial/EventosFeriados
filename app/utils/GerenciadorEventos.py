@@ -169,6 +169,14 @@ class GerenciadorEventos:
             self.eventos.append(novo_evento)
             self._salvar_eventos()
             
+            # Integração com sistema de notificações
+            try:
+                from .GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
+                gerenciador_notificacao = GerenciadorNotificacaoEventos.get_instance()
+                gerenciador_notificacao.notificar_evento_criado(novo_evento)
+            except Exception as e:
+                self.logger.warning(f"Erro ao enviar notificação de evento criado: {e}")
+            
             self.logger.info(f"Evento adicionado: {novo_evento['nome']} no {novo_evento['local']}")
             return novo_evento
             
