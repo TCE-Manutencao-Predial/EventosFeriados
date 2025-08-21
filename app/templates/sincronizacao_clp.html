@@ -337,6 +337,8 @@
     </div>
 
     <!-- Status Geral -->
+    <!-- REMOVIDO: Seção ambígua que não deixava claro se era status consolidado ou apenas do CLP Térreo -->
+    <!--
     <div class="row">
         <div class="col-md-4">
             <div class="status-card">
@@ -370,6 +372,7 @@
             </div>
         </div>
     </div>
+    -->
 
     <!-- Controles -->
     <div class="row">
@@ -547,7 +550,9 @@
     <!-- Mensagens -->
     <div id="messages"></div>
 
-    <!-- Teste de Tags -->
+    <!-- Teste de Tags e Mapeamento TCE -->
+    <!-- COMENTADO: Seções técnicas que podem ser úteis futuramente -->
+    <!--
     <div class="row">
         <div class="col-md-6">
             <div class="status-card">
@@ -582,6 +587,7 @@
             </div>
         </div>
     </div>
+    -->
 
     <!-- Scripts JavaScript -->
 <script>
@@ -729,17 +735,11 @@ async function verificarConectividade() {
 // Função para atualizar status geral
 async function atualizarStatus() {
     try {
-        console.log('[DEBUG] Iniciando atualizarStatus()');
+        console.log('[DEBUG] Atualizando status dos CLPs...');
         
         // Status de sincronização
-        const syncUrl = '{{ url_for("api_clp.status_sincronizacao") }}';
-        console.log('[DEBUG] Fazendo fetch para:', syncUrl);
-        
-        const syncResponse = await fetch(syncUrl);
-        console.log('[DEBUG] Response status:', syncResponse.status);
-        
+        const syncResponse = await fetch('{{ url_for("api_clp.status_sincronizacao") }}');
         const syncStatus = await syncResponse.json();
-        console.log('[DEBUG] syncStatus recebido:', syncStatus);
         
         // Atualizar dados na interface
         if (syncStatus.ultima_sincronizacao) {
@@ -760,33 +760,24 @@ async function atualizarStatus() {
             document.getElementById('sync-timestamp').textContent = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
         }
         
-        // Status da conexão
-        console.log('[DEBUG] Atualizando indicador de status. clp_online:', syncStatus.clp_online);
-        atualizarIndicadorStatus('connection-indicator', syncStatus.clp_online);
-        document.getElementById('connection-text').textContent = syncStatus.msg_conectividade;
+        // Status da conexão - REMOVIDO: elementos não existem mais
+        // atualizarIndicadorStatus('connection-indicator', syncStatus.clp_online);
+        // document.getElementById('connection-text').textContent = syncStatus.msg_conectividade;
         
         // Atualizar status específico do CLP Térreo B1
-        console.log('[DEBUG] Atualizando status específico do CLP Térreo B1');
         const plenarioConexaoElement = document.getElementById('plenario-conexao');
         if (plenarioConexaoElement) {
             plenarioConexaoElement.textContent = syncStatus.clp_online ? 'Online' : 'Offline';
             plenarioConexaoElement.style.color = syncStatus.clp_online ? '#28a745' : '#dc3545';
-            console.log('[DEBUG] plenario-conexao atualizado para:', plenarioConexaoElement.textContent);
-        } else {
-            console.error('[ERROR] Elemento plenario-conexao não encontrado!');
         }
         
         const plenarioSyncElement = document.getElementById('plenario-sync');
         if (plenarioSyncElement) {
             if (syncStatus.ultima_sincronizacao) {
                 plenarioSyncElement.textContent = new Date(syncStatus.ultima_sincronizacao).toLocaleString();
-                console.log('[DEBUG] plenario-sync atualizado para:', plenarioSyncElement.textContent);
             } else {
                 plenarioSyncElement.textContent = 'Nunca sincronizado';
-                console.log('[DEBUG] plenario-sync: nunca sincronizado');
             }
-        } else {
-            console.error('[ERROR] Elemento plenario-sync não encontrado!');
         }
         
         const plenarioProximaElement = document.getElementById('plenario-proxima');
@@ -796,19 +787,16 @@ async function atualizarStatus() {
             } else {
                 plenarioProximaElement.textContent = 'Desabilitada';
             }
-            console.log('[DEBUG] plenario-proxima atualizado para:', plenarioProximaElement.textContent);
-        } else {
-            console.error('[ERROR] Elemento plenario-proxima não encontrado!');
         }
         
-        // Próxima sincronização
-        if (syncStatus.sync_automatica_habilitada) {
-            document.getElementById('next-sync-text').textContent = 'Automática habilitada';
-            document.getElementById('auto-sync-status').textContent = `Horários: ${syncStatus.horarios_sincronizacao.join(', ')}`;
-        } else {
-            document.getElementById('next-sync-text').textContent = 'Desabilitada';
-            document.getElementById('auto-sync-status').textContent = 'Sincronização automática desabilitada';
-        }
+        // Próxima sincronização - REMOVIDO: elementos não existem mais
+        // if (syncStatus.sync_automatica_habilitada) {
+        //     document.getElementById('next-sync-text').textContent = 'Automática habilitada';
+        //     document.getElementById('auto-sync-status').textContent = `Horários: ${syncStatus.horarios_sincronizacao.join(', ')}`;
+        // } else {
+        //     document.getElementById('next-sync-text').textContent = 'Desabilitada';
+        //     document.getElementById('auto-sync-status').textContent = 'Sincronização automática desabilitada';
+        // }
         
         // Obter dados do sistema atual
         const eventosResponse = await fetch('{{ url_for("api_eventos.listar_eventos") }}?ano=' + new Date().getFullYear());
@@ -826,8 +814,6 @@ async function atualizarStatus() {
             document.getElementById('sync-details').textContent = `${syncStatus.feriados_sincronizados} feriados sincronizados (slots: ${syncStatus.feriados_sincronizados}/20)`;
         }
         
-        console.log('[DEBUG] atualizarStatus() concluído com sucesso');
-        
     } catch (error) {
         console.error('[ERROR] Erro ao atualizar status:', error);
         adicionarLog(`Erro ao atualizar status: ${error.message}`, 'error');
@@ -840,7 +826,8 @@ function limparLog() {
     logCount = 0;
 }
 
-// Função para testar tag customizada
+// Função para testar tag customizada - COMENTADA
+/*
 async function testarTagCustom() {
     const tag = document.getElementById('input-tag').value;
     const valorInput = document.getElementById('input-valor').value;
@@ -885,6 +872,7 @@ async function testarTagCustom() {
         adicionarLog(`Erro no teste customizado: ${error.message}`, 'error');
     }
 }
+*/
 
 // Função para limpar todos os feriados do CLP
 async function limparFeriados() {
@@ -1025,36 +1013,21 @@ async function sincronizarAuditorio() {
 // Função para atualizar status específico do CLP Auditório
 async function atualizarStatusAuditorio() {
     try {
-        console.log('[DEBUG] Iniciando atualizarStatusAuditorio()');
+        console.log('[DEBUG] Atualizando status do CLP Auditório...');
         
         // Status de conectividade
-        const conectUrl = '{{ url_for("api_clp_auditorio.verificar_conectividade_auditorio") }}';
-        console.log('[DEBUG] Fazendo fetch conectividade auditório para:', conectUrl);
-        
-        const conectResponse = await fetch(conectUrl);
-        console.log('[DEBUG] Conectividade auditório response status:', conectResponse.status);
-        
+        const conectResponse = await fetch('{{ url_for("api_clp_auditorio.verificar_conectividade_auditorio") }}');
         const conectData = await conectResponse.json();
-        console.log('[DEBUG] Conectividade auditório data:', conectData);
         
         const auditorioConexaoElement = document.getElementById('auditorio-conexao');
         if (auditorioConexaoElement) {
             auditorioConexaoElement.textContent = conectData.conectado ? 'Online' : 'Offline';
             auditorioConexaoElement.style.color = conectData.conectado ? '#28a745' : '#dc3545';
-            console.log('[DEBUG] auditorio-conexao atualizado para:', auditorioConexaoElement.textContent);
-        } else {
-            console.error('[ERROR] Elemento auditorio-conexao não encontrado!');
         }
         
         // Status de sincronização
-        const statusUrl = '{{ url_for("api_clp_auditorio.obter_status_auditorio") }}';
-        console.log('[DEBUG] Fazendo fetch status auditório para:', statusUrl);
-        
-        const statusResponse = await fetch(statusUrl);
-        console.log('[DEBUG] Status auditório response status:', statusResponse.status);
-        
+        const statusResponse = await fetch('{{ url_for("api_clp_auditorio.obter_status_auditorio") }}');
         const statusData = await statusResponse.json();
-        console.log('[DEBUG] Status auditório data:', statusData);
         
         const auditorioSyncElement = document.getElementById('auditorio-sync');
         const eventosAuditorioUltimoElement = document.getElementById('eventos-auditorio-ultimo');
@@ -1063,32 +1036,26 @@ async function atualizarStatusAuditorio() {
             const dataFormatada = new Date(statusData.ultima_sincronizacao).toLocaleString();
             if (auditorioSyncElement) {
                 auditorioSyncElement.textContent = dataFormatada;
-                console.log('[DEBUG] auditorio-sync atualizado para:', dataFormatada);
             }
             if (eventosAuditorioUltimoElement) {
                 eventosAuditorioUltimoElement.textContent = dataFormatada;
-                console.log('[DEBUG] eventos-auditorio-ultimo atualizado para:', dataFormatada);
             }
             
             const eventosSincronizados = statusData.eventos_sincronizados || 0;
             const eventosAuditorioSlotsElement = document.getElementById('eventos-auditorio-slots');
             if (eventosAuditorioSlotsElement) {
                 eventosAuditorioSlotsElement.textContent = `${eventosSincronizados}/10`;
-                console.log('[DEBUG] eventos-auditorio-slots atualizado para:', `${eventosSincronizados}/10`);
             }
         } else {
             if (auditorioSyncElement) {
                 auditorioSyncElement.textContent = 'Nunca sincronizado';
-                console.log('[DEBUG] auditorio-sync: nunca sincronizado');
             }
             if (eventosAuditorioUltimoElement) {
                 eventosAuditorioUltimoElement.textContent = '-';
-                console.log('[DEBUG] eventos-auditorio-ultimo: nunca sincronizado');
             }
             const eventosAuditorioSlotsElement = document.getElementById('eventos-auditorio-slots');
             if (eventosAuditorioSlotsElement) {
                 eventosAuditorioSlotsElement.textContent = '0/10';
-                console.log('[DEBUG] eventos-auditorio-slots: 0/10');
             }
         }
         
@@ -1100,12 +1067,7 @@ async function atualizarStatusAuditorio() {
             } else {
                 auditorioProximaElement.textContent = 'Desabilitada';
             }
-            console.log('[DEBUG] auditorio-proxima atualizado para:', auditorioProximaElement.textContent);
-        } else {
-            console.error('[ERROR] Elemento auditorio-proxima não encontrado!');
         }
-        
-        console.log('[DEBUG] atualizarStatusAuditorio() concluído com sucesso');
         
     } catch (error) {
         console.error('[ERROR] Erro ao atualizar status do Auditório:', error);
@@ -1194,35 +1156,14 @@ async function limparTodosDados() {
 
 // Inicialização da página
 window.addEventListener('DOMContentLoaded', function() {
-    console.log('[DEBUG] DOM Content Loaded - Inicializando página');
-    
-    // Debug - verificar se todos os elementos existem
-    const elementos = [
-        'connection-indicator', 'connection-text', 'connection-timestamp',
-        'plenario-conexao', 'plenario-sync', 'plenario-proxima',
-        'auditorio-conexao', 'auditorio-sync', 'auditorio-proxima',
-        'last-sync-text', 'last-sync-timestamp', 'sync-details',
-        'next-sync-text', 'auto-sync-status'
-    ];
-    
-    console.log('[DEBUG] Verificando existência dos elementos:');
-    elementos.forEach(id => {
-        const elemento = document.getElementById(id);
-        console.log(`[DEBUG] ${id}: ${elemento ? 'ENCONTRADO' : 'NÃO ENCONTRADO'}`);
-        if (!elemento) {
-            console.error(`[ERROR] Elemento ${id} não encontrado no DOM!`);
-        }
-    });
+    console.log('[DEBUG] Inicializando página de sincronização CLP');
     
     // Carregar status inicial
-    console.log('[DEBUG] Carregando status inicial...');
     atualizarStatus();
     atualizarStatusAuditorio();
     
     // Atualizar status automaticamente a cada 30 segundos
-    console.log('[DEBUG] Configurando atualização automática a cada 30 segundos');
     setInterval(() => {
-        console.log('[DEBUG] Executando atualização automática...');
         atualizarStatus();
         atualizarStatusAuditorio();
     }, 30000);
