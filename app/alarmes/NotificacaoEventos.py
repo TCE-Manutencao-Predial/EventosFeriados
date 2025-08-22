@@ -96,9 +96,10 @@ class NotificacaoEventos:
         Returns:
             bool: True se está dentro do horário de disparo, False caso contrário.
         """
-        eh_feriado = self.gerenciador_feriados.eh_feriado(agora.date())
+        feriado = self.gerenciador_feriados.verificar_feriado(agora.day, agora.month, agora.year)
+        eh_feriado = feriado is not None
         if eh_feriado:
-            logger.debug(f"Data atual é feriado: {self.gerenciador_feriados.obter_descricao_feriado(agora.date())}")
+            logger.debug(f"Data atual é feriado: {feriado.get('nome', 'Feriado')}")
             
         dia_semana = agora.weekday()
         eh_final_semana = dia_semana >= 5 or eh_feriado
