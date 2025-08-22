@@ -192,7 +192,7 @@ def remover_evento_tce(evento_id):
             'erro': str(e)
         }), 500
 
-@api_tce.route('/teste-tce', methods=['POST'])
+@api_tce.route('/teste-tce', methods=['GET'])
 def teste_tce():
     """Endpoint simples para testar agendamento automático TCE no servidor"""
     try:
@@ -223,7 +223,7 @@ def teste_tce():
             'erro': str(e)
         }), 500
 
-@api_tce.route('/teste-agendamento', methods=['POST'])
+@api_tce.route('/teste-agendamento', methods=['GET'])
 def teste_agendamento_tce():
     """Executa um teste do agendamento automático do TCE (simula execução às 8h)"""
     try:
