@@ -4,11 +4,20 @@ import logging
 
 # Configuração do diretório base
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATA_DIR = os.path.join(BASE_DIR, 'dados')
+
+# Configuração do diretório de dados
+# Usa diretório externo para persistir dados independente das atualizações do Git
+DATA_DIR = '/var/softwaresTCE/dados'
 
 # Garante que o diretório de dados existe
 if not os.path.exists(DATA_DIR):
-    os.makedirs(DATA_DIR, exist_ok=True)
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+    except PermissionError:
+        # Fallback para diretório local se não tiver permissão para criar em /var
+        DATA_DIR = os.path.join(BASE_DIR, 'dados')
+        if not os.path.exists(DATA_DIR):
+            os.makedirs(DATA_DIR, exist_ok=True)
 
 ROUTES_PREFIX = '/EventosFeriados'
 
