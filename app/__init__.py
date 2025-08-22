@@ -142,6 +142,35 @@ def create_app():
             'agendador': agendador_status
         })
     
+    # Rota de teste TCE (simples)
+    @app.route(f'{ROUTES_PREFIX}/api/teste-tce')
+    def teste_tce_simples():
+        """Teste simples do TCE"""
+        try:
+            from .utils.AgendadorCLP import AgendadorCLP
+            
+            agendador = AgendadorCLP.get_instance()
+            if not agendador:
+                return jsonify({
+                    'status': 'erro',
+                    'erro': 'Agendador não disponível'
+                })
+            
+            # Executar teste
+            resultado = agendador.executar_sincronizacao_tce_manual()
+            
+            return jsonify({
+                'status': 'sucesso',
+                'teste': 'TCE agendamento automático',
+                'resultado': resultado
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'status': 'erro',
+                'erro': str(e)
+            })
+    
     # Rota de teste de agendamento TCE (temporária na rota principal)
     @app.route(f'{ROUTES_PREFIX}/api/teste-agendamento-tce')
     def teste_agendamento_tce_principal():
