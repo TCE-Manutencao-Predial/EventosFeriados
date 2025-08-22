@@ -68,14 +68,15 @@ class SincronizadorTCE:
     def _processar_eventos_json(self, dados_json: List[Dict]) -> List[Dict]:
         """
         Processa os dados JSON e extrai eventos do Tribunal Pleno vespertinos
+        Agrupa múltiplos eventos do mesmo dia em um único evento
         
         Args:
             dados_json: Lista de dicionários com dados da API
             
         Returns:
-            Lista de dicionários com eventos filtrados
+            Lista de dicionários com eventos filtrados e agrupados por dia
         """
-        eventos_filtrados = []
+        eventos_por_dia = {}  # Agrupa eventos por dia
         
         try:
             for evento_api in dados_json:
@@ -104,13 +105,60 @@ class SincronizadorTCE:
                 if hora < 12:
                     continue
                 
+                # Agrupar eventos por dia
+                if dia not in eventos_por_dia:
+                    eventos_por_dia[dia] = {
+                        'dia': dia,
+                        'eventos': [],
+                        'horarios_originais': []
+                    }
+                
+                eventos_por_dia[dia]['eventos'].append(titulo)
+                eventos_por_dia[dia]['horarios_originais'].append(f"{hora:02d}:{minuto:02d}")
+            
+            # Converter para lista de eventos consolidados
+            eventos_filtrados = []
+            for dia, info in eventos_por_dia.items():
+                # Criar título consolidado
+                if len(info['eventos']) == 1:
+                    titulo_consolidado = info['eventos'][0]
+                    horarios_originais = info['horarios_originais'][0]
+                else:
+                    # Múltiplos eventos no mesmo dia
+                    tipos_sessao = []
+                    for evento in info['eventos']:
+                        # Extrair tipo de sessão (Ordinária, Extraordinária, etc.)
+                        if 'Ordinária' in evento:
+                            if 'Ordinária' not in tipos_sessao:
+                                tipos_sessao.append('Ordinária')
+                        elif 'Extraordinária' in evento:
+                            if 'Extraordinária' not in tipos_sessao:
+                                tipos_sessao.append('Extraordinária')
+                    
+                    if len(tipos_sessao) == 1:
+                        titulo_consolidado = f"Tribunal Pleno: {tipos_sessao[0]} (múltiplas sessões)"
+                    else:
+                        titulo_consolidado = f"Tribunal Pleno: {' e '.join(tipos_sessao)} (múltiplas sessões)"
+                    
+                    horarios_originais = ', '.join(info['horarios_originais'])
+                
                 eventos_filtrados.append({
                     'dia': dia,
-                    'titulo': titulo,
-                    'hora_original': f"{hora:02d}:{minuto:02d}"
+                    'titulo': titulo_consolidado,
+                    'hora_original': horarios_originais,
+                    'quantidade_eventos': len(info['eventos']),
+                    'eventos_detalhados': info['eventos']
                 })
             
-            self.logger.info(f"Filtrados {len(eventos_filtrados)} eventos do Tribunal Pleno vespertinos")
+            self.logger.info(f"Filtrados {len(eventos_filtrados)} dias com eventos do Tribunal Pleno vespertinos")
+            
+            # Log detalhado dos eventos consolidados
+            for evento in eventos_filtrados:
+                if evento['quantidade_eventos'] > 1:
+                    self.logger.info(f"Dia {evento['dia']}: {evento['quantidade_eventos']} eventos consolidados - {evento['hora_original']}")
+                else:
+                    self.logger.info(f"Dia {evento['dia']}: 1 evento - {evento['hora_original']}")
+            
             return eventos_filtrados
             
         except Exception as e:
@@ -136,7 +184,7 @@ class SincronizadorTCE:
         Cria um evento no sistema baseado nos dados do TCE
         
         Args:
-            evento_tce: Dados do evento do TCE
+            evento_tce: Dados do evento consolidado do TCE
             mes: Mês do evento
             ano: Ano do evento
             
@@ -144,9 +192,17 @@ class SincronizadorTCE:
             Evento criado ou None em caso de erro
         """
         try:
+            # Preparar descrição detalhada
+            if evento_tce['quantidade_eventos'] > 1:
+                descricao = f"Evento sincronizado automaticamente da API do TCE - {evento_tce['quantidade_eventos']} sessões do Tribunal Pleno:\n"
+                for i, evento_detalhe in enumerate(evento_tce['eventos_detalhados'], 1):
+                    descricao += f"{i}. {evento_detalhe}\n"
+            else:
+                descricao = f"Evento sincronizado automaticamente da API do TCE - {evento_tce['titulo']}"
+            
             dados_evento = {
                 'nome': evento_tce['titulo'],
-                'descricao': f"Evento sincronizado automaticamente da API do TCE - {evento_tce['titulo']}",
+                'descricao': descricao,
                 'local': 'Plenário',
                 'dia': evento_tce['dia'],
                 'mes': mes,
@@ -156,32 +212,61 @@ class SincronizadorTCE:
                 'responsavel': 'Sistema - TCE',
                 'participantes_estimados': 0,
                 'fonte_tce': True,  # Marca para identificar eventos do TCE
-                'hora_original_tce': evento_tce['hora_original']
+                'hora_original_tce': evento_tce['hora_original'],
+                'quantidade_eventos_tce': evento_tce['quantidade_eventos'],
+                'eventos_detalhados_tce': evento_tce.get('eventos_detalhados', [])
             }
             
-            # Gerar ID customizado para eventos do TCE
+            # Gerar ID customizado para eventos do TCE (um por dia)
             evento_id = self._gerar_id_evento_tce(evento_tce['dia'], mes, ano)
             
-            # Verificar se o evento já existe
+            # Verificar se já existe um evento TCE para este dia
             evento_existente = self.gerenciador_eventos.obter_evento(evento_id)
             if evento_existente:
-                self.logger.info(f"Evento TCE já existe: {evento_tce['titulo']} - {evento_tce['dia']}/{mes}/{ano}")
-                return evento_existente
+                # Verificar se houve mudanças nos eventos
+                quantidade_atual = evento_existente.get('quantidade_eventos_tce', 1)
+                eventos_atuais = evento_existente.get('eventos_detalhados_tce', [evento_existente['nome']])
+                
+                if (quantidade_atual != evento_tce['quantidade_eventos'] or 
+                    set(eventos_atuais) != set(evento_tce['eventos_detalhados'])):
+                    
+                    # Atualizar evento existente com novas informações
+                    self.logger.info(f"Atualizando evento TCE existente: {evento_tce['titulo']} - {evento_tce['dia']}/{mes}/{ano}")
+                    
+                    dados_atualizacao = {
+                        'nome': evento_tce['titulo'],
+                        'descricao': descricao,
+                        'hora_original_tce': evento_tce['hora_original'],
+                        'quantidade_eventos_tce': evento_tce['quantidade_eventos'],
+                        'eventos_detalhados_tce': evento_tce['eventos_detalhados']
+                    }
+                    
+                    evento_atualizado = self.gerenciador_eventos.atualizar_evento(evento_id, dados_atualizacao)
+                    return evento_atualizado
+                else:
+                    self.logger.info(f"Evento TCE já existe e está atualizado: {evento_tce['titulo']} - {evento_tce['dia']}/{mes}/{ano}")
+                    return evento_existente
             
-            # Criar evento com ID customizado
+            # Criar novo evento
             novo_evento = self.gerenciador_eventos.adicionar_evento(dados_evento)
             
-            # Atualizar o ID para usar o padrão TCE
+            # Atualizar o ID para usar o padrão TCE e adicionar campos específicos
             for i, evento in enumerate(self.gerenciador_eventos.eventos):
                 if evento['id'] == novo_evento['id']:
                     self.gerenciador_eventos.eventos[i]['id'] = evento_id
                     self.gerenciador_eventos.eventos[i]['fonte_tce'] = True
                     self.gerenciador_eventos.eventos[i]['hora_original_tce'] = evento_tce['hora_original']
+                    self.gerenciador_eventos.eventos[i]['quantidade_eventos_tce'] = evento_tce['quantidade_eventos']
+                    self.gerenciador_eventos.eventos[i]['eventos_detalhados_tce'] = evento_tce.get('eventos_detalhados', [])
                     break
             
             self.gerenciador_eventos._salvar_eventos()
             
-            self.logger.info(f"Evento TCE criado: {evento_tce['titulo']} - {evento_tce['dia']}/{mes}/{ano}")
+            if evento_tce['quantidade_eventos'] > 1:
+                self.logger.info(f"Evento TCE consolidado criado: {evento_tce['titulo']} - {evento_tce['dia']}/{mes}/{ano} ({evento_tce['quantidade_eventos']} sessões)")
+            else:
+                self.logger.info(f"Evento TCE criado: {evento_tce['titulo']} - {evento_tce['dia']}/{mes}/{ano}")
+                
             return novo_evento
             
         except Exception as e:
