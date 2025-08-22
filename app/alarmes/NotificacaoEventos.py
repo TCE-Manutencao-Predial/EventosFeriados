@@ -166,6 +166,44 @@ class NotificacaoEventos:
 
         self.enviar_notificacao_para_tecnicos(mensagem, tecnicos_eventos)
 
+    def notificar_evento_cancelado(self, evento_dados: dict) -> None:
+        """
+        Notifica técnicos quando um evento é cancelado/removido do sistema.
+        
+        Args:
+            evento_dados (dict): Dados do evento que foi cancelado.
+        """
+        agora = datetime.now()
+        
+        # Verifica se está no horário de notificação
+        if not self.verificar_horario_data_alarme(agora):
+            logger.info("Fora do horário de notificação para eventos cancelados.")
+            return
+
+        # Filtra técnicos com função EVENTOS
+        tecnicos_eventos = [
+            tecnico for tecnico in self.tecnicos 
+            if FuncoesTecnicos.EVENTOS in tecnico.funcoes
+        ]
+
+        if not tecnicos_eventos:
+            logger.info("Nenhum técnico com função EVENTOS encontrado.")
+            return
+
+        # Monta mensagem de evento cancelado
+        data_evento = f"{evento_dados['dia']:02d}/{evento_dados['mes']:02d}/{evento_dados['ano']}"
+        mensagem = (
+            f"❌ *EVENTO CANCELADO*\n\n"
+            f"📋 *Evento:* {evento_dados['nome']}\n"
+            f"📅 *Data:* {data_evento}\n"
+            f"🕒 *Horário:* {evento_dados['hora_inicio']} às {evento_dados['hora_fim']}\n"
+            f"📍 *Local:* {evento_dados['local']}\n"
+            f"👤 *Responsável:* {evento_dados.get('responsavel', 'Não informado')}\n\n"
+            f"⚠️ Este evento foi removido do sistema e não acontecerá mais."
+        )
+
+        self.enviar_notificacao_para_tecnicos(mensagem, tecnicos_eventos)
+
     def notificar_lembrete_evento(self, evento_dados: dict) -> None:
         """
         Envia lembrete do evento um dia antes às 8h00.

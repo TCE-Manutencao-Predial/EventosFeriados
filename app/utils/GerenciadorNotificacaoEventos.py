@@ -84,6 +84,28 @@ class GerenciadorNotificacaoEventos:
             logger.error(f"Erro ao enviar notificação de evento criado: {e}")
             return False
     
+    def notificar_evento_cancelado(self, evento_dados: dict) -> bool:
+        """
+        Notifica técnicos sobre um evento que foi cancelado/removido.
+        
+        Args:
+            evento_dados (dict): Dados do evento que foi cancelado
+            
+        Returns:
+            bool: True se a notificação foi enviada, False caso contrário
+        """
+        if not self.notificacao_eventos:
+            logger.error("Sistema de notificação não está inicializado")
+            return False
+            
+        try:
+            self.notificacao_eventos.notificar_evento_cancelado(evento_dados)
+            logger.info(f"Notificação de evento cancelado enviada: {evento_dados['nome']}")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao enviar notificação de evento cancelado: {e}")
+            return False
+    
     def iniciar_scheduler_lembretes(self):
         """Inicia o agendador para envio de lembretes diários"""
         if self.running:

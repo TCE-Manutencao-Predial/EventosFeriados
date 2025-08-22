@@ -169,13 +169,31 @@ class GerenciadorEventos:
             self.eventos.append(novo_evento)
             self._salvar_eventos()
             
-            # Integração com sistema de notificações
+            # Integração com sistema de notificações em background
             try:
+                import threading
                 from .GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
-                gerenciador_notificacao = GerenciadorNotificacaoEventos.get_instance()
-                gerenciador_notificacao.notificar_evento_criado(novo_evento)
+                
+                def enviar_notificacao_background():
+                    """Envia notificação em thread separada para não bloquear a interface"""
+                    try:
+                        gerenciador_notificacao = GerenciadorNotificacaoEventos.get_instance()
+                        gerenciador_notificacao.notificar_evento_criado(novo_evento)
+                        self.logger.info(f"Notificação de evento enviada em background: {novo_evento['nome']}")
+                    except Exception as e:
+                        self.logger.warning(f"Erro ao enviar notificação de evento em background: {e}")
+                
+                # Executar notificação em thread separada (não bloqueante)
+                thread_notificacao = threading.Thread(
+                    target=enviar_notificacao_background,
+                    daemon=True,  # Thread será encerrada quando a aplicação principal terminar
+                    name=f"NotificacaoEvento_{novo_evento['id']}"
+                )
+                thread_notificacao.start()
+                self.logger.debug(f"Thread de notificação iniciada para evento: {novo_evento['nome']}")
+                
             except Exception as e:
-                self.logger.warning(f"Erro ao enviar notificação de evento criado: {e}")
+                self.logger.warning(f"Erro ao iniciar thread de notificação: {e}")
             
             self.logger.info(f"Evento adicionado: {novo_evento['nome']} no {novo_evento['local']}")
             return novo_evento
@@ -252,11 +270,39 @@ class GerenciadorEventos:
         try:
             for i, evento in enumerate(self.eventos):
                 if evento['id'] == evento_id:
+                    # Capturar dados do evento antes de remover para notificação
+                    evento_para_notificar = evento.copy()
                     nome = evento['nome']
                     local = evento['local']
+                    
+                    # Remover evento
                     del self.eventos[i]
                     self._salvar_eventos()
                     self.logger.info(f"Evento removido: {nome} do {local}")
+                    
+                    # Enviar notificação de cancelamento em background thread
+                    def enviar_notificacao_cancelamento():
+                        try:
+                            from .GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
+                            gerenciador_notificacao = GerenciadorNotificacaoEventos.get_instance()
+                            gerenciador_notificacao.notificar_evento_cancelado(evento_para_notificar)
+                            self.logger.info(f"Notificação de cancelamento enviada em background: {nome}")
+                        except Exception as e:
+                            self.logger.warning(f"Erro ao enviar notificação de cancelamento em background: {e}")
+                    
+                    # Executar notificação em thread separada (não bloqueante)
+                    try:
+                        import threading
+                        thread_notificacao = threading.Thread(
+                            target=enviar_notificacao_cancelamento,
+                            daemon=True,
+                            name=f"NotificacaoCancelamento_{evento_id}"
+                        )
+                        thread_notificacao.start()
+                        self.logger.debug(f"Thread de notificação de cancelamento iniciada para evento: {nome}")
+                    except Exception as e:
+                        self.logger.warning(f"Erro ao iniciar thread de notificação de cancelamento: {e}")
+                    
                     return True
             
             return False
