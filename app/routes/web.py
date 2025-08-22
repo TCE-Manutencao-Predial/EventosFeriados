@@ -51,3 +51,12 @@ def sincronizacao_clp():
     except Exception as e:
         logger.error(f"Erro ao renderizar página de sincronização CLP: {e}")
         return "Erro ao carregar página", 500
+
+@web_bp.route('/sincronizacao-tce')
+def sincronizacao_tce():
+    """Página de sincronização com TCE"""
+    try:
+        return render_template('sincronizacao_tce.html')
+    except Exception as e:
+        logger.error(f"Erro ao renderizar página de sincronização TCE: {e}")
+        return "Erro ao carregar página", 500

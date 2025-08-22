@@ -108,6 +108,7 @@ def create_app():
     from .routes.api_eventos import api_eventos_bp
     from .routes.api_clp import api_clp_bp
     from .routes.api_clp_auditorio import api_clp_auditorio_bp
+    from .routes.api_tce import api_tce
     from .routes.web import web_bp
     
     # IMPORTANTE: Registrar com url_prefix
@@ -115,11 +116,18 @@ def create_app():
     app.register_blueprint(api_eventos_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_clp_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_clp_auditorio_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    app.register_blueprint(api_tce, url_prefix=f'{ROUTES_PREFIX}/api/tce')
     app.register_blueprint(web_bp, url_prefix=ROUTES_PREFIX)
     
     # Rota de status da API
     @app.route(f'{ROUTES_PREFIX}/api/status')
     def api_status():
+        try:
+            from .utils.AgendadorCLP import AgendadorCLP
+            agendador_status = AgendadorCLP.get_instance().status()
+        except:
+            agendador_status = {'executando': False}
+            
         return jsonify({
             'status': 'online',
             'versao': '1.0.0',
@@ -130,6 +138,11 @@ def create_app():
             'integracao_clp': {
                 'plenario': app.config['INTEGRACAO_CLP'] is not None,
                 'auditorio': app.config['INTEGRACAO_CLP_AUDITORIO'] is not None
+            },
+            'sincronizacao_tce': {
+                'habilitada': agendador_status.get('status_tce', {}).get('SYNC_ENABLED', False),
+                'proximo_horario': agendador_status.get('proximo_horario_tce'),
+                'agendador_ativo': agendador_status.get('executando', False)
             }
         })
     

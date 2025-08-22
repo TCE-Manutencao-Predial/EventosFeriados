@@ -1,1 +1,2 @@
 *.pyc
+app/routes/__pycache__/*.pyc

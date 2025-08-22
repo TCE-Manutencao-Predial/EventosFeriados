@@ -1,0 +1,529 @@
+{% extends "base.html" %}
+
+{% block title %}Sincronização TCE{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="page-header">
+                <h1>
+                    <i class="fas fa-sync-alt"></i>
+                    Sincronização TCE - Tribunal Pleno
+                </h1>
+                <p class="lead">Gerenciamento da sincronização automática de eventos do Tribunal Pleno do TCE-GO</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status da Sincronização -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> Status da Sincronização</h5>
+                </div>
+                <div class="card-body">
+                    <div id="status-content">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="sr-only">Carregando...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-cog"></i> Configurações</h5>
+                </div>
+                <div class="card-body">
+                    <form id="config-form">
+                        <div class="form-group">
+                            <label for="sync-enabled">
+                                <input type="checkbox" id="sync-enabled" class="form-check-input me-2">
+                                Sincronização Automática Habilitada
+                            </label>
+                        </div>
+                        <div class="form-group mt-3">
+                            <label for="sync-time">Horário da Sincronização:</label>
+                            <input type="time" id="sync-time" class="form-control" value="08:00">
+                            <small class="form-text text-muted">
+                                Sincronização será executada diariamente neste horário
+                            </small>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-3">
+                            <i class="fas fa-save"></i> Salvar Configurações
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações de Sincronização -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-play-circle"></i> Ações de Sincronização</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="d-grid gap-2">
+                                <button id="sync-atual" class="btn btn-success btn-lg">
+                                    <i class="fas fa-sync"></i> Sincronizar Período Atual
+                                </button>
+                                <small class="text-muted text-center">
+                                    Sincroniza mês atual e próximo mês
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-grid gap-2">
+                                <div class="input-group mb-2">
+                                    <select id="mes-especifico" class="form-select">
+                                        <option value="1">Janeiro</option>
+                                        <option value="2">Fevereiro</option>
+                                        <option value="3">Março</option>
+                                        <option value="4">Abril</option>
+                                        <option value="5">Maio</option>
+                                        <option value="6">Junho</option>
+                                        <option value="7">Julho</option>
+                                        <option value="8">Agosto</option>
+                                        <option value="9">Setembro</option>
+                                        <option value="10">Outubro</option>
+                                        <option value="11">Novembro</option>
+                                        <option value="12">Dezembro</option>
+                                    </select>
+                                    <input type="number" id="ano-especifico" class="form-control" 
+                                           min="2024" max="2030" value="2025" placeholder="Ano">
+                                </div>
+                                <button id="sync-especifico" class="btn btn-info">
+                                    <i class="fas fa-calendar-alt"></i> Sincronizar Mês Específico
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Eventos Sincronizados -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5><i class="fas fa-calendar-check"></i> Eventos Sincronizados do TCE</h5>
+                    <button id="refresh-eventos" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-refresh"></i> Atualizar Lista
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <select id="filtro-mes" class="form-select">
+                                <option value="">Todos os meses</option>
+                                <option value="1">Janeiro</option>
+                                <option value="2">Fevereiro</option>
+                                <option value="3">Março</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Maio</option>
+                                <option value="6">Junho</option>
+                                <option value="7">Julho</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Setembro</option>
+                                <option value="10">Outubro</option>
+                                <option value="11">Novembro</option>
+                                <option value="12">Dezembro</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="number" id="filtro-ano" class="form-control" 
+                                   min="2024" max="2030" value="2025" placeholder="Ano">
+                        </div>
+                        <div class="col-md-4">
+                            <button id="aplicar-filtro" class="btn btn-primary">
+                                <i class="fas fa-filter"></i> Aplicar Filtro
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="eventos-content">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="sr-only">Carregando eventos...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Resultado -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="resultModalTitle">Resultado da Operação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="resultModalBody">
+                <!-- Conteúdo será inserido via JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Carregar status inicial
+    carregarStatus();
+    carregarEventos();
+    
+    // Configurar evento de configuração
+    document.getElementById('config-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        salvarConfiguracao();
+    });
+    
+    // Configurar botões de sincronização
+    document.getElementById('sync-atual').addEventListener('click', function() {
+        sincronizarAtual();
+    });
+    
+    document.getElementById('sync-especifico').addEventListener('click', function() {
+        sincronizarEspecifico();
+    });
+    
+    // Configurar filtros
+    document.getElementById('aplicar-filtro').addEventListener('click', function() {
+        carregarEventos();
+    });
+    
+    document.getElementById('refresh-eventos').addEventListener('click', function() {
+        carregarEventos();
+    });
+    
+    // Auto-refresh a cada 30 segundos
+    setInterval(carregarStatus, 30000);
+});
+
+function carregarStatus() {
+    fetch('/api/tce/status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                const config = data.dados.configuracao;
+                const statusHtml = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="status-item">
+                                <strong>Status do Agendador:</strong><br>
+                                <span class="badge ${data.dados.agendador_ativo ? 'bg-success' : 'bg-danger'}">
+                                    ${data.dados.agendador_ativo ? 'Ativo' : 'Inativo'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="status-item">
+                                <strong>Sincronização Automática:</strong><br>
+                                <span class="badge ${config.SYNC_ENABLED ? 'bg-success' : 'bg-secondary'}">
+                                    ${config.SYNC_ENABLED ? 'Habilitada' : 'Desabilitada'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <div class="status-item">
+                                <strong>Horário Configurado:</strong><br>
+                                <span class="badge bg-info">${config.SYNC_TIME}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <div class="status-item">
+                                <strong>Próxima Execução:</strong><br>
+                                <span class="badge bg-warning text-dark">
+                                    ${data.dados.proximo_horario || 'N/A'}
+                                </span>
+                            </div>
+                        </div>
+                        ${config.ultima_sincronizacao ? `
+                        <div class="col-12 mt-2">
+                            <div class="status-item">
+                                <strong>Última Sincronização:</strong><br>
+                                <small class="text-muted">
+                                    ${new Date(config.ultima_sincronizacao).toLocaleString('pt-BR')}
+                                </small>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                document.getElementById('status-content').innerHTML = statusHtml;
+                
+                // Atualizar formulário de configuração
+                document.getElementById('sync-enabled').checked = config.SYNC_ENABLED;
+                document.getElementById('sync-time').value = config.SYNC_TIME;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar status:', error);
+            document.getElementById('status-content').innerHTML = 
+                '<div class="alert alert-danger">Erro ao carregar status</div>';
+        });
+}
+
+function carregarEventos() {
+    const mes = document.getElementById('filtro-mes').value;
+    const ano = document.getElementById('filtro-ano').value;
+    
+    let url = '/api/tce/eventos';
+    const params = new URLSearchParams();
+    if (mes) params.append('mes', mes);
+    if (ano) params.append('ano', ano);
+    if (params.toString()) url += '?' + params.toString();
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                const eventos = data.dados.eventos;
+                let eventosHtml = '';
+                
+                if (eventos.length === 0) {
+                    eventosHtml = '<div class="alert alert-info">Nenhum evento do TCE encontrado para os filtros aplicados.</div>';
+                } else {
+                    eventosHtml = `
+                        <div class="alert alert-success">
+                            <strong>${data.dados.total}</strong> evento(s) sincronizado(s) do TCE encontrado(s).
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Evento</th>
+                                        <th>Horário Original TCE</th>
+                                        <th>Horário no Sistema</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    eventos.forEach(evento => {
+                        const data = `${evento.dia.toString().padStart(2, '0')}/${evento.mes.toString().padStart(2, '0')}/${evento.ano}`;
+                        eventosHtml += `
+                            <tr>
+                                <td>${data}</td>
+                                <td>${evento.nome}</td>
+                                <td><span class="badge bg-secondary">${evento.hora_original_tce || 'N/A'}</span></td>
+                                <td><span class="badge bg-primary">${evento.hora_inicio} - ${evento.hora_fim}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger" 
+                                            onclick="removerEvento('${evento.id}', '${evento.nome}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    eventosHtml += '</tbody></table></div>';
+                }
+                
+                document.getElementById('eventos-content').innerHTML = eventosHtml;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar eventos:', error);
+            document.getElementById('eventos-content').innerHTML = 
+                '<div class="alert alert-danger">Erro ao carregar eventos</div>';
+        });
+}
+
+function salvarConfiguracao() {
+    const habilitado = document.getElementById('sync-enabled').checked;
+    const horario = document.getElementById('sync-time').value;
+    
+    fetch('/api/tce/configurar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            habilitado: habilitado,
+            horario: horario
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'sucesso') {
+            mostrarResultado('Sucesso', 'Configurações salvas com sucesso!', 'success');
+            carregarStatus(); // Recarregar status
+        } else {
+            mostrarResultado('Erro', data.erro, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao salvar configuração:', error);
+        mostrarResultado('Erro', 'Erro ao salvar configurações', 'danger');
+    });
+}
+
+function sincronizarAtual() {
+    document.getElementById('sync-atual').disabled = true;
+    document.getElementById('sync-atual').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
+    
+    fetch('/api/tce/sincronizar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('sync-atual').disabled = false;
+        document.getElementById('sync-atual').innerHTML = '<i class="fas fa-sync"></i> Sincronizar Período Atual';
+        
+        if (data.status === 'sucesso') {
+            let mensagem = `Sincronização concluída com sucesso!<br><br>`;
+            mensagem += `Total de eventos processados: <strong>${data.dados.total_eventos_criados}</strong><br><br>`;
+            
+            data.dados.sincronizacoes.forEach((sync, index) => {
+                const mesNome = new Date(sync.ano, sync.mes - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                mensagem += `<strong>${mesNome}:</strong> ${sync.eventos_criados} evento(s)<br>`;
+            });
+            
+            mostrarResultado('Sincronização Concluída', mensagem, 'success');
+            carregarEventos(); // Recarregar lista de eventos
+            carregarStatus(); // Recarregar status
+        } else {
+            mostrarResultado('Erro na Sincronização', data.erro, 'danger');
+        }
+    })
+    .catch(error => {
+        document.getElementById('sync-atual').disabled = false;
+        document.getElementById('sync-atual').innerHTML = '<i class="fas fa-sync"></i> Sincronizar Período Atual';
+        console.error('Erro na sincronização:', error);
+        mostrarResultado('Erro', 'Erro ao executar sincronização', 'danger');
+    });
+}
+
+function sincronizarEspecifico() {
+    const mes = parseInt(document.getElementById('mes-especifico').value);
+    const ano = parseInt(document.getElementById('ano-especifico').value);
+    
+    document.getElementById('sync-especifico').disabled = true;
+    document.getElementById('sync-especifico').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
+    
+    fetch('/api/tce/sincronizar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            mes: mes,
+            ano: ano
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('sync-especifico').disabled = false;
+        document.getElementById('sync-especifico').innerHTML = '<i class="fas fa-calendar-alt"></i> Sincronizar Mês Específico';
+        
+        if (data.status === 'sucesso') {
+            const mesNome = new Date(ano, mes - 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+            const mensagem = `Sincronização de ${mesNome} concluída com sucesso!<br><br>
+                            Eventos processados: <strong>${data.dados.eventos_criados}</strong>`;
+            
+            mostrarResultado('Sincronização Concluída', mensagem, 'success');
+            carregarEventos(); // Recarregar lista de eventos
+        } else {
+            mostrarResultado('Erro na Sincronização', data.erro, 'danger');
+        }
+    })
+    .catch(error => {
+        document.getElementById('sync-especifico').disabled = false;
+        document.getElementById('sync-especifico').innerHTML = '<i class="fas fa-calendar-alt"></i> Sincronizar Mês Específico';
+        console.error('Erro na sincronização:', error);
+        mostrarResultado('Erro', 'Erro ao executar sincronização', 'danger');
+    });
+}
+
+function removerEvento(eventoId, nomeEvento) {
+    if (!confirm(`Tem certeza que deseja remover o evento "${nomeEvento}"?`)) {
+        return;
+    }
+    
+    fetch(`/api/tce/eventos/${eventoId}`, {
+        method: 'DELETE'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'sucesso') {
+            mostrarResultado('Sucesso', 'Evento removido com sucesso!', 'success');
+            carregarEventos(); // Recarregar lista de eventos
+        } else {
+            mostrarResultado('Erro', data.erro, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao remover evento:', error);
+        mostrarResultado('Erro', 'Erro ao remover evento', 'danger');
+    });
+}
+
+function mostrarResultado(titulo, mensagem, tipo) {
+    document.getElementById('resultModalTitle').textContent = titulo;
+    document.getElementById('resultModalBody').innerHTML = `
+        <div class="alert alert-${tipo}">
+            ${mensagem}
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+    modal.show();
+}
+</script>
+
+<style>
+.status-item {
+    margin-bottom: 1rem;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.badge {
+    font-size: 0.85em;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-top: none;
+}
+
+.btn-outline-danger:hover {
+    color: #fff;
+}
+</style>
+{% endblock %}
