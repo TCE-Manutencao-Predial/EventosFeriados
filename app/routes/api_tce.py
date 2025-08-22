@@ -191,3 +191,42 @@ def remover_evento_tce(evento_id):
             'status': 'erro',
             'erro': str(e)
         }), 500
+
+@api_tce.route('/teste-agendamento', methods=['POST'])
+def teste_agendamento_tce():
+    """Executa um teste do agendamento automático do TCE (simula execução às 8h)"""
+    try:
+        from ..utils.AgendadorCLP import AgendadorCLP
+        
+        # Obter instância do agendador
+        agendador = AgendadorCLP.get_instance()
+        
+        if not agendador:
+            return jsonify({
+                'status': 'erro',
+                'erro': 'Agendador não está disponível'
+            }), 500
+        
+        # Executar sincronização TCE (simula a execução automática das 8h)
+        logger.info("Executando teste de agendamento automático TCE via API")
+        resultado = agendador.executar_sincronizacao_tce_manual()
+        
+        return jsonify({
+            'status': 'sucesso',
+            'dados': {
+                'teste_agendamento': True,
+                'resultado_sincronizacao': resultado,
+                'simulacao': 'Execução automática das 8h',
+                'timestamp': resultado.get('timestamp'),
+                'eventos_processados': resultado.get('eventos_processados', 0),
+                'detalhes': resultado.get('detalhes', {})
+            }
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Erro ao executar teste de agendamento TCE via API: {e}")
+        return jsonify({
+            'status': 'erro',
+            'erro': str(e),
+            'detalhes': 'Falha ao simular agendamento automático'
+        }), 500
