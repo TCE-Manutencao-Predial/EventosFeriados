@@ -139,12 +139,44 @@ def create_app():
                 'plenario': app.config['INTEGRACAO_CLP'] is not None,
                 'auditorio': app.config['INTEGRACAO_CLP_AUDITORIO'] is not None
             },
-            'sincronizacao_tce': {
-                'habilitada': agendador_status.get('status_tce', {}).get('SYNC_ENABLED', False),
-                'proximo_horario': agendador_status.get('proximo_horario_tce'),
-                'agendador_ativo': agendador_status.get('executando', False)
-            }
+            'agendador': agendador_status
         })
+    
+    # Rota de teste de agendamento TCE (temporária na rota principal)
+    @app.route(f'{ROUTES_PREFIX}/api/teste-agendamento-tce')
+    def teste_agendamento_tce_principal():
+        """Teste do agendamento automático TCE na rota principal"""
+        try:
+            from .utils.AgendadorCLP import AgendadorCLP
+            
+            agendador = AgendadorCLP.get_instance()
+            if not agendador:
+                return jsonify({
+                    'status': 'erro',
+                    'erro': 'Agendador não está disponível'
+                }), 500
+            
+            # Executar sincronização TCE
+            resultado = agendador.executar_sincronizacao_tce_manual()
+            
+            return jsonify({
+                'status': 'sucesso',
+                'dados': {
+                    'teste_agendamento': True,
+                    'resultado_sincronizacao': resultado,
+                    'simulacao': 'Execução automática das 8h',
+                    'timestamp': resultado.get('timestamp'),
+                    'eventos_processados': resultado.get('eventos_processados', 0),
+                    'detalhes': resultado.get('detalhes', {})
+                }
+            })
+            
+        except Exception as e:
+            return jsonify({
+                'status': 'erro',
+                'erro': str(e),
+                'detalhes': 'Falha ao simular agendamento automático'
+            }), 500
     
     # Log de rotas registradas para debug
     eventos_logger.info("Rotas registradas:")
