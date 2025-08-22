@@ -7,17 +7,29 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 # Configuração do diretório de dados
 # Usa diretório externo para persistir dados independente das atualizações do Git
-DATA_DIR = '/var/softwaresTCE/dados'
+DATA_DIR = '/var/softwaresTCE/dados/eventos_feriados'
 
 # Garante que o diretório de dados existe
-if not os.path.exists(DATA_DIR):
-    try:
+try:
+    if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR, exist_ok=True)
-    except PermissionError:
-        # Fallback para diretório local se não tiver permissão para criar em /var
-        DATA_DIR = os.path.join(BASE_DIR, 'dados')
-        if not os.path.exists(DATA_DIR):
-            os.makedirs(DATA_DIR, exist_ok=True)
+        print(f"✅ Diretório criado: {DATA_DIR}")
+    else:
+        print(f"✅ Diretório já existe: {DATA_DIR}")
+except PermissionError as e:
+    # Fallback para diretório local se não tiver permissão para criar em /var
+    print(f"⚠️ Sem permissão para criar {DATA_DIR}: {e}")
+    DATA_DIR = os.path.join(BASE_DIR, 'dados')
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR, exist_ok=True)
+    print(f"🔄 Usando diretório fallback: {DATA_DIR}")
+except Exception as e:
+    print(f"❌ Erro ao criar diretório {DATA_DIR}: {e}")
+    # Fallback para diretório local
+    DATA_DIR = os.path.join(BASE_DIR, 'dados')
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR, exist_ok=True)
+    print(f"🔄 Usando diretório fallback: {DATA_DIR}")
 
 ROUTES_PREFIX = '/EventosFeriados'
 

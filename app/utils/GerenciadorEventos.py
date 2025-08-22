@@ -14,9 +14,16 @@ class GerenciadorEventos:
     
     def __init__(self):
         self.logger = logging.getLogger('EventosFeriados.GerenciadorEventos')
+        self.logger.info(f"🚀 Inicializando GerenciadorEventos...")
+        self.logger.info(f"📁 DATA_DIR configurado: {DATA_DIR}")
+        
         self.arquivo_eventos = os.path.join(DATA_DIR, 'eventos.json')
+        self.logger.info(f"📄 Arquivo de eventos: {self.arquivo_eventos}")
+        
         self.eventos = []
         self._carregar_eventos()
+        
+        self.logger.info(f"✅ GerenciadorEventos inicializado com {len(self.eventos)} eventos")
         
     @classmethod
     def get_instance(cls):
@@ -27,27 +34,77 @@ class GerenciadorEventos:
     
     def _carregar_eventos(self):
         """Carrega os eventos do arquivo JSON"""
+        self.logger.info(f"Iniciando carregamento de eventos do arquivo: {self.arquivo_eventos}")
+        
+        # Verificar se o diretório existe
+        dir_eventos = os.path.dirname(self.arquivo_eventos)
+        if not os.path.exists(dir_eventos):
+            self.logger.warning(f"Diretório não existe: {dir_eventos}")
+            try:
+                os.makedirs(dir_eventos, exist_ok=True)
+                self.logger.info(f"Diretório criado: {dir_eventos}")
+            except Exception as e:
+                self.logger.error(f"Erro ao criar diretório {dir_eventos}: {e}")
+        
         if os.path.exists(self.arquivo_eventos):
             try:
+                # Verificar tamanho do arquivo
+                tamanho_arquivo = os.path.getsize(self.arquivo_eventos)
+                self.logger.info(f"Arquivo existe. Tamanho: {tamanho_arquivo} bytes")
+                
                 with open(self.arquivo_eventos, 'r', encoding='utf-8') as f:
+                    conteudo = f.read()
+                    if len(conteudo) > 0:
+                        self.logger.info(f"Conteúdo do arquivo (primeiros 100 chars): {conteudo[:100]}")
+                    else:
+                        self.logger.warning("Arquivo está vazio")
+                    
+                    # Voltar ao início do arquivo
+                    f.seek(0)
                     self.eventos = json.load(f)
-                self.logger.info(f"Carregados {len(self.eventos)} eventos do arquivo")
+                    
+                self.logger.info(f"✅ Carregados {len(self.eventos)} eventos do arquivo {self.arquivo_eventos}")
+                
+                if len(self.eventos) > 0:
+                    self.logger.info(f"Primeiro evento: {self.eventos[0].get('nome', 'N/A')} - {self.eventos[0].get('dia', 'N/A')}/{self.eventos[0].get('mes', 'N/A')}/{self.eventos[0].get('ano', 'N/A')}")
+                    
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Erro de JSON ao carregar eventos: {e}")
+                self.eventos = []
             except Exception as e:
                 self.logger.error(f"Erro ao carregar eventos: {e}")
                 self.eventos = []
         else:
+            self.logger.warning(f"Arquivo de eventos não existe: {self.arquivo_eventos}")
             self.eventos = []
+            self.logger.info("Criando arquivo de eventos vazio...")
             self._salvar_eventos()
     
     def _salvar_eventos(self):
         """Salva os eventos no arquivo JSON"""
         try:
+            self.logger.info(f"Iniciando salvamento de {len(self.eventos)} eventos em: {self.arquivo_eventos}")
+            
+            # Verificar se o diretório existe
+            dir_eventos = os.path.dirname(self.arquivo_eventos)
+            if not os.path.exists(dir_eventos):
+                self.logger.warning(f"Diretório não existe, criando: {dir_eventos}")
+                os.makedirs(dir_eventos, exist_ok=True)
+            
             with open(self.arquivo_eventos, 'w', encoding='utf-8') as f:
                 json.dump(self.eventos, f, ensure_ascii=False, indent=2)
-            self.logger.info("Eventos salvos com sucesso")
+                
+            # Verificar se o arquivo foi salvo corretamente
+            if os.path.exists(self.arquivo_eventos):
+                tamanho = os.path.getsize(self.arquivo_eventos)
+                self.logger.info(f"✅ Eventos salvos com sucesso. Arquivo: {tamanho} bytes")
+            else:
+                self.logger.error("❌ Arquivo não foi criado após salvamento")
+                return False
+                
             return True
         except Exception as e:
-            self.logger.error(f"Erro ao salvar eventos: {e}")
+            self.logger.error(f"❌ Erro ao salvar eventos: {e}")
             return False
     
     def _validar_conflito_horario(self, local: str, dia: int, mes: int, ano: int, 

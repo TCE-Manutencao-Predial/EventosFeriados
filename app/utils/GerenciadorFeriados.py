@@ -12,11 +12,18 @@ class GerenciadorFeriados:
     
     def __init__(self):
         self.logger = logging.getLogger('EventosFeriados.GerenciadorFeriados')
+        self.logger.info(f"🚀 Inicializando GerenciadorFeriados...")
+        self.logger.info(f"📁 DATA_DIR configurado: {DATA_DIR}")
+        
         self.arquivo_feriados = os.path.join(DATA_DIR, 'feriados.json')
+        self.logger.info(f"📄 Arquivo de feriados: {self.arquivo_feriados}")
+        
         self.feriados = []
         self._carregar_feriados()
         # Sempre remover duplicatas na inicialização para garantir integridade
         self._remover_duplicatas_inicializacao()
+        
+        self.logger.info(f"✅ GerenciadorFeriados inicializado com {len(self.feriados)} feriados")
         
     @classmethod
     def get_instance(cls):
@@ -27,15 +34,49 @@ class GerenciadorFeriados:
     
     def _carregar_feriados(self):
         """Carrega os feriados do arquivo JSON ou inicializa com feriados padrão"""
+        self.logger.info(f"Iniciando carregamento de feriados do arquivo: {self.arquivo_feriados}")
+        
+        # Verificar se o diretório existe
+        dir_feriados = os.path.dirname(self.arquivo_feriados)
+        if not os.path.exists(dir_feriados):
+            self.logger.warning(f"Diretório não existe: {dir_feriados}")
+            try:
+                os.makedirs(dir_feriados, exist_ok=True)
+                self.logger.info(f"Diretório criado: {dir_feriados}")
+            except Exception as e:
+                self.logger.error(f"Erro ao criar diretório {dir_feriados}: {e}")
+        
         if os.path.exists(self.arquivo_feriados):
             try:
+                # Verificar tamanho do arquivo
+                tamanho_arquivo = os.path.getsize(self.arquivo_feriados)
+                self.logger.info(f"Arquivo existe. Tamanho: {tamanho_arquivo} bytes")
+                
                 with open(self.arquivo_feriados, 'r', encoding='utf-8') as f:
+                    conteudo = f.read()
+                    if len(conteudo) > 0:
+                        self.logger.info(f"Conteúdo do arquivo (primeiros 100 chars): {conteudo[:100]}")
+                    else:
+                        self.logger.warning("Arquivo está vazio")
+                    
+                    # Voltar ao início do arquivo
+                    f.seek(0)
                     self.feriados = json.load(f)
-                self.logger.info(f"Carregados {len(self.feriados)} feriados do arquivo")
+                    
+                self.logger.info(f"✅ Carregados {len(self.feriados)} feriados do arquivo {self.arquivo_feriados}")
+                
+                if len(self.feriados) > 0:
+                    self.logger.info(f"Primeiro feriado: {self.feriados[0].get('nome', 'N/A')} - {self.feriados[0].get('dia', 'N/A')}/{self.feriados[0].get('mes', 'N/A')}/{self.feriados[0].get('ano', 'N/A')}")
+                    
+            except json.JSONDecodeError as e:
+                self.logger.error(f"Erro de JSON ao carregar feriados: {e}")
+                self._inicializar_feriados_padrao()
             except Exception as e:
                 self.logger.error(f"Erro ao carregar feriados: {e}")
                 self._inicializar_feriados_padrao()
         else:
+            self.logger.warning(f"Arquivo de feriados não existe: {self.arquivo_feriados}")
+            self.logger.info("Inicializando com feriados padrão...")
             self._inicializar_feriados_padrao()
     
     def _inicializar_feriados_padrao(self):
@@ -212,12 +253,28 @@ class GerenciadorFeriados:
     def _salvar_feriados(self):
         """Salva os feriados no arquivo JSON"""
         try:
+            self.logger.info(f"Iniciando salvamento de {len(self.feriados)} feriados em: {self.arquivo_feriados}")
+            
+            # Verificar se o diretório existe
+            dir_feriados = os.path.dirname(self.arquivo_feriados)
+            if not os.path.exists(dir_feriados):
+                self.logger.warning(f"Diretório não existe, criando: {dir_feriados}")
+                os.makedirs(dir_feriados, exist_ok=True)
+            
             with open(self.arquivo_feriados, 'w', encoding='utf-8') as f:
                 json.dump(self.feriados, f, ensure_ascii=False, indent=2)
-            self.logger.info("Feriados salvos com sucesso")
+                
+            # Verificar se o arquivo foi salvo corretamente
+            if os.path.exists(self.arquivo_feriados):
+                tamanho = os.path.getsize(self.arquivo_feriados)
+                self.logger.info(f"✅ Feriados salvos com sucesso. Arquivo: {tamanho} bytes")
+            else:
+                self.logger.error("❌ Arquivo não foi criado após salvamento")
+                return False
+                
             return True
         except Exception as e:
-            self.logger.error(f"Erro ao salvar feriados: {e}")
+            self.logger.error(f"❌ Erro ao salvar feriados: {e}")
             return False
     
     def listar_feriados(self, ano: Optional[int] = None, mes: Optional[int] = None, ano_minimo: Optional[int] = None) -> List[Dict]:
