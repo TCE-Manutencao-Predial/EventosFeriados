@@ -16,7 +16,34 @@ source ./scripts/config.sh
 
 atualizar_projeto_local() {
     echo "[Deploy] Verificando atualizações do projeto no repositório git..."
+    
+    # Verificar se há arquivos não rastreados que podem causar conflito
+    echo "[Deploy] Verificando arquivos não rastreados..."
+    UNTRACKED_FILES=$(git ls-files --others --exclude-standard)
+    
+    if [ ! -z "$UNTRACKED_FILES" ]; then
+        echo "[Deploy] Encontrados arquivos não rastreados:"
+        echo "$UNTRACKED_FILES"
+        
+        # Mover arquivos de log para backup temporário
+        if [ -f "app/logs/eventos_feriados.log" ]; then
+            echo "[Deploy] Fazendo backup do arquivo de log..."
+            mv "app/logs/eventos_feriados.log" "app/logs/eventos_feriados.log.backup.$(date +%Y%m%d_%H%M%S)"
+        fi
+        
+        # Remover outros arquivos não rastreados que possam causar conflito
+        echo "[Deploy] Removendo arquivos temporários..."
+        find . -name "*.log" -not -path "./.git/*" -delete 2>/dev/null || true
+        find . -name "*.pyc" -not -path "./.git/*" -delete 2>/dev/null || true
+        find . -name "__pycache__" -not -path "./.git/*" -type d -exec rm -rf {} + 2>/dev/null || true
+    fi
+    
+    # Garantir que estamos na branch correta
+    git checkout main 2>/dev/null || git checkout master 2>/dev/null || true
+    
+    # Fazer pull das atualizações
     git pull
+    
     echo "[Deploy] Atualizações do repositório git concluídas."
 }
 

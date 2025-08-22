@@ -1,2 +1,40 @@
+# Arquivos Python compilados
 *.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# Diretórios de cache
 app/routes/__pycache__/*.pyc
+app/__pycache__/
+app/utils/__pycache__/
+app/alarmes/__pycache__/
+
+# Arquivos de log
+*.log
+app/logs/*.log
+logs/*.log
+
+# Arquivos de dados temporários
+*.tmp
+*.temp
+
+# Arquivos de configuração local
+config.local.py
+.env
+.env.local
+
+# Diretórios de dados
+app/dados/*
+!app/dados/.gitkeep
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db
