@@ -79,12 +79,14 @@ CLP_AUDITORIO_CONFIG = {
     'STATUS_FILE': os.path.join(DATA_DIR, 'clp_auditorio_status.json'),  # Arquivo de status
     'BACKUP_FILE': os.path.join(DATA_DIR, 'clp_auditorio_backup.json'),   # Backup dos dados
     # Mapeamento das tags do CLP Auditório para eventos
+    # AJUSTE AUTOMÁTICO: TODOS os eventos do Auditório são ajustados para iniciar 1h antes e terminar 1h depois
+    # para preparar infraestrutura (luzes, refrigeração) do Auditório
     'TAGS_EVENTOS_AUDITORIO': {
         'DIA': 'N91',          # N91:0-9 - dias dos eventos  
         'MES': 'N92',          # N92:0-9 - meses dos eventos
-        'HORA_INICIO': 'N93',  # N93:0-9 - hora de início
+        'HORA_INICIO': 'N93',  # N93:0-9 - hora de início (com ajuste automático para todos os eventos)
         'MIN_INICIO': 'N94',   # N94:0-9 - minuto de início
-        'HORA_FIM': 'N95',     # N95:0-9 - hora de fim
+        'HORA_FIM': 'N95',     # N95:0-9 - hora de fim (com ajuste automático para todos os eventos)
         'MIN_FIM': 'N96'       # N96:0-9 - minuto de fim
     },
     'MAX_EVENTOS': 10,  # Máximo de eventos do Auditório

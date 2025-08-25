@@ -164,6 +164,59 @@ class SincronizadorCLPAuditorio:
             self.logger.error(f"Erro inesperado na verificação de conectividade: {e}")
             return False, f"Erro inesperado: {str(e)}"
     
+    def _ajustar_horario_auditorio(self, evento: Dict) -> Tuple[str, str, bool]:
+        """
+        Ajusta horário de eventos do Auditório: inicia 1h antes e termina 1h depois
+        Para preparar infraestrutura (luzes, refrigeração) do Auditório
+        Aplica-se a TODOS os eventos do Auditório (matutinos e vespertinos)
+        
+        Args:
+            evento: Dicionário com dados do evento
+            
+        Returns:
+            Tupla (hora_inicio_ajustada, hora_fim_ajustada, foi_ajustado)
+        """
+        try:
+            hora_inicio_original = evento['hora_inicio']
+            hora_fim_original = evento['hora_fim']
+            
+            # Converter para objetos time para facilitar cálculos
+            hora_inicio = datetime.strptime(hora_inicio_original, '%H:%M').time()
+            hora_fim = datetime.strptime(hora_fim_original, '%H:%M').time()
+            
+            # Aplicar ajuste para TODOS os eventos do Auditório
+            # Calcular novo horário: 1h antes e 1h depois
+            inicio_datetime = datetime.combine(datetime.today(), hora_inicio)
+            fim_datetime = datetime.combine(datetime.today(), hora_fim)
+            
+            # Subtrair 1 hora do início
+            inicio_ajustado = inicio_datetime - timedelta(hours=1)
+            # Adicionar 1 hora ao fim
+            fim_ajustado = fim_datetime + timedelta(hours=1)
+            
+            # Garantir que não ultrapasse limites razoáveis
+            if inicio_ajustado.time().hour < 6:  # Não iniciar antes das 6h
+                inicio_ajustado = inicio_datetime.replace(hour=6, minute=0)
+            
+            # Não terminar depois das 22h (verificar se passa da meia-noite ou se é >= 22h)
+            if fim_ajustado.time().hour >= 22 or fim_ajustado.day > inicio_datetime.day:  
+                fim_ajustado = datetime.combine(inicio_datetime.date(), datetime.strptime('22:00', '%H:%M').time())
+            
+            hora_inicio_ajustada = inicio_ajustado.strftime('%H:%M')
+            hora_fim_ajustada = fim_ajustado.strftime('%H:%M')
+            
+            # Determinar tipo de evento para log
+            tipo_evento = "matutino" if hora_inicio.hour < 12 else "vespertino"
+            
+            self.logger.info(f"Evento {tipo_evento} ajustado - Original: {hora_inicio_original}-{hora_fim_original} -> "
+                           f"Ajustado: {hora_inicio_ajustada}-{hora_fim_ajustada} (evento: {evento['nome'][:20]}...)")
+            
+            return hora_inicio_ajustada, hora_fim_ajustada, True
+                
+        except Exception as e:
+            self.logger.error(f"Erro ao ajustar horário do Auditório: {e}")
+            return evento['hora_inicio'], evento['hora_fim'], False
+    
     def _preparar_dados_para_clp(self, gerenciador_eventos) -> Dict:
         """Prepara os dados para envio ao CLP Auditório com filtros otimizados"""
         agora = datetime.now()
@@ -207,11 +260,15 @@ class SincronizadorCLPAuditorio:
             max_eventos = min(len(eventos_filtrados), self.config['MAX_EVENTOS'])
             
             for i, (evento, data_evento, categoria) in enumerate(eventos_filtrados[:max_eventos]):
-                # Extrair horas e minutos
-                hora_inicio_parts = evento['hora_inicio'].split(':')
-                hora_fim_parts = evento['hora_fim'].split(':')
+                # Aplicar ajuste de horário para todos os eventos do Auditório
+                hora_inicio_ajustada, hora_fim_ajustada, foi_ajustado = self._ajustar_horario_auditorio(evento)
                 
-                dados_clp['eventos_auditorio'].append({
+                # Extrair horas e minutos dos horários ajustados
+                hora_inicio_parts = hora_inicio_ajustada.split(':')
+                hora_fim_parts = hora_fim_ajustada.split(':')
+                
+                # Dados para o CLP
+                evento_clp = {
                     'slot': i,
                     'dia': evento['dia'],
                     'mes': evento['mes'],
@@ -223,13 +280,30 @@ class SincronizadorCLPAuditorio:
                     'local': evento['local'],
                     'categoria': categoria,  # 'passado' ou 'futuro'
                     'data': data_evento.strftime('%Y-%m-%d')
-                })
+                }
+                
+                # Adicionar informações de ajuste para log/debug
+                if foi_ajustado:
+                    evento_clp['horario_original'] = f"{evento['hora_inicio']}-{evento['hora_fim']}"
+                    evento_clp['horario_ajustado'] = f"{hora_inicio_ajustada}-{hora_fim_ajustada}"
+                    evento_clp['ajuste_aplicado'] = 'auditorio'
+                else:
+                    evento_clp['ajuste_aplicado'] = 'nenhum'
+                
+                dados_clp['eventos_auditorio'].append(evento_clp)
             
             passados_e = len([e for e in dados_clp['eventos_auditorio'] if e['categoria'] == 'passado'])
             futuros_e = len([e for e in dados_clp['eventos_auditorio'] if e['categoria'] == 'futuro'])
+            ajustados_e = len([e for e in dados_clp['eventos_auditorio'] if e['ajuste_aplicado'] == 'auditorio'])
             
             self.logger.info(f"Dados preparados para CLP Auditório: {len(dados_clp['eventos_auditorio'])} eventos "
-                           f"({passados_e} passados, {futuros_e} futuros)")
+                           f"({passados_e} passados, {futuros_e} futuros, {ajustados_e} com ajuste de horário)")
+            
+            if ajustados_e > 0:
+                self.logger.info(f"Eventos do Auditório ajustados (+1h antes/-1h depois): {ajustados_e}")
+                for evento in dados_clp['eventos_auditorio']:
+                    if evento['ajuste_aplicado'] == 'auditorio':
+                        self.logger.info(f"  - {evento['nome']}: {evento['horario_original']} -> {evento['horario_ajustado']}")
             
             if len(eventos_filtrados) > self.config['MAX_EVENTOS']:
                 self.logger.info(f"Filtrados {len(eventos_filtrados)} eventos Auditório relevantes, "
