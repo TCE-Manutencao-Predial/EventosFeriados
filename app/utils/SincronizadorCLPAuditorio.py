@@ -198,9 +198,9 @@ class SincronizadorCLPAuditorio:
             if inicio_ajustado.time().hour < 6:  # Não iniciar antes das 6h
                 inicio_ajustado = inicio_datetime.replace(hour=6, minute=0)
             
-            # Não terminar depois das 22h (verificar se passa da meia-noite ou se é >= 22h)
-            if fim_ajustado.time().hour >= 22 or fim_ajustado.day > inicio_datetime.day:  
-                fim_ajustado = datetime.combine(inicio_datetime.date(), datetime.strptime('22:00', '%H:%M').time())
+            # Não terminar depois das 23h59 (manter dentro do mesmo dia para o CLP)
+            if fim_ajustado.time().hour >= 24 or fim_ajustado.day > inicio_datetime.day:  
+                fim_ajustado = datetime.combine(inicio_datetime.date(), datetime.strptime('23:59', '%H:%M').time())
             
             hora_inicio_ajustada = inicio_ajustado.strftime('%H:%M')
             hora_fim_ajustada = fim_ajustado.strftime('%H:%M')

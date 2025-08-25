@@ -81,6 +81,7 @@ CLP_AUDITORIO_CONFIG = {
     # Mapeamento das tags do CLP Auditório para eventos
     # AJUSTE AUTOMÁTICO: TODOS os eventos do Auditório são ajustados para iniciar 1h antes e terminar 1h depois
     # para preparar infraestrutura (luzes, refrigeração) do Auditório
+    # LIMITES DE SEGURANÇA: 6h00 às 23h59 (mantém intervalos válidos para o CLP)
     'TAGS_EVENTOS_AUDITORIO': {
         'DIA': 'N91',          # N91:0-9 - dias dos eventos  
         'MES': 'N92',          # N92:0-9 - meses dos eventos

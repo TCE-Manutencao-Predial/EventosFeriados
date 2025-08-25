@@ -11,8 +11,8 @@ Implementar ajuste automático de horários para **TODOS** os eventos do Auditó
   - ⏰ **Início**: 1 hora ANTES do horário original
   - ⏰ **Fim**: 1 hora DEPOIS do horário original
 - **Limites de segurança**:
-  - 🚫 Não inicia antes das **6h**
-  - 🚫 Não termina depois das **22h**
+  -   ⚠️ Limites respeitados: 6h-23h59
+  - 🚫 Não termina depois das **23h59** (mantém intervalos válidos para o CLP)
 
 ## 📊 Exemplos Práticos
 
@@ -23,7 +23,7 @@ Implementar ajuste automático de horários para **TODOS** os eventos do Auditó
 | 14:00 - 16:00    | 13:00 - 17:00            | ✅ Vespertino  |
 | 19:00 - 21:00    | 18:00 - 22:00            | ✅ Noturno     |
 | 05:00 - 07:00    | 06:00 - 08:00            | ✅ Limite 6h   |
-| 21:00 - 23:00    | 20:00 - 22:00            | ✅ Limite 22h  |
+| 22:00 - 24:00    | 21:00 - 23:59            | ✅ Limite 23h59|
 
 ## 🏗️ Implementação Técnica
 
@@ -62,6 +62,7 @@ def _ajustar_horario_auditorio(self, evento: Dict) -> Tuple[str, str, bool]:
 - ✅ Melhor qualidade dos eventos
 - ✅ Profissionalismo na gestão de espaços
 - ✅ Economia de energia com programação otimizada
+- ✅ Intervalos válidos sempre programados no CLP (6h-23h59)
 
 ## 🔍 Monitoramento
 
