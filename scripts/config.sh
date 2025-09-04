@@ -10,9 +10,6 @@ GIT_REPO_NAME="EventosFeriados"
 GIT_REPO_OWNER="TCE-Manutencao-Predial"
 GIT_REPO_LINK="https://github.com/$GIT_REPO_OWNER/$GIT_REPO_NAME.git"
 
-APACHE_CONFIG_DIR="/etc/httpd/conf.d"
-APACHE_CONFIG_FILE="EventosFeriados.conf"
-
 HTACCESS_FILE="scripts/htaccess"
 
 # Configurações 
