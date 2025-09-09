@@ -335,7 +335,8 @@ class NotificacaoEventos:
             'funcao': 'EVENTOS',
             'mensagem': f"[{hostname}] {mensagem}",
             'origem': WHATSAPP_API.get('ORIGEM') or 'EVENTOS_FERIADOS',
-            'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True)
+            'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True),
+            'async': WHATSAPP_API.get('ASYNC', True)
         }
 
         with self._lock_api_whatsapp:
@@ -361,6 +362,16 @@ class NotificacaoEventos:
                 self._tempo_ultima_chamada_whatsapp = datetime.now()
 
                 conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text
+                # Se for 202 Accepted, tentar exibir task_id e status_url
+                if resp.status_code == 202:
+                    try:
+                        body = resp.json()
+                        logger.info(
+                            "Envio aceito de forma assíncrona: task_id=%s | status_url=%s | detalhes=%s",
+                            body.get('task_id'), body.get('status_url'), body.get('detalhes')
+                        )
+                    except Exception:
+                        logger.info("Resposta 202 sem JSON parseável: %s", conteudo_curto)
                 logger.info(
                     "Resultado API WhatsApp por função: status=%s | ok=%s | resposta=%s",
                     resp.status_code, resp.ok, conteudo_curto

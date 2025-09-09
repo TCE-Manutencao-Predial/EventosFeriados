@@ -166,5 +166,7 @@ WHATSAPP_API = {
     'TOKEN': os.environ.get('WHATSAPP_API_TOKEN', 'whatsapp_api_token_2025_helpdeskmonitor_tce'),
     'ORIGEM': os.environ.get('WHATSAPP_API_ORIGEM', 'EVENTOS_FERIADOS'),
     'APENAS_DISPONIVEIS': os.environ.get('WHATSAPP_APENAS_DISPONIVEIS', 'true').lower() == 'true',
+        # Preferir processamento assíncrono no backend
+        'ASYNC': os.getenv('WHATSAPP_API_ASYNC', 'true').lower() == 'true',
     'TIMEOUT': int(os.environ.get('WHATSAPP_API_TIMEOUT', '60')),
 }
