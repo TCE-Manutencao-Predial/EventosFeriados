@@ -155,3 +155,14 @@ config = {
     'testing': TestingConfig,
     'default': DevelopmentConfig
 }
+
+# Configuração da API de WhatsApp (HelpDeskMonitor) usada para notificar por função
+# Valores podem (e devem) ser definidos por variáveis de ambiente em produção
+#   WHATSAPP_API_HOST, WHATSAPP_API_TOKEN, WHATSAPP_API_ORIGEM, WHATSAPP_APENAS_DISPONIVEIS, WHATSAPP_API_TIMEOUT
+WHATSAPP_API = {
+    'HOST': os.environ.get('WHATSAPP_API_HOST', 'https://SEU_HOST').rstrip('/'),
+    'TOKEN': os.environ.get('WHATSAPP_API_TOKEN', 'whatsapp_api_token_2025_helpdeskmonitor_tce'),
+    'ORIGEM': os.environ.get('WHATSAPP_API_ORIGEM', 'EVENTOS_FERIADOS'),
+    'APENAS_DISPONIVEIS': os.environ.get('WHATSAPP_APENAS_DISPONIVEIS', 'true').lower() == 'true',
+    'TIMEOUT': int(os.environ.get('WHATSAPP_API_TIMEOUT', '30')),
+}

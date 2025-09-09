@@ -5,9 +5,11 @@ def inicializar_tecnicos() -> List[Tecnico]:
     """Inicializa e retorna a lista de técnicos do sistema"""
     tecnicos = []
 
+    # OBS: Telefones aqui não são mais usados para WhatsApp; o envio por WhatsApp ocorre via API por função.
+    # Os emails continuam válidos para quem preferir EMAIL.
     tecnicos.append(Tecnico(
         nome="Flaximan Arruda dos Santos Junior",
-        telefone="+556291229363",
+    telefone="",  # desabilitado para WhatsApp direto
         email="elderflaximan@gmail.com",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -27,7 +29,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Grupo Elevadores - Orona",
-        telefone="120363159016507640@g.us",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -39,7 +41,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
     
     tecnicos.append(Tecnico(
         nome="Grupo Manutenção Predial",
-        telefone="556293688928-1505225593@g.us",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -52,7 +54,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
     
     tecnicos.append(Tecnico(
         nome="Grupo Refrigeração - Powersafety",
-        telefone="120363311856919908@g.us",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -64,7 +66,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Pedro Henrique Mota Emiliano",
-        telefone="+556299686668",
+    telefone="",
         email="phmotaemiliano@gmail.com",
         metodo_contato_preferencial=MetodoContato.EMAIL,
         funcoes=[
@@ -79,7 +81,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Kamila Leandro Costa",
-        telefone="+556284136363",
+    telefone="",
         email="kleandro@tce.go.gov.br",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -92,7 +94,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Gilney da Costa Vaz",
-        telefone="+556299687686",
+    telefone="",
         email="gcosta@tce.go.gov.br",
         metodo_contato_preferencial=MetodoContato.EMAIL,
         funcoes=[
@@ -107,7 +109,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Ângela Cássia Moraes",
-        telefone="+556292961460",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -119,7 +121,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Andreia da Silva Pinto",
-        telefone="+556281173665",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -132,7 +134,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Francimar Pereira dos Santos Oliveira",
-        telefone="+556299782182",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -147,7 +149,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Adriano Alves Ferreira",
-        telefone="+556291773139",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -161,7 +163,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Daniel Gomes de Lima",
-        telefone="+556282710569",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -175,7 +177,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Thiago Henrique Lemes Borges Teixeira",
-        telefone="+556292246845",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[
@@ -187,7 +189,7 @@ def inicializar_tecnicos() -> List[Tecnico]:
 
     tecnicos.append(Tecnico(
         nome="Juliana Borges de Souza",
-        telefone="+556296586898",
+    telefone="",
         email="",
         metodo_contato_preferencial=MetodoContato.WHATSAPP,
         funcoes=[

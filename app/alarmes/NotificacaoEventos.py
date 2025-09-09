@@ -10,6 +10,7 @@ import requests
 import threading
 import time
 import socket
+from app.config import WHATSAPP_API
 
 logger = logging.getLogger('EventosFeriados')
 
@@ -265,26 +266,25 @@ class NotificacaoEventos:
 
         logger.debug(f"Método de notificação escolhido: {self.metodo_notificacao.name}")
 
+        # Novo fluxo: WhatsApp será enviado em lote por função via API externa.
+        # Emails (se houver) continuam individuais.
+
+        # 1) WhatsApp por função (EVENTOS) usando API externa
+        if any(t.metodo_contato_preferencial == MetodoContato.WHATSAPP for t in tecnicos_para_notificar):
+            try:
+                self.enviar_whatsapp_por_funcao(mensagem, apenas_disponiveis=True)
+            except Exception as e:
+                logger.error(f"Erro ao enviar WhatsApp por função: {e}")
+
+        # 2) Email individual para quem preferir EMAIL
         for tecnico in tecnicos_para_notificar:
-            # Usa o método preferencial do técnico se disponível
-            metodo_usar = tecnico.metodo_contato_preferencial
-
-            if metodo_usar == MetodoContato.WHATSAPP:
-                contato = tecnico.telefone
-            elif metodo_usar == MetodoContato.EMAIL:
-                contato = tecnico.email
-            else:
-                logger.warning(f"Método de contato desconhecido: {metodo_usar}")
-                continue
-
-            msg_log = (
-                f"Enviando notificação de evento para {tecnico.nome} via "
-                f"{metodo_usar.name} ({contato})"
-            )
-            print(msg_log)
-            logger.info(msg_log)
-
-            self.enviar_mensagem(contato, metodo_usar, mensagem)
+            if tecnico.metodo_contato_preferencial == MetodoContato.EMAIL and tecnico.email:
+                msg_log = (
+                    f"Enviando notificação de evento para {tecnico.nome} via EMAIL ({tecnico.email})"
+                )
+                print(msg_log)
+                logger.info(msg_log)
+                self.enviar_email(tecnico.email, mensagem)
 
     def enviar_mensagem(self, contato: str, metodo: MetodoContato, mensagem: str) -> None:
         """
@@ -299,86 +299,81 @@ class NotificacaoEventos:
         mensagem = f"[{hostname}] {mensagem}"
         
         if metodo == MetodoContato.WHATSAPP:
-            logger.debug(f"Preparando envio via WhatsApp para {contato}")
-            self.enviar_whatsapp(contato, mensagem)
+            # Mantido por compatibilidade, mas agora delegamos ao envio por função
+            logger.debug("Preparando envio via WhatsApp por função (compat)")
+            self.enviar_whatsapp_por_funcao(mensagem, apenas_disponiveis=True)
         elif metodo == MetodoContato.EMAIL:
             logger.debug(f"Preparando envio de email para {contato}")
             self.enviar_email(contato, mensagem)
         else:
             logger.warning(f"Método de contato desconhecido: {metodo}")
 
-    # Variáveis de classe para controlar o atraso entre as chamadas
+    # Variáveis para controlar o intervalo entre chamadas (mantido para evitar flood)
     _tempo_ultima_chamada_whatsapp = None
     _lock_api_whatsapp = threading.Lock()
 
-    # Configurações para API de WhatsApp (textmebot) 
-    API_TEXTMEBOT_BASE_URL = "http://api.textmebot.com/send.php"
-    API_TEXMEBOT_KEY = "pF7RP5Zcgdnw"
-
-    @classmethod
-    def __chamar_api_textmebot(cls, params):
+    def enviar_whatsapp_por_funcao(self, mensagem: str, apenas_disponiveis: bool = True) -> None:
         """
-        Envia uma requisição para a API de WhatsApp (textmebot), garantindo um intervalo mínimo
-        entre as chamadas.
-        
+        Envia mensagem via WhatsApp para todos os técnicos com a função EVENTOS
+        utilizando a API pública de envio por função.
+
         Args:
-            params (dict): Parâmetros necessários para a chamada da API.
-        
-        Returns:
-            requests.Response ou None: Retorna o objeto de resposta em caso de sucesso ou None se falhar.
+            mensagem (str): Texto a ser enviado.
+            apenas_disponiveis (bool): Se True, envia apenas para quem está em jornada.
         """
-        TEMPO_ATRASO_API = 7
-        NUM_MAX_TENTATIVAS = 5
-        TEMPO_ATRASO_RETRIES = 10
+        TEMPO_ATRASO_API = 2  # pequena contenção para evitar floods
+        NUM_MAX_TENTATIVAS = 3
+        TEMPO_ATRASO_RETRIES = 5
 
-        with cls._lock_api_whatsapp:
-            now = datetime.now()
-            if cls._tempo_ultima_chamada_whatsapp is not None:
-                elapsed = (now - cls._tempo_ultima_chamada_whatsapp).total_seconds()
-                if elapsed < TEMPO_ATRASO_API:
-                    sleep_time = TEMPO_ATRASO_API - elapsed
-                    logger.info(f"Aguardando {sleep_time:.0f}s antes de enviar a próxima mensagem.")
-                    time.sleep(sleep_time)
-
-            tentativa_atual = 0
-            while tentativa_atual < NUM_MAX_TENTATIVAS:
-                try:
-                    url_debug = requests.Request('GET', cls.API_TEXTMEBOT_BASE_URL, params=params).prepare().url
-                    logger.info(f"Chamando a URL: {url_debug}")
-
-                    response = requests.get(cls.API_TEXTMEBOT_BASE_URL, params=params)
-                    cls._tempo_ultima_chamada_whatsapp = datetime.now()
-                    return response
-                except requests.RequestException as e:
-                    tentativa_atual += 1
-                    logger.error(f"Erro na requisição (tentativa {tentativa_atual} de {NUM_MAX_TENTATIVAS}): {e}")
-                    if tentativa_atual < NUM_MAX_TENTATIVAS:
-                        logger.info(f"Aguardando {TEMPO_ATRASO_RETRIES}s antes da próxima tentativa.")
-                        time.sleep(TEMPO_ATRASO_RETRIES)
-        return None
-
-    def enviar_whatsapp(self, telefone: str, mensagem: str) -> None:
-        """
-        Implementa envio de mensagem via WhatsApp usando uma API externa.
-        
-        Args:
-            telefone (str): Número em formato E.164 ou ID de grupo.
-            mensagem (str): Texto a ser enviado via WhatsApp.
-        """
-        if not telefone.startswith('+') and '@g.us' not in telefone:
-            telefone = '+' + telefone
-
-        params = {
-            'recipient': telefone,
-            'apikey': self.API_TEXMEBOT_KEY,
-            'text': mensagem
+        url = f"{WHATSAPP_API['HOST']}/helpdeskmonitor/api/whatsapp/send-by-function"
+        headers = {
+            'Authorization': f"Bearer {WHATSAPP_API['TOKEN']}",
+            'Content-Type': 'application/json'
         }
-        response = self.__chamar_api_textmebot(params)
-        if response and response.status_code == 200:
-            logger.info(f"WhatsApp enviado com sucesso para {telefone}.")
-        else:
-            status_code = response.status_code if response else '???'
-            logger.error(f"Falha ao enviar WhatsApp para {telefone}. Status: {status_code}")
+
+        hostname = socket.gethostname()
+        payload = {
+            'funcao': 'EVENTOS',
+            'mensagem': f"[{hostname}] {mensagem}",
+            'origem': WHATSAPP_API.get('ORIGEM') or 'EVENTOS_FERIADOS',
+            'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True)
+        }
+
+        with self._lock_api_whatsapp:
+            now = datetime.now()
+            if self._tempo_ultima_chamada_whatsapp is not None:
+                elapsed = (now - self._tempo_ultima_chamada_whatsapp).total_seconds()
+                if elapsed < TEMPO_ATRASO_API:
+                    time.sleep(TEMPO_ATRASO_API - elapsed)
+
+            tentativa = 0
+            while tentativa < NUM_MAX_TENTATIVAS:
+                try:
+                    logger.info(
+                        f"Chamando API WhatsApp por função: POST {url} | headers=Authorization: Bearer **** | payload={{{'funcao': 'EVENTOS', 'origem': payload['origem'], 'apenas_disponiveis': payload['apenas_disponiveis'], 'mensagem_len': {len(payload['mensagem'])}}}}"
+                    )
+                    resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30))
+                    self._tempo_ultima_chamada_whatsapp = datetime.now()
+
+                    # Log detalhado do resultado
+                    conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text
+                    logger.info(
+                        f"Resultado API WhatsApp por função: status={resp.status_code} | ok={resp.ok} | resposta={conteudo_curto}"
+                    )
+
+                    if resp.ok:
+                        return
+
+                    # Em caso de status não-OK, tenta novamente com backoff
+                    tentativa += 1
+                    if tentativa < NUM_MAX_TENTATIVAS:
+                        logger.warning(f"Falha no envio (status {resp.status_code}). Nova tentativa em {TEMPO_ATRASO_RETRIES}s...")
+                        time.sleep(TEMPO_ATRASO_RETRIES)
+                except requests.RequestException as e:
+                    tentativa += 1
+                    logger.error(f"Erro na chamada da API WhatsApp por função (tentativa {tentativa}/{NUM_MAX_TENTATIVAS}): {e}")
+                    if tentativa < NUM_MAX_TENTATIVAS:
+                        time.sleep(TEMPO_ATRASO_RETRIES)
 
     def enviar_email(self, email: str, mensagem: str) -> None:
         """

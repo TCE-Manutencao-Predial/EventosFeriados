@@ -109,10 +109,28 @@ As notificações respeitam os seguintes horários:
 
 ### API WhatsApp
 
-O sistema usa a API TextMeBot para envio de WhatsApp:
-- URL: `http://api.textmebot.com/send.php`
-- Chave: `pF7RP5Zcgdnw`
-- Intervalo entre mensagens: 7 segundos
+Envio via API pública de envio por função (HelpDeskMonitor). Telefones não são armazenados no código; o backend externo resolve os destinatários pela função EVENTOS.
+
+- Método: POST
+- URL: `https://SEU_HOST/helpdeskmonitor/api/whatsapp/send-by-function`
+- Header: `Authorization: Bearer whatsapp_api_token_2025_helpdeskmonitor_tce`
+- Body (JSON):
+   - `funcao`: "EVENTOS"
+   - `mensagem`: texto já montado pelo sistema
+   - `origem`: identificador do sistema (opcional)
+   - `apenas_disponiveis`: true para respeitar jornada
+
+Exemplo curl:
+
+curl -X POST "https://SEU_HOST/helpdeskmonitor/api/whatsapp/send-by-function" \
+   -H "Authorization: Bearer whatsapp_api_token_2025_helpdeskmonitor_tce" \
+   -H "Content-Type: application/json" \
+   -d '{
+      "funcao": "EVENTOS",
+      "mensagem": "Olá, equipe de EVENTOS. Favor verificar o chamado #12345.",
+      "origem": "SISTEMA_EXTERNO",
+      "apenas_disponiveis": true
+   }'
 
 ### Email SMTP
 
@@ -155,12 +173,12 @@ Para envio de emails:
 
 ### Adicionar Novo Técnico
 
-Para adicionar um novo técnico com função EVENTOS, edite o arquivo `app/alarmes/agenda_contatos.py`:
+Para adicionar um novo técnico com função EVENTOS, edite o arquivo `app/alarmes/agenda_contatos.py` (telefone não é necessário para WhatsApp; emails continuam válidos para quem preferir EMAIL):
 
 ```python
 tecnicos.append(Tecnico(
     nome="Nome do Técnico",
-    telefone="+5562999999999",
+   telefone="",
     email="email@tce.go.gov.br",
     metodo_contato_preferencial=MetodoContato.WHATSAPP,
     funcoes=[
@@ -200,7 +218,7 @@ Os logs são gravados usando o logger padrão do sistema:
 
 4. **Feriados**: O sistema considera feriados através do `GerenciadorFeriados` e os trata como fins de semana.
 
-5. **Rate Limiting**: Há um intervalo de 7 segundos entre envios de WhatsApp para evitar bloqueios da API.
+5. **Rate Limiting**: Há contenção entre chamadas à API externa e até 3 tentativas com backoff.
 
 ## 🐛 Troubleshooting
 
@@ -211,9 +229,16 @@ Os logs são gravados usando o logger padrão do sistema:
 4. Consulte os logs para mensagens de erro
 
 ### Erro na API WhatsApp
-1. Verifique a conectividade com `api.textmebot.com`
-2. Confirme se a chave da API está correta
-3. Verifique se não há muitas requisições simultâneas
+1. Verifique a conectividade com `SEU_HOST` e o endpoint `/helpdeskmonitor/api/whatsapp/send-by-function`
+2. Confirme o token Bearer e o host configurados nas variáveis de ambiente
+3. Consulte os logs em `app/logs/eventos_feriados.log` para ver o payload (sem token) e a resposta da API
+
+### Variáveis de Ambiente
+- `WHATSAPP_API_HOST` (ex.: `https://helpdesk.tce.go.gov.br`)
+- `WHATSAPP_API_TOKEN` (ex.: `whatsapp_api_token_2025_helpdeskmonitor_tce`)
+- `WHATSAPP_API_ORIGEM` (ex.: `EVENTOS_FERIADOS`)
+- `WHATSAPP_APENAS_DISPONIVEIS` (`true`/`false`)
+- `WHATSAPP_API_TIMEOUT` (segundos)
 
 ### Erro no envio de Email
 1. Verifique conectividade com o servidor SMTP `172.17.120.1`
