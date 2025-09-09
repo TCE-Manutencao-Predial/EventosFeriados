@@ -1,15 +1,10 @@
 import logging
 from datetime import datetime
-from app.alarmes.ClassesSistema import Tecnico, MetodoContato, FuncoesTecnicos, ConfigNotificacao
+from app.alarmes.ClassesSistema import ConfigNotificacao
 from app.utils.GerenciadorFeriados import GerenciadorFeriados
-from typing import List
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import requests
 import threading
 import time
-import socket
 from app.config import WHATSAPP_API
 
 logger = logging.getLogger('EventosFeriados')
@@ -23,68 +18,23 @@ class NotificacaoEventos:
     incluídos no sistema e também um dia antes do evento às 8h00.
 
     Atributos:
-        config_notificacao (ConfigNotificacao): Configurações sobre a forma de notificação.
-        tecnicos (List[Tecnico]): Lista de técnicos que podem receber as notificações.
-        metodo_notificacao (MetodoContato): Método de contato a ser utilizado.
+    config_notificacao (ConfigNotificacao): Configurações sobre a forma de notificação.
     """
 
     def __init__(
         self,
         config_notificacao: ConfigNotificacao,
-        tecnicos: List[Tecnico],
-        metodo_notificacao: MetodoContato = MetodoContato.WHATSAPP
     ):
         """
         Construtor da classe NotificacaoEventos.
 
         Args:
             config_notificacao (ConfigNotificacao): Objeto com configurações de notificação.
-            tecnicos (List[Tecnico]): Lista de instâncias da classe Tecnico.
-            metodo_notificacao (MetodoContato, optional): Método de contato (Enum). 
-                Por padrão, utiliza 'MetodoContato.WHATSAPP'.
         """
         self.config_notificacao = config_notificacao
-        self.tecnicos = tecnicos
-        self.metodo_notificacao = metodo_notificacao
         self.gerenciador_feriados = GerenciadorFeriados()
-
-    def verificar_disponibilidade_tecnico(self, tecnico: Tecnico, agora: datetime) -> bool:
-        """
-        Verifica se o técnico está disponível no momento atual, considerando:
-            - Se está de férias (ferias=True).
-            - Se há horários (jornada) definidos e se o horário atual está dentro de algum
-              dos intervalos válidos, inclusive levando em conta turnos que ultrapassam a meia-noite.
-        
-        Args:
-            tecnico (Tecnico): O técnico a ser verificado.
-            agora (datetime): Data e hora de referência para a checagem.
-        
-        Returns:
-            bool: True se o técnico está disponível, False caso contrário.
-        """
-        if tecnico.ferias:
-            logger.debug(f"Técnico {tecnico.nome} está de férias.")
-            return False
-        if not tecnico.jornada:
-            logger.debug(f"Técnico {tecnico.nome} não tem jornada definida, assumindo disponível.")
-            return True
-
-        now_time = agora.time()
-        for inicio_str, fim_str in tecnico.jornada:
-            inicio = datetime.strptime(inicio_str, '%H:%M').time()
-            fim = datetime.strptime(fim_str, '%H:%M').time()
-
-            if inicio <= fim:
-                if inicio <= now_time <= fim:
-                    logger.debug(f"Técnico {tecnico.nome} está disponível no intervalo {inicio} - {fim}.")
-                    return True
-            else:
-                if now_time >= inicio or now_time <= fim:
-                    logger.debug(f"Técnico {tecnico.nome} está disponível no turno noturno {inicio} - {fim}.")
-                    return True
-
-        logger.debug(f"Técnico {tecnico.nome} não está disponível agora.")
-        return False
+    # A lista de técnicos e verificação de disponibilidade local foram removidas;
+    # o filtro por disponibilidade é realizado pela própria API externa via parâmetro.
 
     def verificar_horario_data_alarme(self, agora: datetime) -> bool:
         """
@@ -137,19 +87,9 @@ class NotificacaoEventos:
         """
         agora = datetime.now()
         
-        # Verifica se está no horário de notificação
+    # Verifica se está no horário de notificação
         if not self.verificar_horario_data_alarme(agora):
             logger.info("Fora do horário de notificação para eventos criados.")
-            return
-
-        # Filtra técnicos com função EVENTOS
-        tecnicos_eventos = [
-            tecnico for tecnico in self.tecnicos 
-            if FuncoesTecnicos.EVENTOS in tecnico.funcoes
-        ]
-
-        if not tecnicos_eventos:
-            logger.info("Nenhum técnico com função EVENTOS encontrado.")
             return
 
         # Monta mensagem de evento criado
@@ -165,7 +105,11 @@ class NotificacaoEventos:
             f"ℹ️ Um lembrete será enviado 1 dia antes do evento às 08:00h."
         )
 
-        self.enviar_notificacao_para_tecnicos(mensagem, tecnicos_eventos)
+        self.enviar_notificacao_funcao_eventos(
+            assunto="Aviso de Evento - Novo cadastro",
+            mensagem=mensagem,
+            apenas_disponiveis=True
+        )
 
     def notificar_evento_cancelado(self, evento_dados: dict) -> None:
         """
@@ -176,19 +120,9 @@ class NotificacaoEventos:
         """
         agora = datetime.now()
         
-        # Verifica se está no horário de notificação
+    # Verifica se está no horário de notificação
         if not self.verificar_horario_data_alarme(agora):
             logger.info("Fora do horário de notificação para eventos cancelados.")
-            return
-
-        # Filtra técnicos com função EVENTOS
-        tecnicos_eventos = [
-            tecnico for tecnico in self.tecnicos 
-            if FuncoesTecnicos.EVENTOS in tecnico.funcoes
-        ]
-
-        if not tecnicos_eventos:
-            logger.info("Nenhum técnico com função EVENTOS encontrado.")
             return
 
         # Monta mensagem de evento cancelado
@@ -203,7 +137,11 @@ class NotificacaoEventos:
             f"⚠️ Este evento foi removido do sistema e não acontecerá mais."
         )
 
-        self.enviar_notificacao_para_tecnicos(mensagem, tecnicos_eventos)
+        self.enviar_notificacao_funcao_eventos(
+            assunto="Aviso de Evento - Cancelado",
+            mensagem=mensagem,
+            apenas_disponiveis=True
+        )
 
     def notificar_evento_alterado(self, evento_anterior: dict, evento_atual: dict) -> None:
         """
@@ -218,13 +156,6 @@ class NotificacaoEventos:
             logger.info("Fora do horário de notificação para eventos alterados.")
             return
 
-        tecnicos_eventos = [
-            tecnico for tecnico in self.tecnicos
-            if FuncoesTecnicos.EVENTOS in tecnico.funcoes
-        ]
-        if not tecnicos_eventos:
-            logger.info("Nenhum técnico com função EVENTOS encontrado para alteração.")
-            return
 
         # Identificar mudanças relevantes
         def fmt_data(ev):
@@ -263,7 +194,11 @@ class NotificacaoEventos:
             f"Alterações:\n{lista_mudancas}"
         )
 
-        self.enviar_notificacao_para_tecnicos(mensagem, tecnicos_eventos)
+        self.enviar_notificacao_funcao_eventos(
+            assunto="Aviso de Evento - Atualizado",
+            mensagem=mensagem,
+            apenas_disponiveis=True
+        )
 
     def notificar_lembrete_evento(self, evento_dados: dict) -> None:
         """
@@ -274,19 +209,9 @@ class NotificacaoEventos:
         """
         agora = datetime.now()
         
-        # Verifica se é aproximadamente 8h00 (tolerância de 30 minutos)
+    # Verifica se é aproximadamente 8h00 (tolerância de 30 minutos)
         if not (7.5 <= agora.hour + agora.minute/60 <= 8.5):
             logger.debug("Não está no horário de lembrete (08:00h ±30min).")
-            return
-
-        # Filtra técnicos com função EVENTOS
-        tecnicos_eventos = [
-            tecnico for tecnico in self.tecnicos 
-            if FuncoesTecnicos.EVENTOS in tecnico.funcoes
-        ]
-
-        if not tecnicos_eventos:
-            logger.info("Nenhum técnico com função EVENTOS encontrado para lembrete.")
             return
 
         # Monta mensagem de lembrete
@@ -302,70 +227,24 @@ class NotificacaoEventos:
             f"⚠️ Verifique se todos os equipamentos e instalações estão funcionando adequadamente."
         )
 
-        self.enviar_notificacao_para_tecnicos(mensagem, tecnicos_eventos)
-
-    def enviar_notificacao_para_tecnicos(self, mensagem: str, tecnicos_lista: List[Tecnico]) -> None:
+        self.enviar_notificacao_funcao_eventos(
+            assunto="Lembrete de Evento - Amanhã",
+            mensagem=mensagem,
+            apenas_disponiveis=True
+        )
+    def enviar_notificacao_funcao_eventos(self, assunto: str, mensagem: str, apenas_disponiveis: bool = True) -> None:
         """
-        Envia a notificação para uma lista específica de técnicos.
-        
-        Args:
-            mensagem (str): Mensagem a ser enviada.
-            tecnicos_lista (List[Tecnico]): Lista de técnicos para notificar.
+        Envia a notificação para todos com a função EVENTOS via API externa (e-mail por função).
         """
-        agora = datetime.now()
+        try:
+            # Manter formatação de e-mail (HTML simples)
+            mensagem_html = mensagem.replace('\n', '<br>')
+            self.enviar_email_por_funcao(assunto=assunto, mensagem=mensagem_html, apenas_disponiveis=apenas_disponiveis)
+        except Exception as e:
+            logger.error(f"Erro ao enviar notificação por função EVENTOS: {e}")
 
-        # Filtra técnicos pela disponibilidade atual
-        tecnicos_para_notificar = [
-            tecnico for tecnico in tecnicos_lista
-            if self.verificar_disponibilidade_tecnico(tecnico, agora)
-        ]
-
-        if not tecnicos_para_notificar:
-            logger.info("Nenhum técnico disponível para notificação no momento.")
-            return
-
-        logger.debug(f"Método de notificação escolhido: {self.metodo_notificacao.name}")
-
-        # Novo fluxo: WhatsApp será enviado em lote por função via API externa.
-        # Emails (se houver) continuam individuais.
-
-        # 1) WhatsApp por função (EVENTOS) usando API externa
-        if any(t.metodo_contato_preferencial == MetodoContato.WHATSAPP for t in tecnicos_para_notificar):
-            try:
-                self.enviar_whatsapp_por_funcao(mensagem, apenas_disponiveis=True)
-            except Exception as e:
-                logger.error(f"Erro ao enviar WhatsApp por função: {e}")
-
-        # 2) Email individual para quem preferir EMAIL
-        for tecnico in tecnicos_para_notificar:
-            if tecnico.metodo_contato_preferencial == MetodoContato.EMAIL and tecnico.email:
-                msg_log = (
-                    f"Enviando notificação de evento para {tecnico.nome} via EMAIL ({tecnico.email})"
-                )
-                print(msg_log)
-                logger.info(msg_log)
-                # enviar mensagem sem prefixo de hostname
-                self.enviar_mensagem(tecnico.email, MetodoContato.EMAIL, mensagem)
-
-    def enviar_mensagem(self, contato: str, metodo: MetodoContato, mensagem: str) -> None:
-        """
-        Encaminha a mensagem para o método apropriado.
-        
-        Args:
-            contato (str): Telefone ou e-mail do destinatário.
-            metodo (MetodoContato): Método de envio (WhatsApp ou EMAIL).
-            mensagem (str): Texto da mensagem a ser enviada.
-        """
-        if metodo == MetodoContato.WHATSAPP:
-            # Mantido por compatibilidade, mas agora delegamos ao envio por função
-            logger.debug("Preparando envio via WhatsApp por função (compat)")
-            self.enviar_whatsapp_por_funcao(mensagem, apenas_disponiveis=True)
-        elif metodo == MetodoContato.EMAIL:
-            logger.debug(f"Preparando envio de email para {contato}")
-            # Removido prefixo de hostname da mensagem
-            self.enviar_email(contato, mensagem)
-        else:
-            logger.warning(f"Método de contato desconhecido: {metodo}")
+    # Mantemos opcionalmente o envio via WhatsApp por função (API externa),
+    # mas o fluxo principal usa e-mail por função.
 
     # Variáveis para controlar o intervalo entre chamadas (mantido para evitar flood)
     _tempo_ultima_chamada_whatsapp = None
@@ -379,7 +258,7 @@ class NotificacaoEventos:
         Args:
             mensagem (str): Texto a ser enviado.
             apenas_disponiveis (bool): Se True, envia apenas para quem está em jornada.
-    """
+        """
         TEMPO_ATRASO_API = 2  # pequena contenção para evitar floods
         NUM_MAX_TENTATIVAS = 1  # apenas uma tentativa imediata
 
@@ -396,7 +275,7 @@ class NotificacaoEventos:
             'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True),
             'async': WHATSAPP_API.get('ASYNC', True)
         }
-
+        
         with self._lock_api_whatsapp:
             now = datetime.now()
             if self._tempo_ultima_chamada_whatsapp is not None:
@@ -483,37 +362,59 @@ class NotificacaoEventos:
             )
         except requests.RequestException as e:
             logger.error("(Segunda tentativa) Erro na chamada da API WhatsApp por função: %s", e)
-
-    def enviar_email(self, email: str, mensagem: str) -> None:
+    def enviar_email_por_funcao(self, assunto: str, mensagem: str, apenas_disponiveis: bool = True) -> None:
         """
-        Envia um e-mail usando o servidor SMTP configurado.
-        
-        Args:
-            email (str): Endereço de e-mail do destinatário.
-            mensagem (str): Conteúdo da mensagem.
+        Envia e-mail via API para todos os técnicos com a função EVENTOS.
         """
-        smtp_server = '172.17.120.1'
-        smtp_port = 25
-        from_email = 'automacao@tce.go.gov.br'
-        subject = "Notificação de Evento - TCE-GO"
+        TEMPO_ATRASO_API = 2
+        url = f"{WHATSAPP_API['HOST']}/helpdeskmonitor/api/email/send-by-function"
+        headers = {
+            'Authorization': f"Bearer {WHATSAPP_API['TOKEN']}",
+            'Content-Type': 'application/json'
+        }
+        payload = {
+            'funcao': 'EVENTOS',
+            'assunto': assunto,
+            'mensagem': mensagem,
+            'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True),
+            'async': WHATSAPP_API.get('ASYNC', True)
+        }
 
-        # Converte quebras de linha para HTML
-        mensagem_html = mensagem.replace('\n', '<br>')
+        with self._lock_api_whatsapp:
+            now = datetime.now()
+            if self._tempo_ultima_chamada_whatsapp is not None:
+                elapsed = (now - self._tempo_ultima_chamada_whatsapp).total_seconds()
+                if elapsed < TEMPO_ATRASO_API:
+                    time.sleep(TEMPO_ATRASO_API - elapsed)
 
-        msg = MIMEMultipart()
-        msg['From'] = from_email
-        msg['To'] = email
-        msg['Subject'] = subject
-        msg.attach(MIMEText(mensagem_html, 'html'))
-
-        try:
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            server.sendmail(from_email, email, msg.as_string())
-            logger.info(f"Email enviado com sucesso para {email}.")
-        except Exception as e:
-            logger.error(f"Erro ao enviar o email para {email}: {e}")
-        finally:
             try:
-                server.quit()
-            except:
-                pass
+                log_payload = {
+                    'funcao': 'EVENTOS',
+                    'apenas_disponiveis': payload['apenas_disponiveis'],
+                    'assunto': payload['assunto'],
+                    'mensagem_len': len(payload['mensagem'])
+                }
+                logger.info(
+                    "Chamando API Email por função: POST %s | headers=Authorization: Bearer **** | payload=%s",
+                    url,
+                    log_payload
+                )
+                resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30))
+                self._tempo_ultima_chamada_whatsapp = datetime.now()
+
+                conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text
+                if resp.status_code == 202:
+                    try:
+                        body = resp.json()
+                        logger.info(
+                            "Envio de e-mail aceito (assíncrono): task_id=%s | status_url=%s | detalhes=%s",
+                            body.get('task_id'), body.get('status_url'), body.get('detalhes')
+                        )
+                    except Exception:
+                        logger.info("Resposta 202 sem JSON parseável: %s", conteudo_curto)
+                logger.info(
+                    "Resultado API Email por função: status=%s | ok=%s | resposta=%s",
+                    resp.status_code, resp.ok, conteudo_curto
+                )
+            except requests.RequestException as e:
+                logger.error("Erro na chamada da API Email por função: %s", e)

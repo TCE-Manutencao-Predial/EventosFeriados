@@ -5,8 +5,7 @@ import threading
 from datetime import datetime, timedelta
 from typing import Optional
 from app.alarmes.NotificacaoEventos import NotificacaoEventos
-from app.alarmes.ClassesSistema import ConfigNotificacao, MetodoContato
-from app.alarmes.agenda_contatos import inicializar_tecnicos
+from app.alarmes.ClassesSistema import ConfigNotificacao
 from app.utils.GerenciadorEventos import GerenciadorEventos
 
 logger = logging.getLogger('EventosFeriados')
@@ -46,14 +45,9 @@ class GerenciadorNotificacaoEventos:
                 repetir_notificacao=False
             )
             
-            # Carrega a lista de técnicos
-            tecnicos = inicializar_tecnicos()
-            
-            # Cria a instância de notificação
+            # Cria a instância de notificação (sem técnicos locais; API externa cuida do envio por função)
             self.notificacao_eventos = NotificacaoEventos(
-                config_notificacao=config,
-                tecnicos=tecnicos,
-                metodo_notificacao=MetodoContato.WHATSAPP
+                config_notificacao=config
             )
             
             logger.info("Sistema de notificação de eventos inicializado com sucesso")
@@ -97,6 +91,13 @@ class GerenciadorNotificacaoEventos:
         if not self.notificacao_eventos:
             logger.error("Sistema de notificação não está inicializado")
             return False
+        try:
+            self.notificacao_eventos.notificar_evento_cancelado(evento_dados)
+            logger.info(f"Notificação de evento cancelado enviada: {evento_dados['nome']}")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao enviar notificação de evento cancelado: {e}")
+            return False
 
     def notificar_evento_alterado(self, evento_anterior: dict, evento_atual: dict) -> bool:
         """
@@ -111,14 +112,6 @@ class GerenciadorNotificacaoEventos:
             return True
         except Exception as e:
             logger.error(f"Erro ao enviar notificação de evento alterado: {e}")
-            return False
-            
-        try:
-            self.notificacao_eventos.notificar_evento_cancelado(evento_dados)
-            logger.info(f"Notificação de evento cancelado enviada: {evento_dados['nome']}")
-            return True
-        except Exception as e:
-            logger.error(f"Erro ao enviar notificação de evento cancelado: {e}")
             return False
     
     def iniciar_scheduler_lembretes(self):
@@ -231,19 +224,7 @@ class GerenciadorNotificacaoEventos:
     
     def obter_tecnicos_eventos(self):
         """
-        Retorna a lista de técnicos que têm a função EVENTOS.
-        
-        Returns:
-            list: Lista de técnicos com função EVENTOS
+        Depreciado: não mantemos mais técnicos localmente; envio é por função via API externa.
+        Retorna lista vazia por compatibilidade.
         """
-        if not self.notificacao_eventos:
-            return []
-            
-        from app.alarmes.ClassesSistema import FuncoesTecnicos
-        
-        tecnicos_eventos = [
-            tecnico for tecnico in self.notificacao_eventos.tecnicos
-            if FuncoesTecnicos.EVENTOS in tecnico.funcoes
-        ]
-        
-        return tecnicos_eventos
+        return []
