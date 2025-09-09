@@ -97,6 +97,21 @@ class GerenciadorNotificacaoEventos:
         if not self.notificacao_eventos:
             logger.error("Sistema de notificação não está inicializado")
             return False
+
+    def notificar_evento_alterado(self, evento_anterior: dict, evento_atual: dict) -> bool:
+        """
+        Notifica técnicos sobre um evento que foi alterado.
+        """
+        if not self.notificacao_eventos:
+            logger.error("Sistema de notificação não está inicializado")
+            return False
+        try:
+            self.notificacao_eventos.notificar_evento_alterado(evento_anterior, evento_atual)
+            logger.info(f"Notificação de evento alterado enviada: {evento_atual.get('nome','')} ")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao enviar notificação de evento alterado: {e}")
+            return False
             
         try:
             self.notificacao_eventos.notificar_evento_cancelado(evento_dados)

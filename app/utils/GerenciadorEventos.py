@@ -264,6 +264,8 @@ class GerenciadorEventos:
         try:
             for i, evento in enumerate(self.eventos):
                 if evento['id'] == evento_id:
+                    # Snapshot antes das mudanças para notificação
+                    evento_antes = evento.copy()
                     # Validar local se fornecido
                     if 'local' in dados and dados['local'] not in self.LOCAIS_VALIDOS:
                         raise ValueError(f"Local inválido. Locais válidos: {', '.join(self.LOCAIS_VALIDOS)}")
@@ -314,6 +316,28 @@ class GerenciadorEventos:
                     
                     self._salvar_eventos()
                     self.logger.info(f"Evento atualizado: {evento['nome']}")
+
+                    # Enviar notificação de alteração em background
+                    try:
+                        import threading
+                        from .GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
+
+                        def enviar_notificacao_alteracao():
+                            try:
+                                ger = GerenciadorNotificacaoEventos.get_instance()
+                                ger.notificar_evento_alterado(evento_antes, evento)
+                            except Exception as e:
+                                self.logger.warning(f"Erro ao notificar alteração de evento: {e}")
+
+                        t = threading.Thread(
+                            target=enviar_notificacao_alteracao,
+                            daemon=True,
+                            name=f"NotificacaoAlteracao_{evento_id}"
+                        )
+                        t.start()
+                    except Exception as e:
+                        self.logger.warning(f"Falha ao iniciar thread de notificação de alteração: {e}")
+
                     return evento
             
             return None

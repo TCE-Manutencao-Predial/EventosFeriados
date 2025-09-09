@@ -205,6 +205,66 @@ class NotificacaoEventos:
 
         self.enviar_notificacao_para_tecnicos(mensagem, tecnicos_eventos)
 
+    def notificar_evento_alterado(self, evento_anterior: dict, evento_atual: dict) -> None:
+        """
+        Notifica técnicos quando um evento é alterado (data, horário, local, etc.).
+        
+        Args:
+            evento_anterior (dict): Snapshot do evento antes da atualização.
+            evento_atual (dict): Estado atual do evento após a atualização.
+        """
+        agora = datetime.now()
+        if not self.verificar_horario_data_alarme(agora):
+            logger.info("Fora do horário de notificação para eventos alterados.")
+            return
+
+        tecnicos_eventos = [
+            tecnico for tecnico in self.tecnicos
+            if FuncoesTecnicos.EVENTOS in tecnico.funcoes
+        ]
+        if not tecnicos_eventos:
+            logger.info("Nenhum técnico com função EVENTOS encontrado para alteração.")
+            return
+
+        # Identificar mudanças relevantes
+        def fmt_data(ev):
+            return f"{ev['dia']:02d}/{ev['mes']:02d}/{ev['ano']}"
+
+        mudancas = []
+        if evento_anterior.get('nome') != evento_atual.get('nome'):
+            mudancas.append(f"• Nome: {evento_anterior.get('nome','-')} → {evento_atual.get('nome','-')}")
+        if (evento_anterior.get('dia'), evento_anterior.get('mes'), evento_anterior.get('ano')) != \
+           (evento_atual.get('dia'), evento_atual.get('mes'), evento_atual.get('ano')):
+            mudancas.append(f"• Data: {fmt_data(evento_anterior)} → {fmt_data(evento_atual)}")
+        if evento_anterior.get('hora_inicio') != evento_atual.get('hora_inicio') or \
+           evento_anterior.get('hora_fim') != evento_atual.get('hora_fim'):
+            mudancas.append(
+                f"• Horário: {evento_anterior.get('hora_inicio','--:--')}–{evento_anterior.get('hora_fim','--:--')} → "
+                f"{evento_atual.get('hora_inicio','--:--')}–{evento_atual.get('hora_fim','--:--')}"
+            )
+        if evento_anterior.get('local') != evento_atual.get('local'):
+            mudancas.append(f"• Local: {evento_anterior.get('local','-')} → {evento_atual.get('local','-')}")
+        if evento_anterior.get('responsavel') != evento_atual.get('responsavel'):
+            mudancas.append(f"• Responsável: {evento_anterior.get('responsavel','-')} → {evento_atual.get('responsavel','-')}")
+        if evento_anterior.get('participantes_estimados') != evento_atual.get('participantes_estimados'):
+            mudancas.append(
+                f"• Participantes: {evento_anterior.get('participantes_estimados','-')} → {evento_atual.get('participantes_estimados','-')}"
+            )
+
+        # Montar mensagem
+        data_nova = fmt_data(evento_atual)
+        lista_mudancas = "\n".join(mudancas) if mudancas else "• Detalhes ajustados"
+        mensagem = (
+            f"🔄 *EVENTO ATUALIZADO*\n\n"
+            f"📋 *Evento:* {evento_atual.get('nome','')}\n"
+            f"📅 *Data:* {data_nova}\n"
+            f"🕒 *Horário:* {evento_atual.get('hora_inicio','--:--')} às {evento_atual.get('hora_fim','--:--')}\n"
+            f"📍 *Local:* {evento_atual.get('local','')}\n\n"
+            f"Alterações:\n{lista_mudancas}"
+        )
+
+        self.enviar_notificacao_para_tecnicos(mensagem, tecnicos_eventos)
+
     def notificar_lembrete_evento(self, evento_dados: dict) -> None:
         """
         Envia lembrete do evento um dia antes às 8h00.
