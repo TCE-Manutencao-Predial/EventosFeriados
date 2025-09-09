@@ -295,10 +295,10 @@ function carregarEventos() {
     if (mes) params.push(`mes=${mes}`);
     if (ano) params.push(`ano=${ano}`);
     
-    // Adicionar filtro para não carregar eventos muito antigos apenas se não há filtro de mês específico
-    if (!mes && !ano) {
+    // Por padrão, buscar somente eventos do ano atual quando não há filtros (local/mês/ano)
+    if (!local && !mes && !ano) {
         const anoAtual = new Date().getFullYear();
-        params.push(`ano_minimo=${anoAtual - 1}`);
+        params.push(`ano_minimo=${anoAtual}`);
     }
     
     if (params.length > 0) {
@@ -317,16 +317,17 @@ function carregarEventos() {
 function exibirEventos() {
     const busca = $('#buscarEvento').val().toLowerCase();
     const mes = $('#filtroMes').val();
+    const ano = $('#filtroAno').val();
+    const local = $('#filtroLocal').val();
     const tbody = $('#listaEventos');
     tbody.empty();
     
     let eventosFiltrados = eventosList;
     
-    // Filtrar eventos passados (não exibir eventos anteriores a 7 dias) apenas se não há filtro de mês específico
-    if (!mes) {
-        eventosFiltrados = eventosFiltrados.filter(e => {
-            return eventoDeveSerExibido(e.dia, e.mes, e.ano);
-        });
+    // Regra padrão: exibir apenas hoje e futuros quando nenhum filtro (local/mês/ano ou busca) está ativo
+    const filtrosAtivos = Boolean(local || mes || ano || busca);
+    if (!filtrosAtivos) {
+        eventosFiltrados = eventosFiltrados.filter(e => eventoDeveSerExibido(e.dia, e.mes, e.ano));
     }
     
     // Filtrar por busca
@@ -379,13 +380,25 @@ function exibirEventos() {
 
 function atualizarEstatisticas() {
     const mes = $('#filtroMes').val();
+    const ano = $('#filtroAno').val();
+    const local = $('#filtroLocal').val();
+    const busca = $('#buscarEvento').val().toLowerCase();
     let eventosParaEstatistica = eventosList;
     
-    // Aplicar o mesmo filtro de eventos passados nas estatísticas se não há filtro de mês
-    if (!mes) {
-        eventosParaEstatistica = eventosList.filter(e => {
-            return eventoDeveSerExibido(e.dia, e.mes, e.ano);
-        });
+    // Aplicar a mesma regra padrão (apenas hoje/futuros) quando nenhum filtro (local/mês/ano ou busca) está ativo
+    const filtrosAtivos = Boolean(local || mes || ano || busca);
+    if (!filtrosAtivos) {
+        eventosParaEstatistica = eventosParaEstatistica.filter(e => eventoDeveSerExibido(e.dia, e.mes, e.ano));
+    }
+    
+    // Aplicar filtro de busca para alinhar com a tabela visível
+    if (busca) {
+        eventosParaEstatistica = eventosParaEstatistica.filter(e => 
+            e.nome.toLowerCase().includes(busca) || 
+            e.local.toLowerCase().includes(busca) ||
+            (e.responsavel && e.responsavel.toLowerCase().includes(busca)) ||
+            (e.descricao && e.descricao.toLowerCase().includes(busca))
+        );
     }
     
     const estatisticas = {

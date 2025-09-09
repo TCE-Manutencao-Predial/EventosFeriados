@@ -177,14 +177,14 @@ function feriadoDeveSerExibido(dia, mes, ano) {
     return dataFeriado >= umaSemanaaAtras && ano <= anoAtual;
 }
 
-// Função para verificar se um evento deve ser exibido (não muito antigo)
+// Função para verificar se um evento deve ser exibido (apenas hoje ou futuros)
 function eventoDeveSerExibido(dia, mes, ano) {
     const dataEvento = new Date(ano, mes - 1, dia);
-    const agora = new Date();
-    const umaSemanaaAtras = new Date();
-    umaSemanaaAtras.setDate(agora.getDate() - 7);
+    const hoje = new Date();
+    // Considera o dia inteiro de hoje
+    hoje.setHours(0, 0, 0, 0);
     
-    return dataEvento >= umaSemanaaAtras;
+    return dataEvento >= hoje;
 }
 
 // Inicialização global

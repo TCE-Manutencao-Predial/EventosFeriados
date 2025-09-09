@@ -344,7 +344,7 @@ class NotificacaoEventos:
                 )
                 print(msg_log)
                 logger.info(msg_log)
-                # usar enviar_mensagem para manter prefixo do hostname
+                # enviar mensagem sem prefixo de hostname
                 self.enviar_mensagem(tecnico.email, MetodoContato.EMAIL, mensagem)
 
     def enviar_mensagem(self, contato: str, metodo: MetodoContato, mensagem: str) -> None:
@@ -362,9 +362,8 @@ class NotificacaoEventos:
             self.enviar_whatsapp_por_funcao(mensagem, apenas_disponiveis=True)
         elif metodo == MetodoContato.EMAIL:
             logger.debug(f"Preparando envio de email para {contato}")
-            hostname = socket.gethostname()
-            mensagem_email = f"[{hostname}] {mensagem}"
-            self.enviar_email(contato, mensagem_email)
+            # Removido prefixo de hostname da mensagem
+            self.enviar_email(contato, mensagem)
         else:
             logger.warning(f"Método de contato desconhecido: {metodo}")
 
@@ -390,10 +389,9 @@ class NotificacaoEventos:
             'Content-Type': 'application/json'
         }
 
-        hostname = socket.gethostname()
         payload = {
             'funcao': 'EVENTOS',
-            'mensagem': f"[{hostname}] {mensagem}",
+            'mensagem': mensagem,
             'origem': WHATSAPP_API.get('ORIGEM') or 'EVENTOS_FERIADOS',
             'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True),
             'async': WHATSAPP_API.get('ASYNC', True)
@@ -460,10 +458,9 @@ class NotificacaoEventos:
                 'Authorization': f"Bearer {WHATSAPP_API['TOKEN']}",
                 'Content-Type': 'application/json'
             }
-            hostname = socket.gethostname()
             payload = {
                 'funcao': 'EVENTOS',
-                'mensagem': f"[{hostname}] {mensagem}",
+                'mensagem': mensagem,
                 'origem': WHATSAPP_API.get('ORIGEM') or 'EVENTOS_FERIADOS',
                 'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True)
             }
