@@ -284,7 +284,8 @@ class NotificacaoEventos:
                 )
                 print(msg_log)
                 logger.info(msg_log)
-                self.enviar_email(tecnico.email, mensagem)
+                # usar enviar_mensagem para manter prefixo do hostname
+                self.enviar_mensagem(tecnico.email, MetodoContato.EMAIL, mensagem)
 
     def enviar_mensagem(self, contato: str, metodo: MetodoContato, mensagem: str) -> None:
         """
@@ -349,8 +350,16 @@ class NotificacaoEventos:
             tentativa = 0
             while tentativa < NUM_MAX_TENTATIVAS:
                 try:
+                    log_payload = {
+                        'funcao': 'EVENTOS',
+                        'origem': payload['origem'],
+                        'apenas_disponiveis': payload['apenas_disponiveis'],
+                        'mensagem_len': len(payload['mensagem'])
+                    }
                     logger.info(
-                        f"Chamando API WhatsApp por função: POST {url} | headers=Authorization: Bearer **** | payload={{{'funcao': 'EVENTOS', 'origem': payload['origem'], 'apenas_disponiveis': payload['apenas_disponiveis'], 'mensagem_len': {len(payload['mensagem'])}}}}"
+                        "Chamando API WhatsApp por função: POST %s | headers=Authorization: Bearer **** | payload=%s",
+                        url,
+                        log_payload
                     )
                     resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30))
                     self._tempo_ultima_chamada_whatsapp = datetime.now()
