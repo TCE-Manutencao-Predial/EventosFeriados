@@ -372,6 +372,9 @@ function exibirEventos() {
                     <button class="btn btn-sm btn-outline-danger" onclick="excluirEvento('${evento.id}', '${evento.nome}')" title="Excluir">
                         <i class="fas fa-trash"></i>
                     </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="dispararWhatsApp('${evento.id}')" title="Disparar WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </button>
                 </td>
             </tr>
         `);
@@ -562,6 +565,22 @@ function confirmarExclusaoEvento() {
         },
         error: function(xhr) {
             showNotification('Erro ao excluir evento', 'error');
+        }
+    });
+}
+
+function dispararWhatsApp(eventoId, tipo = 'detalhes') {
+    if (!eventoId) return;
+    if (!confirm('Deseja disparar a notificação de WhatsApp agora?')) return;
+    $.ajax({
+        url: `/api/eventos/${eventoId}/forcar-notificacao-whatsapp?tipo=${encodeURIComponent(tipo)}`,
+        method: 'POST',
+        success: function(resp) {
+            showNotification('Notificação WhatsApp disparada com sucesso', 'success');
+        },
+        error: function(xhr) {
+            const msg = (xhr.responseJSON && xhr.responseJSON.erro) ? xhr.responseJSON.erro : 'Falha ao disparar WhatsApp';
+            showNotification(msg, 'error');
         }
     });
 }

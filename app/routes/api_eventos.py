@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 import logging
+from app.utils.GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
 
 api_eventos_bp = Blueprint('api_eventos', __name__)
 logger = logging.getLogger('EventosFeriados.api_eventos')
@@ -212,4 +213,72 @@ def listar_locais():
         
     except Exception as e:
         logger.error(f"Erro ao listar locais: {e}")
+        return jsonify({'erro': str(e)}), 500
+
+@api_eventos_bp.route('/eventos/<evento_id>/forcar-notificacao-whatsapp', methods=['POST'])
+def forcar_notificacao_whatsapp(evento_id):
+    """Dispara manualmente uma notificação via WhatsApp por função EVENTOS para um evento específico.
+
+    Parâmetros (query):
+      - tipo: 'detalhes' (padrão) | 'amanha' | '1h'
+    """
+    try:
+        gerenciador = current_app.config.get('GERENCIADOR_EVENTOS')
+        if not gerenciador:
+            return jsonify({'erro': 'Gerenciador de eventos não disponível'}), 503
+
+        evento = gerenciador.obter_evento(evento_id)
+        if not evento:
+            return jsonify({'erro': 'Evento não encontrado'}), 404
+
+        tipo = request.args.get('tipo', 'detalhes')
+
+        # Construir mensagem conforme tipo solicitado
+        data_evento = f"{evento['dia']:02d}/{evento['mes']:02d}/{evento['ano']}"
+        if tipo == 'amanha':
+            mensagem = (
+                f"⏰ *LEMBRETE DE EVENTO - AMANHÃ*\n\n"
+                f"📋 *Evento:* {evento['nome']}\n"
+                f"📅 *Data:* {data_evento} (AMANHÃ)\n"
+                f"🕒 *Horário:* {evento['hora_inicio']} às {evento['hora_fim']}\n"
+                f"📍 *Local:* {evento['local']}\n"
+                f"👤 *Responsável:* {evento.get('responsavel', 'Não informado')}\n"
+                f"👥 *Participantes:* {evento.get('participantes_estimados', 'Não informado')}\n\n"
+                f"⚠️ Verifique se todos os equipamentos e instalações estão prontos."
+            )
+        elif tipo == '1h':
+            mensagem = (
+                f"⏰ *LEMBRETE DE EVENTO - EM 1 HORA*\n\n"
+                f"📋 *Evento:* {evento['nome']}\n"
+                f"📅 *Data:* {data_evento}\n"
+                f"🕒 *Horário:* {evento['hora_inicio']} às {evento['hora_fim']}\n"
+                f"📍 *Local:* {evento['local']}\n"
+                f"👤 *Responsável:* {evento.get('responsavel', 'Não informado')}\n"
+                f"👥 *Participantes:* {evento.get('participantes_estimados', 'Não informado')}\n\n"
+                f"⚠️ Preparar infraestrutura e checagens finais."
+            )
+        else:
+            mensagem = (
+                f"📣 *AVISO MANUAL DE EVENTO*\n\n"
+                f"📋 *Evento:* {evento['nome']}\n"
+                f"📅 *Data:* {data_evento}\n"
+                f"🕒 *Horário:* {evento['hora_inicio']} às {evento['hora_fim']}\n"
+                f"📍 *Local:* {evento['local']}\n"
+                f"👤 *Responsável:* {evento.get('responsavel', 'Não informado')}\n"
+                f"👥 *Participantes:* {evento.get('participantes_estimados', 'Não informado')}\n\n"
+                f"ℹ️ Notificação disparada manualmente pelo sistema."
+            )
+
+        # Enviar via WhatsApp por função EVENTOS
+        ger_notif = GerenciadorNotificacaoEventos.get_instance()
+        if not ger_notif or not ger_notif.notificacao_eventos:
+            return jsonify({'erro': 'Sistema de notificação indisponível'}), 503
+
+        # Ignorar restrições de horário; a API externa filtra disponibilidade se configurado
+        ger_notif.notificacao_eventos.enviar_whatsapp_por_funcao(mensagem=mensagem, apenas_disponiveis=True)
+
+        logger.info(f"WhatsApp forçado enviado para evento {evento_id} (tipo={tipo})")
+        return jsonify({'sucesso': True, 'mensagem': 'Notificação WhatsApp enviada com sucesso', 'tipo': tipo})
+    except Exception as e:
+        logger.error(f"Erro ao forçar notificação WhatsApp: {e}")
         return jsonify({'erro': str(e)}), 500
