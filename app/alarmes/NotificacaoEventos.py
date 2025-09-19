@@ -105,8 +105,11 @@ class NotificacaoEventos:
             f"ℹ️ Um lembrete será enviado 1 dia antes do evento às 08:00h."
         )
 
+        local = (evento_dados.get('local') or '').strip()
+        assunto_dinamico = f"TCE-GO: Aviso de Evento - {local}" if local else "TCE-GO: Aviso de Evento - Novo cadastro"
+
         self.enviar_notificacao_funcao_eventos(
-            assunto="Aviso de Evento - Novo cadastro",
+            assunto=assunto_dinamico,
             mensagem=mensagem,
             apenas_disponiveis=True
         )
@@ -137,8 +140,11 @@ class NotificacaoEventos:
             f"⚠️ Este evento foi removido do sistema e não acontecerá mais."
         )
 
+        local = (evento_dados.get('local') or '').strip()
+        assunto_dinamico = f"TCE-GO: Aviso de Evento - {local} (Cancelado)" if local else "TCE-GO: Aviso de Evento - Cancelado"
+
         self.enviar_notificacao_funcao_eventos(
-            assunto="Aviso de Evento - Cancelado",
+            assunto=assunto_dinamico,
             mensagem=mensagem,
             apenas_disponiveis=True
         )
@@ -194,8 +200,11 @@ class NotificacaoEventos:
             f"Alterações:\n{lista_mudancas}"
         )
 
+        local_atual = (evento_atual.get('local') or '').strip()
+        assunto_dinamico = f"TCE-GO: Aviso de Evento - {local_atual} (Atualizado)" if local_atual else "TCE-GO: Aviso de Evento - Atualizado"
+
         self.enviar_notificacao_funcao_eventos(
-            assunto="Aviso de Evento - Atualizado",
+            assunto=assunto_dinamico,
             mensagem=mensagem,
             apenas_disponiveis=True
         )
@@ -227,8 +236,11 @@ class NotificacaoEventos:
             f"⚠️ Verifique se todos os equipamentos e instalações estão funcionando adequadamente."
         )
 
+        local = (evento_dados.get('local') or '').strip()
+        assunto_dinamico = f"TCE-GO: Lembrete de Evento - {local} (Amanhã)" if local else "TCE-GO: Lembrete de Evento - Amanhã"
+
         self.enviar_notificacao_funcao_eventos(
-            assunto="Lembrete de Evento - Amanhã",
+            assunto=assunto_dinamico,
             mensagem=mensagem,
             apenas_disponiveis=True
         )
