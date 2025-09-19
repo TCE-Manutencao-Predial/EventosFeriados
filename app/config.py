@@ -81,7 +81,7 @@ CLP_AUDITORIO_CONFIG = {
     # Mapeamento das tags do CLP Auditório para eventos
     # AJUSTE AUTOMÁTICO: TODOS os eventos do Auditório são ajustados para iniciar 1h antes e terminar 1h depois
     # para preparar infraestrutura (luzes, refrigeração) do Auditório
-    # LIMITES DE SEGURANÇA: 6h00 às 23h59 (mantém intervalos válidos para o CLP)
+    # LIMITES DE SEGURANÇA (configurável via env CLP_AUD_MIN_HORA): 05:30 às 23:59 (mantém intervalos válidos para o CLP)
     'TAGS_EVENTOS_AUDITORIO': {
         'DIA': 'N91',          # N91:0-9 - dias dos eventos  
         'MES': 'N92',          # N92:0-9 - meses dos eventos
@@ -90,6 +90,9 @@ CLP_AUDITORIO_CONFIG = {
         'HORA_FIM': 'N95',     # N95:0-9 - hora de fim (com ajuste automático para todos os eventos)
         'MIN_FIM': 'N96'       # N96:0-9 - minuto de fim
     },
+    # Hora mínima para início após ajuste no Auditório (formato HH:MM)
+    # Pode ser definido por variável de ambiente CLP_AUD_MIN_HORA (ex.: '05:30')
+    'AUDITORIO_HORA_MINIMA': os.environ.get('CLP_AUD_MIN_HORA', '05:30'),
     'MAX_EVENTOS': 10,  # Máximo de eventos do Auditório
     'LOCAIS_GERENCIADOS': ['Auditório Nobre', 'Foyer do Auditório']  # Locais gerenciados por este CLP
 }

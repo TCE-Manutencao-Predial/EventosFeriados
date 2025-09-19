@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 import logging
 from app.utils.GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
+from app.utils.AutoSyncCLP import AutoSyncCLP
 
 api_eventos_bp = Blueprint('api_eventos', __name__)
 logger = logging.getLogger('EventosFeriados.api_eventos')
@@ -75,6 +76,17 @@ def adicionar_evento():
         
         # Adicionar evento
         novo_evento = gerenciador.adicionar_evento(dados)
+
+        # Disparar autosync debounced para o CLP do local
+        try:
+            integracao_plenario = current_app.config.get('INTEGRACAO_CLP')
+            integracao_auditorio = current_app.config.get('INTEGRACAO_CLP_AUDITORIO')
+            aud_locais = []
+            if integracao_auditorio and getattr(integracao_auditorio, 'sincronizador', None):
+                aud_locais = integracao_auditorio.sincronizador.config.get('LOCAIS_GERENCIADOS', [])
+            AutoSyncCLP.get_instance().trigger_for_local(novo_evento.get('local'), integracao_plenario, integracao_auditorio, aud_locais)
+        except Exception as e:
+            logger.error(f"Falha ao agendar autosync após adicionar evento: {e}")
         
         return jsonify({
             'sucesso': True,
@@ -99,13 +111,24 @@ def atualizar_evento(evento_id):
         dados = request.get_json()
         if not dados:
             return jsonify({'erro': 'Dados não fornecidos'}), 400
-        
+
         # Atualizar evento
         evento_atualizado = gerenciador.atualizar_evento(evento_id, dados)
-        
+
         if not evento_atualizado:
             return jsonify({'erro': 'Evento não encontrado'}), 404
         
+        # Disparar autosync debounced para o CLP do local
+        try:
+            integracao_plenario = current_app.config.get('INTEGRACAO_CLP')
+            integracao_auditorio = current_app.config.get('INTEGRACAO_CLP_AUDITORIO')
+            aud_locais = []
+            if integracao_auditorio and getattr(integracao_auditorio, 'sincronizador', None):
+                aud_locais = integracao_auditorio.sincronizador.config.get('LOCAIS_GERENCIADOS', [])
+            AutoSyncCLP.get_instance().trigger_for_local(evento_atualizado.get('local'), integracao_plenario, integracao_auditorio, aud_locais)
+        except Exception as e:
+            logger.error(f"Falha ao agendar autosync após atualizar evento: {e}")
+
         return jsonify({
             'sucesso': True,
             'mensagem': 'Evento atualizado com sucesso',
@@ -125,12 +148,28 @@ def remover_evento(evento_id):
         gerenciador = current_app.config['GERENCIADOR_EVENTOS']
         if not gerenciador:
             return jsonify({'erro': 'Gerenciador de eventos não disponível'}), 503
-        
+
+        # Capturar local antes da remoção para disparar autosync
+        evento = gerenciador.obter_evento(evento_id)
+        local_evento = evento.get('local') if evento else None
+
         sucesso = gerenciador.remover_evento(evento_id)
-        
+
         if not sucesso:
             return jsonify({'erro': 'Evento não encontrado'}), 404
         
+        # Disparar autosync debounced para o CLP do local
+        try:
+            if sucesso and local_evento:
+                integracao_plenario = current_app.config.get('INTEGRACAO_CLP')
+                integracao_auditorio = current_app.config.get('INTEGRACAO_CLP_AUDITORIO')
+                aud_locais = []
+                if integracao_auditorio and getattr(integracao_auditorio, 'sincronizador', None):
+                    aud_locais = integracao_auditorio.sincronizador.config.get('LOCAIS_GERENCIADOS', [])
+                AutoSyncCLP.get_instance().trigger_for_local(local_evento, integracao_plenario, integracao_auditorio, aud_locais)
+        except Exception as e:
+            logger.error(f"Falha ao agendar autosync após remover evento: {e}")
+
         return jsonify({
             'sucesso': True,
             'mensagem': 'Evento removido com sucesso'

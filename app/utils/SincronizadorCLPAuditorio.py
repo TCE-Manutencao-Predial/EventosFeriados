@@ -195,8 +195,16 @@ class SincronizadorCLPAuditorio:
             fim_ajustado = fim_datetime + timedelta(hours=1)
             
             # Garantir que não ultrapasse limites razoáveis
-            if inicio_ajustado.time().hour < 6:  # Não iniciar antes das 6h
-                inicio_ajustado = inicio_datetime.replace(hour=6, minute=0)
+            # Respeitar hora mínima configurada (padrão 05:30)
+            try:
+                hora_min_str = self.config.get('AUDITORIO_HORA_MINIMA', '05:30')
+                hora_minima = datetime.strptime(hora_min_str, '%H:%M').time()
+            except Exception:
+                hora_minima = datetime.strptime('05:30', '%H:%M').time()
+
+            if (inicio_ajustado.time().hour < hora_minima.hour or
+                (inicio_ajustado.time().hour == hora_minima.hour and inicio_ajustado.time().minute < hora_minima.minute)):
+                inicio_ajustado = datetime.combine(inicio_datetime.date(), hora_minima)
             
             # Não terminar depois das 23h59 (manter dentro do mesmo dia para o CLP)
             if fim_ajustado.time().hour >= 24 or fim_ajustado.day > inicio_datetime.day:  
