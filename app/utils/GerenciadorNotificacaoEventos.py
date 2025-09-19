@@ -14,8 +14,10 @@ class GerenciadorNotificacaoEventos:
     """
     Gerenciador responsável por coordenar as notificações de eventos.
     
-    Esta classe gerencia tanto as notificações imediatas (quando um evento é criado)
-    quanto os lembretes programados (um dia antes do evento às 8h00).
+    Esta classe gerencia:
+    - notificações imediatas (criado/alterado/cancelado → e-mail por função)
+    - lembrete 1 dia antes às 08:00 → WhatsApp por função
+    - lembrete 1 hora antes do início → WhatsApp por função
     """
     
     _instance = None
@@ -24,6 +26,9 @@ class GerenciadorNotificacaoEventos:
         self.notificacao_eventos: Optional[NotificacaoEventos] = None
         self.scheduler_thread: Optional[threading.Thread] = None
         self.running = False
+        # Controle simples para evitar lembretes 1h duplicados (por execução)
+        # Mapeia id do evento → timestamp do último envio
+        self._ultimo_envio_1h = {}
         self._inicializar_notificacao()
         
     @classmethod
@@ -120,8 +125,10 @@ class GerenciadorNotificacaoEventos:
             logger.warning("Scheduler de lembretes já está em execução")
             return
             
-        # Agenda verificação diária às 8:00
+        # Agenda verificação diária às 8:00 (lembrete 1 dia antes)
         schedule.every().day.at("08:00").do(self._verificar_eventos_amanha)
+        # Agenda verificação minuciosa para lembretes 1h antes
+        schedule.every(1).minutes.do(self._verificar_eventos_1h)
         
         self.running = True
         self.scheduler_thread = threading.Thread(target=self._executar_scheduler, daemon=True)
@@ -190,6 +197,57 @@ class GerenciadorNotificacaoEventos:
                     
         except Exception as e:
             logger.error(f"Erro ao verificar eventos de amanhã: {e}")
+
+    def _verificar_eventos_1h(self):
+        """Verifica eventos que iniciarão em ~1 hora e envia lembrete via WhatsApp."""
+        if not self.notificacao_eventos:
+            logger.error("Sistema de notificação não está disponível para lembretes 1h")
+            return
+
+        try:
+            agora = datetime.now()
+            gerenciador_eventos = GerenciadorEventos.get_instance()
+            eventos_hoje = gerenciador_eventos.obter_eventos_por_data(
+                dia=agora.day,
+                mes=agora.month,
+                ano=agora.year
+            )
+
+            if not eventos_hoje:
+                return
+
+            TOLERANCIA_MINUTOS = 2
+
+            # Limpeza simples do mapa de envios (remover envios com mais de 6 horas)
+            try:
+                limite = agora - timedelta(hours=6)
+                self._ultimo_envio_1h = {
+                    k: v for k, v in self._ultimo_envio_1h.items() if v >= limite
+                }
+            except Exception:
+                pass
+
+            for evento in eventos_hoje:
+                try:
+                    # Monta datetime do início do evento
+                    hora, minuto = evento['hora_inicio'].split(':')
+                    dt_inicio = datetime(evento['ano'], evento['mes'], evento['dia'], int(hora), int(minuto))
+                    minutos_para_inicio = (dt_inicio - agora).total_seconds() / 60.0
+
+                    if 60 - TOLERANCIA_MINUTOS <= minutos_para_inicio <= 60 + TOLERANCIA_MINUTOS:
+                        ultimo_envio = self._ultimo_envio_1h.get(evento['id'])
+                        if ultimo_envio and (agora - ultimo_envio).total_seconds() < 60 * 55:
+                            # Já enviou nos últimos 55 minutos; evita duplicidade
+                            continue
+
+                        self.notificacao_eventos.notificar_lembrete_evento_1h(evento)
+                        self._ultimo_envio_1h[evento['id']] = agora
+                        logger.info(f"Lembrete 1h enviado para evento: {evento['nome']}")
+
+                except Exception as e:
+                    logger.error(f"Erro ao processar lembrete 1h do evento {evento.get('nome','')}: {e}")
+        except Exception as e:
+            logger.error(f"Erro ao verificar eventos 1h: {e}")
     
     def verificar_lembretes_manualmente(self):
         """

@@ -211,7 +211,7 @@ class NotificacaoEventos:
 
     def notificar_lembrete_evento(self, evento_dados: dict) -> None:
         """
-        Envia lembrete do evento um dia antes às 8h00.
+        Envia lembrete do evento um dia antes às 8h00 via WhatsApp (função EVENTOS).
         
         Args:
             evento_dados (dict): Dados do evento que acontecerá amanhã.
@@ -239,11 +239,27 @@ class NotificacaoEventos:
         local = (evento_dados.get('local') or '').strip()
         assunto_dinamico = f"TCE-GO: Lembrete de Evento - {local} (Amanhã)" if local else "TCE-GO: Lembrete de Evento - Amanhã"
 
-        self.enviar_notificacao_funcao_eventos(
-            assunto=assunto_dinamico,
-            mensagem=mensagem,
-            apenas_disponiveis=True
+        # Envia via WhatsApp por função (sem e-mail)
+        self.enviar_whatsapp_por_funcao(mensagem=mensagem, apenas_disponiveis=True)
+
+    def notificar_lembrete_evento_1h(self, evento_dados: dict) -> None:
+        """
+        Envia lembrete do evento 1 hora antes do início via WhatsApp (função EVENTOS).
+        Não aplica restrições de horário gerais.
+        """
+        data_evento = f"{evento_dados['dia']:02d}/{evento_dados['mes']:02d}/{evento_dados['ano']}"
+        mensagem = (
+            f"⏰ *LEMBRETE DE EVENTO - EM 1 HORA*\n\n"
+            f"📋 *Evento:* {evento_dados['nome']}\n"
+            f"📅 *Data:* {data_evento}\n"
+            f"🕒 *Horário:* {evento_dados['hora_inicio']} às {evento_dados['hora_fim']}\n"
+            f"📍 *Local:* {evento_dados['local']}\n"
+            f"👤 *Responsável:* {evento_dados.get('responsavel', 'Não informado')}\n"
+            f"👥 *Participantes:* {evento_dados.get('participantes_estimados', 'Não informado')}\n\n"
+            f"⚠️ Preparar infraestrutura e checagens finais."
         )
+
+        self.enviar_whatsapp_por_funcao(mensagem=mensagem, apenas_disponiveis=True)
     def enviar_notificacao_funcao_eventos(self, assunto: str, mensagem: str, apenas_disponiveis: bool = True) -> None:
         """
         Envia a notificação para todos com a função EVENTOS via API externa (e-mail por função).
