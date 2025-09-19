@@ -117,7 +117,8 @@ def verificar_disponibilidade_clp():
             dados['mes'],
             dados['ano'],
             dados['hora_inicio'],
-            dados['hora_fim']
+            dados['hora_fim'],
+            dados.get('evento_id')
         )
         
         return jsonify(resultado)

@@ -193,7 +193,7 @@ class IntegracaoCLPAuditorio:
             return None
     
     def verificar_local_disponivel(self, local: str, dia: int, mes: int, ano: int,
-                                  hora_inicio: str, hora_fim: str) -> Dict:
+                                  hora_inicio: str, hora_fim: str, evento_id: Optional[str] = None) -> Dict:
         """
         Verifica se um local do Auditório está disponível em determinado horário
         Útil para CLPs que controlam acesso aos locais
@@ -209,13 +209,13 @@ class IntegracaoCLPAuditorio:
             
             # Verificar se há eventos conflitantes
             conflito = self.gerenciador_eventos._validar_conflito_horario(
-                local, dia, mes, ano, hora_inicio, hora_fim
+                local, dia, mes, ano, hora_inicio, hora_fim, evento_id
             )
             
             if conflito:
                 # Buscar o evento conflitante para informar
                 eventos_dia = self.gerenciador_eventos.obter_eventos_por_data(dia, mes, ano)
-                eventos_local = [e for e in eventos_dia if e['local'] == local]
+                eventos_local = [e for e in eventos_dia if e['local'] == local and (not evento_id or e.get('id') != evento_id)]
                 
                 return {
                     'disponivel': False,
