@@ -115,10 +115,10 @@ function carregarProximosEventos() {
         const container = $('#proximosEventos');
         container.empty();
         
-        const hoje = moment();
+    const hoje = moment().startOf('day');
         // Filtrar apenas eventos que ainda não terminaram (data >= hoje)
         const eventosFuturosOuHoje = data.eventos.filter(function(evento) {
-            const dataEvento = moment(`${evento.ano}-${evento.mes}-${evento.dia}`);
+            const dataEvento = moment(`${evento.ano}-${evento.mes}-${evento.dia}`, 'YYYY-M-D').startOf('day');
             return dataEvento.isSameOrAfter(hoje, 'day');
         }).sort(function(a, b) {
             const dA = moment(`${a.ano}-${a.mes}-${a.dia}`);
@@ -135,7 +135,7 @@ function carregarProximosEventos() {
 
         // Mostrar apenas os próximos 2 eventos futuros
         eventosFuturosOuHoje.slice(0, 2).forEach(function(evento) {
-            const dataEvento = moment(`${evento.ano}-${evento.mes}-${evento.dia}`);
+            const dataEvento = moment(`${evento.ano}-${evento.mes}-${evento.dia}`, 'YYYY-M-D').startOf('day');
             const diasRestantes = dataEvento.diff(hoje, 'days');
 
             let badge = '';
@@ -174,9 +174,9 @@ function carregarProximosFeriados() {
         container.empty();
         
         // Filtrar apenas feriados futuros
-        const hoje = moment();
+    const hoje = moment().startOf('day');
         const feriadosFuturos = data.feriados.filter(function(feriado) {
-            const dataFeriado = moment(`${feriado.ano}-${feriado.mes}-${feriado.dia}`);
+            const dataFeriado = moment(`${feriado.ano}-${feriado.mes}-${feriado.dia}`, 'YYYY-M-D').startOf('day');
             return dataFeriado.isAfter(hoje) || dataFeriado.isSame(hoje, 'day');
         });
         
@@ -187,7 +187,7 @@ function carregarProximosFeriados() {
         
         // Mostrar apenas os próximos 2 feriados
         feriadosFuturos.slice(0, 2).forEach(function(feriado) {
-            const dataFeriado = moment(`${feriado.ano}-${feriado.mes}-${feriado.dia}`);
+            const dataFeriado = moment(`${feriado.ano}-${feriado.mes}-${feriado.dia}`, 'YYYY-M-D').startOf('day');
             const diasRestantes = dataFeriado.diff(hoje, 'days');
             
             let badge = '';
