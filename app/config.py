@@ -1,6 +1,7 @@
 # app/config.py
 import os
 import logging
+from logging.handlers import RotatingFileHandler
 
 # Configuração do diretório base
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -119,6 +120,7 @@ def setup_logging():
 
     Evita adicionar handlers duplicados se chamada múltiplas vezes (ex.: em ambientes WSGI com vários workers).
     """
+    global LOG_DIR, LOG_FILE
     logger = logging.getLogger('EventosFeriados')
 
     if not logger.handlers:
@@ -127,26 +129,22 @@ def setup_logging():
             if not os.path.exists(LOG_DIR):
                 os.makedirs(LOG_DIR, exist_ok=True)
         except Exception as e:
-            # Último fallback emergencial para diretório local
             fallback_dir = os.path.join(BASE_DIR, 'logs')
             try:
                 os.makedirs(fallback_dir, exist_ok=True)
                 logger.warning(f"Falha ao garantir LOG_DIR '{LOG_DIR}': {e}. Usando fallback '{fallback_dir}'.")
-                global LOG_DIR, LOG_FILE  # atualizar caminhos globais
                 LOG_DIR = fallback_dir
                 LOG_FILE = os.path.join(LOG_DIR, 'eventos_feriados.log')
             except Exception:
-                # Se nem fallback funciona, prossegue apenas com StreamHandler
                 pass
 
         file_handler = None
         try:
-                file_handler = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=5*1024*1024, backupCount=5)
+            file_handler = RotatingFileHandler(LOG_FILE, maxBytes=5*1024*1024, backupCount=5)
         except Exception as e:
             logger.warning(f"Não foi possível criar FileHandler em '{LOG_FILE}': {e}. Prosseguindo sem arquivo de log.")
 
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
         stream_handler = logging.StreamHandler()
         stream_handler.setFormatter(formatter)
         logger.setLevel(logging.INFO)
@@ -155,7 +153,6 @@ def setup_logging():
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)
         logger.propagate = False
-
         logger.info(f"Sistema de logging inicializado | LOG_DIR={LOG_DIR} | LOG_FILE={LOG_FILE}")
     else:
         logger.debug("setup_logging() chamado novamente - handlers já configurados")
