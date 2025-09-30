@@ -102,7 +102,7 @@ class NotificacaoEventos:
             f"📍 *Local:* {evento_dados['local']}\n"
             f"👤 *Responsável:* {evento_dados.get('responsavel', 'Não informado')}\n"
             f"👥 *Participantes:* {evento_dados.get('participantes_estimados', 'Não informado')}\n\n"
-            f"ℹ️ Um lembrete será enviado 1 dia antes do evento às 08:00h."
+            f"ℹ️ Um lembrete será enviado 1 dia antes do evento."
         )
 
         local = (evento_dados.get('local') or '').strip()
@@ -211,36 +211,26 @@ class NotificacaoEventos:
 
     def notificar_lembrete_evento(self, evento_dados: dict) -> None:
         """
-        Envia lembrete do evento um dia antes às 8h00 via WhatsApp (função EVENTOS).
+        Envia lembrete do evento um dia antes via WhatsApp (função EVENTOS).
         
         Args:
             evento_dados (dict): Dados do evento que acontecerá amanhã.
         """
-        agora = datetime.now()
-        
-    # Verifica se é aproximadamente 8h00 (tolerância de 30 minutos)
-        if not (7.5 <= agora.hour + agora.minute/60 <= 8.5):
-            logger.debug("Não está no horário de lembrete (08:00h ±30min).")
-            return
-
-        # Monta mensagem de lembrete
-        data_evento = f"{evento_dados['dia']:02d}/{evento_dados['mes']:02d}/{evento_dados['ano']}"
-        mensagem = (
-            f"⏰ *LEMBRETE DE EVENTO - AMANHÃ*\n\n"
-            f"📋 *Evento:* {evento_dados['nome']}\n"
-            f"📅 *Data:* {data_evento} (AMANHÃ)\n"
-            f"🕒 *Horário:* {evento_dados['hora_inicio']} às {evento_dados['hora_fim']}\n"
-            f"📍 *Local:* {evento_dados['local']}\n"
-            f"👤 *Responsável:* {evento_dados.get('responsavel', 'Não informado')}\n"
-            f"👥 *Participantes:* {evento_dados.get('participantes_estimados', 'Não informado')}\n\n"
-            f"⚠️ Verifique se todos os equipamentos e instalações estão funcionando adequadamente."
-        )
-
-        local = (evento_dados.get('local') or '').strip()
-        assunto_dinamico = f"TCE-GO: Lembrete de Evento - {local} (Amanhã)" if local else "TCE-GO: Lembrete de Evento - Amanhã"
-
-        # Envia via WhatsApp por função (sem e-mail)
-        self.enviar_whatsapp_por_funcao(mensagem=mensagem, apenas_disponiveis=True)
+        try:
+            data_evento = f"{evento_dados['dia']:02d}/{evento_dados['mes']:02d}/{evento_dados['ano']}"
+            mensagem = (
+                f"⏰ *LEMBRETE DE EVENTO - AMANHÃ*\n\n"
+                f"📋 *Evento:* {evento_dados['nome']}\n"
+                f"📅 *Data:* {data_evento} (AMANHÃ)\n"
+                f"🕒 *Horário:* {evento_dados['hora_inicio']} às {evento_dados['hora_fim']}\n"
+                f"📍 *Local:* {evento_dados['local']}\n"
+                f"👤 *Responsável:* {evento_dados.get('responsavel', 'Não informado')}\n"
+                f"👥 *Participantes:* {evento_dados.get('participantes_estimados', 'Não informado')}\n\n"
+                f"⚠️ Verifique se todos os equipamentos e instalações estão funcionando adequadamente."
+            )
+            self.enviar_whatsapp_por_funcao(mensagem=mensagem)
+        except Exception as e:
+            logger.error(f"Erro ao montar/enviar lembrete de evento (amanhã): {e}")
 
     def notificar_lembrete_evento_1h(self, evento_dados: dict) -> None:
         """
@@ -278,14 +268,13 @@ class NotificacaoEventos:
     _tempo_ultima_chamada_whatsapp = None
     _lock_api_whatsapp = threading.Lock()
 
-    def enviar_whatsapp_por_funcao(self, mensagem: str, apenas_disponiveis: bool = True) -> None:
+    def enviar_whatsapp_por_funcao(self, mensagem: str) -> None:
         """
         Envia mensagem via WhatsApp para todos os técnicos com a função EVENTOS
         utilizando a API pública de envio por função.
 
         Args:
-            mensagem (str): Texto a ser enviado.
-            apenas_disponiveis (bool): Se True, envia apenas para quem está em jornada.
+            mensagem (str): Texto a ser enviado (pode conter \n para quebras de linha).
         """
         TEMPO_ATRASO_API = 2  # pequena contenção para evitar floods
         NUM_MAX_TENTATIVAS = 1  # apenas uma tentativa imediata
@@ -299,9 +288,8 @@ class NotificacaoEventos:
         payload = {
             'funcao': 'EVENTOS',
             'mensagem': mensagem,
-            'origem': WHATSAPP_API.get('ORIGEM') or 'EVENTOS_FERIADOS',
-            'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True),
-            'async': WHATSAPP_API.get('ASYNC', True)
+            # Origem fixada conforme solicitação (mantendo nome do sistema)
+            'origem': 'EventosFeriados'
         }
         
         with self._lock_api_whatsapp:
@@ -312,19 +300,20 @@ class NotificacaoEventos:
                     time.sleep(TEMPO_ATRASO_API - elapsed)
 
             try:
+                inicio_req = datetime.now()
+                req_id = f"WAFUNC-{int(inicio_req.timestamp()*1000)}"
                 log_payload = {
                     'funcao': 'EVENTOS',
                     'origem': payload['origem'],
-                    'apenas_disponiveis': payload['apenas_disponiveis'],
                     'mensagem_len': len(payload['mensagem'])
                 }
                 logger.info(
-                    "Chamando API WhatsApp por função: POST %s | headers=Authorization: Bearer **** | payload=%s",
-                    url,
-                    log_payload
+                    "%s | POST %s | Envio WhatsApp função=EVENTOS | payload=%s",
+                    req_id, url, log_payload
                 )
                 resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30))
                 self._tempo_ultima_chamada_whatsapp = datetime.now()
+                duracao_ms = int((datetime.now() - inicio_req).total_seconds() * 1000)
 
                 conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text
                 # Se for 202 Accepted, tentar exibir task_id e status_url
@@ -332,34 +321,47 @@ class NotificacaoEventos:
                     try:
                         body = resp.json()
                         logger.info(
-                            "Envio aceito de forma assíncrona: task_id=%s | status_url=%s | detalhes=%s",
-                            body.get('task_id'), body.get('status_url'), body.get('detalhes')
+                            "%s | Aceito async (202) | task_id=%s | status_url=%s | detalhes=%s",
+                            req_id, body.get('task_id'), body.get('status_url'), body.get('detalhes')
                         )
                     except Exception:
-                        logger.info("Resposta 202 sem JSON parseável: %s", conteudo_curto)
-                logger.info(
-                    "Resultado API WhatsApp por função: status=%s | ok=%s | resposta=%s",
-                    resp.status_code, resp.ok, conteudo_curto
-                )
+                        logger.info("%s | 202 sem JSON parseável | trecho=%s", req_id, conteudo_curto)
 
                 if resp.ok:
+                    logger.info(
+                        "%s | Sucesso envio WhatsApp | status=%s | duracao_ms=%s | resposta=%s",
+                        req_id, resp.status_code, duracao_ms, conteudo_curto
+                    )
                     return
 
+                # Em caso de falha, tentar extrair JSON para log estruturado
+                erro_json = None
+                try:
+                    erro_json = resp.json()
+                except Exception:
+                    pass
+                logger.error(
+                    "%s | Falha envio WhatsApp | status=%s | duracao_ms=%s | corpo=%s | erro_json=%s",
+                    req_id, resp.status_code, duracao_ms, conteudo_curto, erro_json
+                )
+
                 # Agendar uma segunda tentativa única para 5 minutos depois
-                logger.warning("Falha no envio (status %s). Segunda tentativa será executada em 5 minutos.", resp.status_code)
-                timer = threading.Timer(300, self._segunda_tentativa_whatsapp_por_funcao, args=(mensagem, apenas_disponiveis))
+                logger.warning("%s | Agendando segunda tentativa em 5 minutos (status=%s)", req_id, resp.status_code)
+                timer = threading.Timer(300, self._segunda_tentativa_whatsapp_por_funcao, args=(mensagem,))
                 timer.daemon = True
                 timer.start()
             except requests.RequestException as e:
-                logger.error("Erro na chamada da API WhatsApp por função (tentativa imediata): %s", e)
+                logger.error("Erro na chamada da API WhatsApp por função (imediata) | excecao=%s", e)
                 # Agendar segunda tentativa em 5 minutos
-                timer = threading.Timer(300, self._segunda_tentativa_whatsapp_por_funcao, args=(mensagem, apenas_disponiveis))
+                timer = threading.Timer(300, self._segunda_tentativa_whatsapp_por_funcao, args=(mensagem,))
                 timer.daemon = True
                 timer.start()
 
-    def _segunda_tentativa_whatsapp_por_funcao(self, mensagem: str, apenas_disponiveis: bool = True) -> None:
+    def _segunda_tentativa_whatsapp_por_funcao(self, mensagem: str) -> None:
         """Executa uma segunda tentativa única após 5 minutos."""
         try:
+            inicio_req = datetime.now()
+            req_id = f"WAFUNC-RETRY-{int(inicio_req.timestamp()*1000)}"
             url = f"{WHATSAPP_API['HOST']}/helpdeskmonitor/api/whatsapp/send-by-function"
             headers = {
                 'Authorization': f"Bearer {WHATSAPP_API['TOKEN']}",
@@ -368,28 +370,37 @@ class NotificacaoEventos:
             payload = {
                 'funcao': 'EVENTOS',
                 'mensagem': mensagem,
-                'origem': WHATSAPP_API.get('ORIGEM') or 'EVENTOS_FERIADOS',
-                'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True)
+                'origem': 'EventosFeriados'
             }
             log_payload = {
                 'funcao': 'EVENTOS',
                 'origem': payload['origem'],
-                'apenas_disponiveis': payload['apenas_disponiveis'],
                 'mensagem_len': len(payload['mensagem'])
             }
             logger.info(
-                "(Segunda tentativa) Chamando API WhatsApp por função: POST %s | headers=Authorization: Bearer **** | payload=%s",
-                url,
-                log_payload
+                "%s | Segunda tentativa POST %s | payload=%s",
+                req_id, url, log_payload
             )
             resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30))
+            duracao_ms = int((datetime.now() - inicio_req).total_seconds() * 1000)
             conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text
-            logger.info(
-                "(Segunda tentativa) Resultado API WhatsApp por função: status=%s | ok=%s | resposta=%s",
-                resp.status_code, resp.ok, conteudo_curto
-            )
+            if resp.ok:
+                logger.info(
+                    "%s | Segunda tentativa sucesso | status=%s | duracao_ms=%s | resposta=%s",
+                    req_id, resp.status_code, duracao_ms, conteudo_curto
+                )
+            else:
+                erro_json = None
+                try:
+                    erro_json = resp.json()
+                except Exception:
+                    pass
+                logger.error(
+                    "%s | Segunda tentativa falhou | status=%s | duracao_ms=%s | corpo=%s | erro_json=%s",
+                    req_id, resp.status_code, duracao_ms, conteudo_curto, erro_json
+                )
         except requests.RequestException as e:
-            logger.error("(Segunda tentativa) Erro na chamada da API WhatsApp por função: %s", e)
+            logger.error("Segunda tentativa erro de exceção na chamada WhatsApp | excecao=%s", e)
     def enviar_email_por_funcao(self, assunto: str, mensagem: str, apenas_disponiveis: bool = True) -> None:
         """
         Envia e-mail via API para todos os técnicos com a função EVENTOS.

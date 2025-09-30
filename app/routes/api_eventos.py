@@ -313,10 +313,15 @@ def forcar_notificacao_whatsapp(evento_id):
         if not ger_notif or not ger_notif.notificacao_eventos:
             return jsonify({'erro': 'Sistema de notificação indisponível'}), 503
 
-        # Ignorar restrições de horário; a API externa filtra disponibilidade se configurado
-        ger_notif.notificacao_eventos.enviar_whatsapp_por_funcao(mensagem=mensagem, apenas_disponiveis=True)
-
-        logger.info(f"WhatsApp forçado enviado para evento {evento_id} (tipo={tipo})")
+        logger.info(
+            "FORCAR_WHATSAPP | preparando envio | evento_id=%s | tipo=%s | len_msg=%s",
+            evento_id, tipo, len(mensagem)
+        )
+        ger_notif.notificacao_eventos.enviar_whatsapp_por_funcao(mensagem=mensagem)
+        logger.info(
+            "FORCAR_WHATSAPP | envio solicitado com sucesso | evento_id=%s | tipo=%s",
+            evento_id, tipo
+        )
         return jsonify({'sucesso': True, 'mensagem': 'Notificação WhatsApp enviada com sucesso', 'tipo': tipo})
     except Exception as e:
         logger.error(f"Erro ao forçar notificação WhatsApp: {e}")
