@@ -34,7 +34,24 @@ except Exception as e:
 ROUTES_PREFIX = '/EventosFeriados'
 
 # Configuração dos diretórios de logs
-LOG_DIR = os.path.join(BASE_DIR, 'logs')
+# Prioridade: variavel ambiente EVENTOS_FERIADOS_LOG_DIR > /var/softwaresTCE/logs/EventosFeriados > fallback local
+_LOG_DIR_ENV = os.environ.get('EVENTOS_FERIADOS_LOG_DIR')
+LOG_DIR = _LOG_DIR_ENV or '/var/softwaresTCE/logs/EventosFeriados'
+
+try:
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR, exist_ok=True)
+except PermissionError:
+    # Fallback local caso não tenha permissão em /var ou caminho customizado
+    LOG_DIR = os.path.join(BASE_DIR, 'logs')
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR, exist_ok=True)
+except Exception:
+    # Qualquer erro inesperado também leva ao fallback local
+    LOG_DIR = os.path.join(BASE_DIR, 'logs')
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR, exist_ok=True)
+
 LOG_FILE = os.path.join(LOG_DIR, 'eventos_feriados.log')
 
 # Configurações CLP TCE
@@ -98,22 +115,51 @@ CLP_AUDITORIO_CONFIG = {
 }
 
 def setup_logging():
-    """Configura o sistema de logging da aplicação."""
-    if not os.path.exists(LOG_DIR):
-        os.makedirs(LOG_DIR, exist_ok=True)
-        
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(LOG_FILE),
-            logging.StreamHandler()
-        ]
-    )
-    
+    """Configura o sistema de logging da aplicação.
+
+    Evita adicionar handlers duplicados se chamada múltiplas vezes (ex.: em ambientes WSGI com vários workers).
+    """
     logger = logging.getLogger('EventosFeriados')
-    logger.info("Sistema de logging inicializado")
-    
+
+    if not logger.handlers:
+        # Garante diretório (caso algo tenha removido após import)
+        try:
+            if not os.path.exists(LOG_DIR):
+                os.makedirs(LOG_DIR, exist_ok=True)
+        except Exception as e:
+            # Último fallback emergencial para diretório local
+            fallback_dir = os.path.join(BASE_DIR, 'logs')
+            try:
+                os.makedirs(fallback_dir, exist_ok=True)
+                logger.warning(f"Falha ao garantir LOG_DIR '{LOG_DIR}': {e}. Usando fallback '{fallback_dir}'.")
+                global LOG_DIR, LOG_FILE  # atualizar caminhos globais
+                LOG_DIR = fallback_dir
+                LOG_FILE = os.path.join(LOG_DIR, 'eventos_feriados.log')
+            except Exception:
+                # Se nem fallback funciona, prossegue apenas com StreamHandler
+                pass
+
+        file_handler = None
+        try:
+                file_handler = logging.handlers.RotatingFileHandler(LOG_FILE, maxBytes=5*1024*1024, backupCount=5)
+        except Exception as e:
+            logger.warning(f"Não foi possível criar FileHandler em '{LOG_FILE}': {e}. Prosseguindo sem arquivo de log.")
+
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        logger.setLevel(logging.INFO)
+        logger.addHandler(stream_handler)
+        if file_handler:
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
+        logger.propagate = False
+
+        logger.info(f"Sistema de logging inicializado | LOG_DIR={LOG_DIR} | LOG_FILE={LOG_FILE}")
+    else:
+        logger.debug("setup_logging() chamado novamente - handlers já configurados")
+
     return logger
 
 # Configurações da aplicação
