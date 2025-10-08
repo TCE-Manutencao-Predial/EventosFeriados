@@ -30,6 +30,16 @@
         <h2 class="eventos-stat-value" id="totalFoyerAuditorio">0</h2>
         <p class="eventos-stat-label">Foyer do Auditório</p>
     </div>
+    <div class="eventos-stat-card">
+        <i class="fas fa-chalkboard-teacher eventos-stat-icon" style="color: #6610f2"></i>
+        <h2 class="eventos-stat-value" id="totalMiniAuditorio">0</h2>
+        <p class="eventos-stat-label">Mini-Auditório</p>
+    </div>
+    <div class="eventos-stat-card">
+        <i class="fas fa-handshake eventos-stat-icon" style="color: #d63384"></i>
+        <h2 class="eventos-stat-value" id="totalSalaConferencias">0</h2>
+        <p class="eventos-stat-label">Sala de Conferências</p>
+    </div>
 </div>
 
 <!-- Controles e Filtros -->
@@ -374,7 +384,9 @@ function exibirEventos() {
             'Átrio': 'info',
             'Plenário': 'warning',
             'Creche': 'success',
-            'Foyer do Auditório': 'secondary'
+            'Foyer do Auditório': 'secondary',
+            'Mini-Auditório': 'dark',
+            'Sala de Conferências': 'danger'
         };
         
         tbody.append(`
@@ -432,7 +444,9 @@ function atualizarEstatisticas() {
         'Átrio': 0,
         'Plenário': 0,
         'Creche': 0,
-        'Foyer do Auditório': 0
+        'Foyer do Auditório': 0,
+        'Mini-Auditório': 0,
+        'Sala de Conferências': 0
     };
     
     eventosParaEstatistica.forEach(evento => {
@@ -446,6 +460,8 @@ function atualizarEstatisticas() {
     $('#totalPlenario').text(estatisticas['Plenário']);
     $('#totalCreche').text(estatisticas['Creche']);
     $('#totalFoyerAuditorio').text(estatisticas['Foyer do Auditório']);
+    $('#totalMiniAuditorio').text(estatisticas['Mini-Auditório']);
+    $('#totalSalaConferencias').text(estatisticas['Sala de Conferências']);
 }
 
 function filtrarEventos() {
