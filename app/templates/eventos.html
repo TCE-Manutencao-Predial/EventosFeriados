@@ -59,6 +59,8 @@
                     <option value="Plenário">Plenário</option>
                     <option value="Creche">Creche</option>
                     <option value="Foyer do Auditório">Foyer do Auditório</option>
+                    <option value="Mini-Auditório">Mini-Auditório</option>
+                    <option value="Sala de Conferências">Sala de Conferências</option>
                 </select>
             </div>
         </div>
@@ -161,8 +163,17 @@
                                 <option value="Plenário">Plenário</option>
                                 <option value="Creche">Creche</option>
                                 <option value="Foyer do Auditório">Foyer do Auditório</option>
+                                <option value="Mini-Auditório">Mini-Auditório</option>
+                                <option value="Sala de Conferências">Sala de Conferências</option>
                             </select>
                         </div>
+                    </div>
+                    
+                    <!-- Aviso para locais sem automação predial -->
+                    <div class="alert alert-warning d-none" id="avisoSemAutomacao" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Atenção:</strong> Este local não possui sistema de automação predial (ar-condicionado e iluminação). 
+                        O evento será registrado e os funcionários e servidores envolvidos serão notificados apenas por mensagens via WhatsApp.
                     </div>
                     
                     <div class="row mb-3">
@@ -281,6 +292,18 @@ $(document).ready(function() {
     
     // Verificar disponibilidade ao mudar campos
     $('#eventoLocal, #eventoDia, #eventoMes, #eventoAno, #eventoHoraInicio, #eventoHoraFim').on('change', verificarDisponibilidade);
+    
+    // Mostrar aviso para locais sem automação predial
+    $('#eventoLocal').on('change', function() {
+        const local = $(this).val();
+        const locaisSemAutomacao = ['Creche', 'Mini-Auditório', 'Sala de Conferências'];
+        
+        if (locaisSemAutomacao.includes(local)) {
+            $('#avisoSemAutomacao').removeClass('d-none');
+        } else {
+            $('#avisoSemAutomacao').addClass('d-none');
+        }
+    });
 });
 
 function carregarEventos() {
@@ -435,6 +458,7 @@ function abrirModalNovoEvento() {
     $('#eventoId').val('');
     $('#eventoAno').val(new Date().getFullYear());
     $('#avisoDisponibilidade').addClass('d-none');
+    $('#avisoSemAutomacao').addClass('d-none');
     $('#modalEvento').modal('show');
 }
 
@@ -454,6 +478,14 @@ function editarEvento(id) {
     $('#eventoResponsavel').val(evento.responsavel);
     $('#eventoParticipantes').val(evento.participantes_estimados);
     $('#eventoDescricao').val(evento.descricao);
+    
+    // Verificar se o local não possui automação predial
+    const locaisSemAutomacao = ['Creche', 'Mini-Auditório', 'Sala de Conferências'];
+    if (locaisSemAutomacao.includes(evento.local)) {
+        $('#avisoSemAutomacao').removeClass('d-none');
+    } else {
+        $('#avisoSemAutomacao').addClass('d-none');
+    }
     
     $('#modalEvento').modal('show');
 }

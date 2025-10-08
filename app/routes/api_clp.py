@@ -180,7 +180,9 @@ def listar_locais_clp():
                 'Átrio': 'AT',
                 'Plenário': 'PL',
                 'Creche': 'CR',
-                'Foyer do Auditório': 'FA'
+                'Foyer do Auditório': 'FA',
+                'Mini-Auditório': 'MA',
+                'Sala de Conferências': 'SC'
             }
         })
         

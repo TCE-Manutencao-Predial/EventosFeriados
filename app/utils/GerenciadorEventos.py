@@ -10,7 +10,7 @@ class GerenciadorEventos:
     _instance = None
     
     # Locais disponíveis para eventos
-    LOCAIS_VALIDOS = ['Auditório Nobre', 'Átrio', 'Plenário', 'Creche', 'Foyer do Auditório']
+    LOCAIS_VALIDOS = ['Auditório Nobre', 'Átrio', 'Plenário', 'Creche', 'Foyer do Auditório', 'Mini-Auditório', 'Sala de Conferências']
     
     def __init__(self):
         self.logger = logging.getLogger('EventosFeriados.GerenciadorEventos')
