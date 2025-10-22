@@ -423,3 +423,40 @@ class GerenciadorEventos:
     def obter_locais_disponiveis(self) -> List[str]:
         """Retorna a lista de locais disponíveis"""
         return self.LOCAIS_VALIDOS.copy()
+    
+    def encerrar_evento_agora(self, evento_id: str) -> Optional[Dict]:
+        """
+        Encerra um evento mais cedo removendo o dia atual dos CLPs envolvidos.
+        Isso fará com que o CLP desligue luzes e ar condicionado imediatamente.
+        
+        Returns:
+            Dict com informações do evento e resultado da operação, ou None se evento não encontrado
+        """
+        try:
+            evento = self.obter_evento(evento_id)
+            if not evento:
+                self.logger.error(f"Evento não encontrado: {evento_id}")
+                return None
+            
+            # Verificar se o evento é hoje
+            data_hoje = date.today()
+            data_evento = date(evento['ano'], evento['mes'], evento['dia'])
+            
+            if data_evento != data_hoje:
+                raise ValueError(f"Evento não é de hoje. Data do evento: {data_evento.strftime('%d/%m/%Y')}")
+            
+            self.logger.info(f"Encerrando evento '{evento['nome']}' do local '{evento['local']}' mais cedo...")
+            
+            # Retornar dados do evento para processamento externo
+            return {
+                'evento': evento,
+                'local': evento['local'],
+                'dia': evento['dia'],
+                'mes': evento['mes'],
+                'ano': evento['ano'],
+                'timestamp': datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Erro ao encerrar evento: {e}")
+            raise

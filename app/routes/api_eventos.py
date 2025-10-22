@@ -326,3 +326,95 @@ def forcar_notificacao_whatsapp(evento_id):
     except Exception as e:
         logger.error(f"Erro ao forçar notificação WhatsApp: {e}")
         return jsonify({'erro': str(e)}), 500
+
+@api_eventos_bp.route('/eventos/<evento_id>/encerrar', methods=['POST'])
+def encerrar_evento(evento_id):
+    """Encerra um evento mais cedo removendo o dia atual dos CLPs envolvidos.
+    
+    Isso faz com que o CLP desligue luzes e ar condicionado imediatamente,
+    permitindo que o evento seja encerrado antes do horário programado.
+    """
+    try:
+        gerenciador = current_app.config.get('GERENCIADOR_EVENTOS')
+        if not gerenciador:
+            return jsonify({'erro': 'Gerenciador de eventos não disponível'}), 503
+        
+        # Obter informações do evento e validar se pode ser encerrado
+        resultado = gerenciador.encerrar_evento_agora(evento_id)
+        
+        if not resultado:
+            return jsonify({'erro': 'Evento não encontrado'}), 404
+        
+        evento = resultado['evento']
+        local = resultado['local']
+        dia = resultado['dia']
+        mes = resultado['mes']
+        
+        logger.info(f"Encerrando evento '{evento['nome']}' do local '{local}'...")
+        
+        # Determinar qual CLP gerencia este local
+        integracao_plenario = current_app.config.get('INTEGRACAO_CLP')
+        integracao_auditorio = current_app.config.get('INTEGRACAO_CLP_AUDITORIO')
+        
+        locais_auditorio = []
+        if integracao_auditorio and hasattr(integracao_auditorio, 'sincronizador'):
+            locais_auditorio = integracao_auditorio.sincronizador.config.get('LOCAIS_GERENCIADOS', [])
+        
+        sucesso = False
+        erros = []
+        clp_afetado = None
+        
+        # Remover eventos do CLP correspondente ao local
+        if local in locais_auditorio:
+            # CLP Auditório
+            clp_afetado = 'Auditório'
+            if integracao_auditorio and hasattr(integracao_auditorio, 'sincronizador'):
+                sucesso, erros = integracao_auditorio.sincronizador.remover_eventos_do_dia(dia, mes)
+                logger.info(f"Resultado remoção CLP Auditório: sucesso={sucesso}, erros={erros}")
+            else:
+                erros.append('Integração com CLP Auditório não disponível')
+                logger.error('Integração com CLP Auditório não disponível')
+        elif local == 'Plenário':
+            # CLP Plenário
+            clp_afetado = 'Plenário'
+            if integracao_plenario and hasattr(integracao_plenario, 'sincronizador'):
+                sucesso, erros = integracao_plenario.sincronizador.remover_eventos_do_dia(dia, mes)
+                logger.info(f"Resultado remoção CLP Plenário: sucesso={sucesso}, erros={erros}")
+            else:
+                erros.append('Integração com CLP Plenário não disponível')
+                logger.error('Integração com CLP Plenário não disponível')
+        else:
+            # Local sem automação predial
+            logger.info(f"Local '{local}' não possui automação predial integrada ao sistema")
+            return jsonify({
+                'sucesso': True,
+                'mensagem': f'Evento marcado como encerrado. O local "{local}" não possui automação predial integrada ao sistema.',
+                'evento': evento['nome'],
+                'local': local,
+                'sem_automacao': True
+            })
+        
+        if sucesso:
+            logger.info(f"Evento '{evento['nome']}' encerrado com sucesso no CLP {clp_afetado}")
+            return jsonify({
+                'sucesso': True,
+                'mensagem': f'Evento encerrado com sucesso! O CLP {clp_afetado} foi atualizado e as luzes/ar condicionado serão desligados.',
+                'evento': evento['nome'],
+                'local': local,
+                'clp_afetado': clp_afetado
+            })
+        else:
+            logger.error(f"Falha ao encerrar evento '{evento['nome']}' no CLP {clp_afetado}: {erros}")
+            return jsonify({
+                'erro': f'Erro ao atualizar CLP {clp_afetado}: {", ".join(erros)}',
+                'evento': evento['nome'],
+                'local': local,
+                'clp_afetado': clp_afetado
+            }), 500
+        
+    except ValueError as e:
+        logger.error(f"Erro de validação ao encerrar evento: {e}")
+        return jsonify({'erro': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Erro ao encerrar evento: {e}")
+        return jsonify({'erro': str(e)}), 500

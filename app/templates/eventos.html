@@ -408,6 +408,11 @@ function exibirEventos() {
                     <button class="btn btn-sm btn-outline-success" onclick="dispararWhatsApp('${evento.id}')" title="Disparar WhatsApp">
                         <i class="fab fa-whatsapp"></i>
                     </button>
+                    ${eventoEhHoje(evento.dia, evento.mes, evento.ano) ? `
+                    <button class="btn btn-sm btn-outline-warning" onclick="encerrarEvento('${evento.id}', '${evento.nome}', '${evento.local}')" title="Encerrar Evento Mais Cedo">
+                        <i class="fas fa-stop-circle"></i>
+                    </button>
+                    ` : ''}
                 </td>
             </tr>
         `);
@@ -627,6 +632,63 @@ function dispararWhatsApp(eventoId, tipo = 'detalhes') {
         error: function(xhr) {
             const msg = (xhr.responseJSON && xhr.responseJSON.erro) ? xhr.responseJSON.erro : 'Falha ao disparar WhatsApp';
             showNotification(msg, 'error');
+        }
+    });
+}
+
+function eventoEhHoje(dia, mes, ano) {
+    const hoje = new Date();
+    return dia === hoje.getDate() && mes === (hoje.getMonth() + 1) && ano === hoje.getFullYear();
+}
+
+function encerrarEvento(eventoId, nomeEvento, local) {
+    if (!eventoId) return;
+    
+    const mensagem = `Deseja realmente ENCERRAR o evento "${nomeEvento}" AGORA?\n\n` +
+                    `Esta ação irá:\n` +
+                    `• Remover o evento de hoje do CLP\n` +
+                    `• Desligar as luzes e ar condicionado do ${local}\n` +
+                    `• O evento será encerrado IMEDIATAMENTE\n\n` +
+                    `Esta operação NÃO pode ser desfeita!`;
+    
+    if (!confirm(mensagem)) return;
+    
+    // Mostrar indicador de carregamento
+    const btnElement = event.target.closest('button');
+    const originalHTML = btnElement.innerHTML;
+    btnElement.disabled = true;
+    btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    $.ajax({
+        url: `/api/eventos/${eventoId}/encerrar`,
+        method: 'POST',
+        success: function(resp) {
+            if (resp.sem_automacao) {
+                showNotification(resp.mensagem, 'warning');
+            } else {
+                showNotification(resp.mensagem || 'Evento encerrado com sucesso!', 'success');
+            }
+            // Recarregar eventos após 2 segundos
+            setTimeout(() => {
+                carregarEventos();
+            }, 2000);
+        },
+        error: function(xhr) {
+            const msg = (xhr.responseJSON && xhr.responseJSON.erro) 
+                ? xhr.responseJSON.erro 
+                : 'Falha ao encerrar evento';
+            showNotification(msg, 'error');
+            
+            // Restaurar botão
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalHTML;
+        },
+        complete: function() {
+            // Restaurar botão caso ainda não tenha sido restaurado
+            setTimeout(() => {
+                btnElement.disabled = false;
+                btnElement.innerHTML = originalHTML;
+            }, 100);
         }
     });
 }

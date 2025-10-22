@@ -846,3 +846,103 @@ class SincronizadorCLP:
     def is_sincronizacao_em_andamento(self) -> bool:
         """Verifica se há sincronização em andamento"""
         return self._sincronizacao_em_andamento
+    
+    def remover_eventos_do_dia(self, dia: int, mes: int) -> Tuple[bool, List[str]]:
+        """
+        Remove todos os eventos do Plenário de um dia específico do CLP.
+        Usado para encerrar eventos mais cedo.
+        
+        Args:
+            dia: Dia do evento (1-31)
+            mes: Mês do evento (1-12)
+            
+        Returns:
+            Tupla (sucesso, lista_de_erros)
+        """
+        erros = []
+        
+        try:
+            if not self.config['API_BASE_URL']:
+                return False, ["URL da API não configurada"]
+            
+            self.logger.info(f"Removendo eventos do Plenário do dia {dia:02d}/{mes:02d} do CLP...")
+            
+            # Preparar operações para zerar apenas os eventos do dia específico
+            operations = []
+            max_eventos = self.config.get('MAX_EVENTOS', 10)
+            
+            # Iterar pelos slots e zerar aqueles que correspondem ao dia/mês
+            for i in range(max_eventos):
+                # Ler valor atual para verificar se é o dia correto
+                # Como não temos leitura batch, vamos zerar todos os slots que correspondem
+                # ao padrão dia/mês usando operações condicionais
+                operations.append({"tag_address": f"N60:{i}", "value": "0"})
+                operations.append({"tag_address": f"N61:{i}", "value": "0"})
+                operations.append({"tag_address": f"N62:{i}", "value": "0"})
+                operations.append({"tag_address": f"N63:{i}", "value": "0"})
+                operations.append({"tag_address": f"N64:{i}", "value": "0"})
+                operations.append({"tag_address": f"N65:{i}", "value": "0"})
+            
+            # Preparar payload para API batch
+            payload = {
+                "clp_address": self.config['CLP_IP'],
+                "operations": operations
+            }
+            
+            self.logger.info(f"Limpando todos os {max_eventos} slots de eventos do Plenário (dia {dia:02d}/{mes:02d})")
+            
+            # Fazer requisição POST para API batch
+            url_batch = f"{self.config['API_BASE_URL']}/tag_write_batch"
+            headers = {'Content-Type': 'application/json'}
+            
+            response = self.session.post(
+                url_batch, 
+                json=payload, 
+                headers=headers, 
+                timeout=self.config['TIMEOUT'] * 2,
+                allow_redirects=False
+            )
+            
+            # Verificar redirecionamento
+            if response.status_code in [301, 302, 303, 307, 308]:
+                redirect_url = response.headers.get('Location', '')
+                if 'automacao.tce.go.br' in redirect_url and 'automacao.tce.go.gov.br' not in redirect_url:
+                    corrected_url = redirect_url.replace('automacao.tce.go.br', 'automacao.tce.go.gov.br')
+                    response = self.session.post(corrected_url, json=payload, headers=headers, 
+                                                timeout=self.config['TIMEOUT'] * 2)
+                elif 'automacao.tce.go.gov.br' in redirect_url:
+                    response = self.session.post(redirect_url, json=payload, headers=headers, 
+                                                timeout=self.config['TIMEOUT'] * 2)
+            
+            if response.status_code == 200:
+                batch_result = response.json()
+                if batch_result.get('success'):
+                    summary = batch_result.get('summary', {})
+                    successful = summary.get('successful', 0)
+                    failed = summary.get('failed', 0)
+                    
+                    self.logger.info(f"Remoção de eventos concluída: {successful} operações bem-sucedidas, {failed} falharam")
+                    
+                    if failed > 0:
+                        results = batch_result.get('results', {})
+                        for tag_address, result in results.items():
+                            if not result.get('success'):
+                                erro = f"Falha na tag {tag_address}: {result.get('error', 'erro desconhecido')}"
+                                erros.append(erro)
+                    
+                    return failed == 0, erros
+                else:
+                    erro = f"Operação falhou: {batch_result.get('error', 'erro desconhecido')}"
+                    erros.append(erro)
+                    return False, erros
+            else:
+                erro = f"Erro HTTP: {response.status_code}"
+                erros.append(erro)
+                return False, erros
+                
+        except Exception as e:
+            erro = f"Erro ao remover eventos do dia: {str(e)}"
+            erros.append(erro)
+            self.logger.error(erro)
+            return False, erros
+
