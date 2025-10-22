@@ -418,3 +418,47 @@ def encerrar_evento(evento_id):
     except Exception as e:
         logger.error(f"Erro ao encerrar evento: {e}")
         return jsonify({'erro': str(e)}), 500
+
+@api_eventos_bp.route('/eventos/<evento_id>/reativar', methods=['POST'])
+def reativar_evento(evento_id):
+    """Reativa um evento que foi encerrado mais cedo.
+    
+    Remove a marca de encerramento para que o evento volte a ser sincronizado com o CLP
+    na próxima sincronização automática (7h ou 18h) ou manual.
+    """
+    try:
+        gerenciador = current_app.config.get('GERENCIADOR_EVENTOS')
+        if not gerenciador:
+            return jsonify({'erro': 'Gerenciador de eventos não disponível'}), 503
+        
+        # Reativar evento
+        evento = gerenciador.reativar_evento(evento_id)
+        
+        if not evento:
+            return jsonify({'erro': 'Evento não encontrado'}), 404
+        
+        logger.info(f"Evento '{evento['nome']}' reativado com sucesso")
+        
+        # Disparar autosync para reprogramar no CLP
+        try:
+            integracao_plenario = current_app.config.get('INTEGRACAO_CLP')
+            integracao_auditorio = current_app.config.get('INTEGRACAO_CLP_AUDITORIO')
+            aud_locais = []
+            if integracao_auditorio and getattr(integracao_auditorio, 'sincronizador', None):
+                aud_locais = integracao_auditorio.sincronizador.config.get('LOCAIS_GERENCIADOS', [])
+            AutoSyncCLP.get_instance().trigger_for_local(evento.get('local'), integracao_plenario, integracao_auditorio, aud_locais)
+        except Exception as e:
+            logger.error(f"Falha ao agendar autosync após reativar evento: {e}")
+        
+        return jsonify({
+            'sucesso': True,
+            'mensagem': f'Evento "{evento["nome"]}" reativado com sucesso! Será reprogramado no CLP na próxima sincronização.',
+            'evento': evento
+        })
+        
+    except ValueError as e:
+        logger.error(f"Erro de validação ao reativar evento: {e}")
+        return jsonify({'erro': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Erro ao reativar evento: {e}")
+        return jsonify({'erro': str(e)}), 500

@@ -429,14 +429,29 @@ class GerenciadorEventos:
         Encerra um evento mais cedo removendo o dia atual dos CLPs envolvidos.
         Isso fará com que o CLP desligue luzes e ar condicionado imediatamente.
         
+        IMPORTANTE: Marca o evento como encerrado para evitar que seja reprogramado
+        nas sincronizações automáticas (7h e 18h).
+        
         Returns:
             Dict com informações do evento e resultado da operação, ou None se evento não encontrado
         """
         try:
-            evento = self.obter_evento(evento_id)
-            if not evento:
+            # Buscar índice do evento para atualizar
+            evento_index = None
+            for i, evt in enumerate(self.eventos):
+                if evt['id'] == evento_id:
+                    evento_index = i
+                    break
+            
+            if evento_index is None:
                 self.logger.error(f"Evento não encontrado: {evento_id}")
                 return None
+            
+            evento = self.eventos[evento_index]
+            
+            # Verificar se já está encerrado
+            if evento.get('encerrado_em'):
+                raise ValueError(f"Evento já foi encerrado em {evento['encerrado_em']}")
             
             # Verificar se o evento é hoje
             data_hoje = date.today()
@@ -447,16 +462,74 @@ class GerenciadorEventos:
             
             self.logger.info(f"Encerrando evento '{evento['nome']}' do local '{evento['local']}' mais cedo...")
             
+            # MARCAR EVENTO COMO ENCERRADO no banco de dados
+            timestamp_encerramento = datetime.now().isoformat()
+            self.eventos[evento_index]['encerrado_em'] = timestamp_encerramento
+            self.eventos[evento_index]['atualizado_em'] = timestamp_encerramento
+            
+            # Salvar alterações no arquivo
+            if not self._salvar_eventos():
+                self.logger.error("Falha ao salvar evento encerrado no arquivo")
+                raise Exception("Erro ao persistir encerramento do evento")
+            
+            self.logger.info(f"✅ Evento '{evento['nome']}' marcado como encerrado em {timestamp_encerramento}")
+            
             # Retornar dados do evento para processamento externo
             return {
-                'evento': evento,
+                'evento': self.eventos[evento_index],
                 'local': evento['local'],
                 'dia': evento['dia'],
                 'mes': evento['mes'],
                 'ano': evento['ano'],
-                'timestamp': datetime.now().isoformat()
+                'timestamp': timestamp_encerramento
             }
             
         except Exception as e:
             self.logger.error(f"Erro ao encerrar evento: {e}")
+            raise
+    
+    def reativar_evento(self, evento_id: str) -> Optional[Dict]:
+        """
+        Reativa um evento que foi encerrado mais cedo.
+        Remove a marca de encerramento para que o evento volte a ser sincronizado com o CLP.
+        
+        Returns:
+            Dict com informações do evento reativado, ou None se evento não encontrado
+        """
+        try:
+            # Buscar índice do evento para atualizar
+            evento_index = None
+            for i, evt in enumerate(self.eventos):
+                if evt['id'] == evento_id:
+                    evento_index = i
+                    break
+            
+            if evento_index is None:
+                self.logger.error(f"Evento não encontrado: {evento_id}")
+                return None
+            
+            evento = self.eventos[evento_index]
+            
+            # Verificar se está encerrado
+            if not evento.get('encerrado_em'):
+                raise ValueError("Evento não está encerrado")
+            
+            self.logger.info(f"Reativando evento '{evento['nome']}' do local '{evento['local']}'...")
+            
+            # REMOVER MARCA DE ENCERRAMENTO
+            encerrado_em_anterior = evento['encerrado_em']
+            del self.eventos[evento_index]['encerrado_em']
+            self.eventos[evento_index]['atualizado_em'] = datetime.now().isoformat()
+            
+            # Salvar alterações no arquivo
+            if not self._salvar_eventos():
+                self.logger.error("Falha ao salvar evento reativado no arquivo")
+                raise Exception("Erro ao persistir reativação do evento")
+            
+            self.logger.info(f"✅ Evento '{evento['nome']}' reativado (estava encerrado desde {encerrado_em_anterior})")
+            
+            return self.eventos[evento_index]
+            
+        except Exception as e:
+            self.logger.error(f"Erro ao reativar evento: {e}")
             raise

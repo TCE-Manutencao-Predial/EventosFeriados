@@ -229,6 +229,11 @@ class SincronizadorCLP:
             
             for evento in todos_eventos_plenario:
                 try:
+                    # FILTRAR EVENTOS ENCERRADOS - NÃO SINCRONIZAR COM CLP
+                    if evento.get('encerrado_em'):
+                        self.logger.info(f"⏭️ Ignorando evento encerrado: '{evento['nome']}' (encerrado em {evento['encerrado_em']})")
+                        continue
+                    
                     data_evento = date(evento['ano'], evento['mes'], evento['dia'])
                     
                     # Incluir eventos da última semana (para documentação)

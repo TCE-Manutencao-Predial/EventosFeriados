@@ -387,18 +387,26 @@ function exibirEventos() {
             'Sala de Conferências': 'danger'
         };
         
+        // Verificar se evento foi encerrado
+        const eventoEncerrado = evento.encerrado_em ? true : false;
+        const classeEncerrado = eventoEncerrado ? 'table-secondary text-muted' : '';
+        const estiloTextoEncerrado = eventoEncerrado ? 'style="text-decoration: line-through; opacity: 0.6;"' : '';
+        
         tbody.append(`
-            <tr>
+            <tr class="${classeEncerrado}">
                 <td>${evento.dia.toString().padStart(2, '0')}/${evento.mes.toString().padStart(2, '0')}/${evento.ano}</td>
                 <td>
-                    <strong>${evento.nome}</strong>
+                    <strong ${estiloTextoEncerrado}>${evento.nome}</strong>
+                    ${eventoEncerrado ? '<br><span class="badge bg-danger"><i class="fas fa-ban"></i> ENCERRADO</span>' : ''}
                     ${evento.descricao ? `<br><small class="text-muted">${evento.descricao}</small>` : ''}
+                    ${eventoEncerrado ? `<br><small class="text-muted"><i class="fas fa-clock"></i> Encerrado em ${new Date(evento.encerrado_em).toLocaleString('pt-BR')}</small>` : ''}
                 </td>
                 <td><span class="badge bg-${localBadge[evento.local] || 'secondary'}">${evento.local}</span></td>
-                <td>${evento.hora_inicio} - ${evento.hora_fim}</td>
-                <td>${evento.responsavel || '<span class="text-muted">-</span>'}</td>
-                <td>${evento.participantes_estimados || '<span class="text-muted">-</span>'}</td>
+                <td ${estiloTextoEncerrado}>${evento.hora_inicio} - ${evento.hora_fim}</td>
+                <td ${estiloTextoEncerrado}>${evento.responsavel || '<span class="text-muted">-</span>'}</td>
+                <td ${estiloTextoEncerrado}>${evento.participantes_estimados || '<span class="text-muted">-</span>'}</td>
                 <td class="text-center">
+                    ${!eventoEncerrado ? `
                     <button class="btn btn-sm btn-outline-primary" onclick="editarEvento('${evento.id}')" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -413,6 +421,14 @@ function exibirEventos() {
                         <i class="fas fa-stop-circle"></i>
                     </button>
                     ` : ''}
+                    ` : `
+                    <button class="btn btn-sm btn-outline-info" onclick="reativarEvento('${evento.id}', '${evento.nome}')" title="Reativar Evento">
+                        <i class="fas fa-redo"></i> Reativar
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="excluirEvento('${evento.id}', '${evento.nome}')" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    `}
                 </td>
             </tr>
         `);
@@ -649,7 +665,7 @@ function encerrarEvento(eventoId, nomeEvento, local) {
                     `• Remover o evento de hoje do CLP\n` +
                     `• Desligar as luzes e ar condicionado do ${local}\n` +
                     `• O evento será encerrado IMEDIATAMENTE\n\n` +
-                    `Esta operação NÃO pode ser desfeita!`;
+                    `Você poderá REATIVAR o evento depois se necessário.`;
     
     if (!confirm(mensagem)) return;
     
@@ -677,6 +693,53 @@ function encerrarEvento(eventoId, nomeEvento, local) {
             const msg = (xhr.responseJSON && xhr.responseJSON.erro) 
                 ? xhr.responseJSON.erro 
                 : 'Falha ao encerrar evento';
+            showNotification(msg, 'error');
+            
+            // Restaurar botão
+            btnElement.disabled = false;
+            btnElement.innerHTML = originalHTML;
+        },
+        complete: function() {
+            // Restaurar botão caso ainda não tenha sido restaurado
+            setTimeout(() => {
+                btnElement.disabled = false;
+                btnElement.innerHTML = originalHTML;
+            }, 100);
+        }
+    });
+}
+
+function reativarEvento(eventoId, nomeEvento) {
+    if (!eventoId) return;
+    
+    const mensagem = `Deseja realmente REATIVAR o evento "${nomeEvento}"?\n\n` +
+                    `Esta ação irá:\n` +
+                    `• Remover a marca de encerramento\n` +
+                    `• Reprogramar o evento no CLP na próxima sincronização\n` +
+                    `• Reativar iluminação e ar condicionado conforme programação original`;
+    
+    if (!confirm(mensagem)) return;
+    
+    // Mostrar indicador de carregamento
+    const btnElement = event.target.closest('button');
+    const originalHTML = btnElement.innerHTML;
+    btnElement.disabled = true;
+    btnElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    $.ajax({
+        url: `/api/eventos/${eventoId}/reativar`,
+        method: 'POST',
+        success: function(resp) {
+            showNotification(resp.mensagem || 'Evento reativado com sucesso!', 'success');
+            // Recarregar eventos após 1 segundo
+            setTimeout(() => {
+                carregarEventos();
+            }, 1000);
+        },
+        error: function(xhr) {
+            const msg = (xhr.responseJSON && xhr.responseJSON.erro) 
+                ? xhr.responseJSON.erro 
+                : 'Falha ao reativar evento';
             showNotification(msg, 'error');
             
             // Restaurar botão
