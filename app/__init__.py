@@ -76,6 +76,15 @@ def create_app():
             eventos_logger.warning("Agendador CLP não iniciado - gerenciadores indisponíveis")
     except Exception as e:
         eventos_logger.error(f"Erro ao inicializar agendador CLP: {e}")
+    
+    # Inicializa sistema de notificações de eventos
+    try:
+        from .utils.GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
+        gerenciador_notificacao = GerenciadorNotificacaoEventos.get_instance()
+        gerenciador_notificacao.iniciar_scheduler_lembretes()
+        eventos_logger.info("Sistema de notificações de eventos iniciado com scheduler ativo")
+    except Exception as e:
+        eventos_logger.error(f"Erro ao inicializar sistema de notificações de eventos: {e}")
 
     # Handlers de erro
     @app.errorhandler(404)
@@ -127,6 +136,24 @@ def create_app():
             agendador_status = AgendadorCLP.get_instance().status()
         except:
             agendador_status = {'executando': False}
+        
+        # Status do scheduler de notificações
+        try:
+            from .utils.GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
+            ger_notif = GerenciadorNotificacaoEventos.get_instance()
+            notificacoes_status = {
+                'scheduler_ativo': ger_notif.running,
+                'thread_viva': ger_notif.scheduler_thread.is_alive() if ger_notif.scheduler_thread else False,
+                'sistema_inicializado': ger_notif.notificacao_eventos is not None
+            }
+        except Exception as e:
+            eventos_logger.error(f"Erro ao obter status de notificações: {e}")
+            notificacoes_status = {
+                'scheduler_ativo': False,
+                'thread_viva': False,
+                'sistema_inicializado': False,
+                'erro': str(e)
+            }
             
         return jsonify({
             'status': 'online',
@@ -139,6 +166,7 @@ def create_app():
                 'plenario': app.config['INTEGRACAO_CLP'] is not None,
                 'auditorio': app.config['INTEGRACAO_CLP_AUDITORIO'] is not None
             },
+            'notificacoes_eventos': notificacoes_status,
             'sincronizacao_tce': {
                 'habilitada': agendador_status.get('status_tce', {}).get('SYNC_ENABLED', False),
                 'proximo_horario': agendador_status.get('proximo_horario_tce'),
