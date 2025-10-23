@@ -76,6 +76,15 @@ def create_app():
             eventos_logger.warning("Agendador CLP não iniciado - gerenciadores indisponíveis")
     except Exception as e:
         eventos_logger.error(f"Erro ao inicializar agendador CLP: {e}")
+    
+    # Inicializa sistema de notificações de eventos
+    try:
+        from .utils.GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
+        gerenciador_notificacao = GerenciadorNotificacaoEventos.get_instance()
+        gerenciador_notificacao.iniciar_scheduler_lembretes()
+        eventos_logger.info("Sistema de notificações de eventos iniciado (lembretes agendados)")
+    except Exception as e:
+        eventos_logger.error(f"Erro ao inicializar sistema de notificações: {e}")
 
     # Handlers de erro
     @app.errorhandler(404)
