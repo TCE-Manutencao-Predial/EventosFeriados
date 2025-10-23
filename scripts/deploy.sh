@@ -16,7 +16,20 @@ source ./scripts/config.sh
 
 atualizar_projeto_local() {
     echo "[Deploy] Verificando atualizações do projeto no repositório git..."
-    git pull
+    
+    # Descartar todas as alterações locais (arquivos modificados e não rastreados)
+    echo "[Deploy] Descartando alterações locais..."
+    git reset --hard HEAD
+    git clean -fd
+    
+    # Buscar atualizações do remoto
+    echo "[Deploy] Buscando atualizações do repositório remoto..."
+    git fetch origin
+    
+    # Forçar atualização com a versão remota
+    echo "[Deploy] Sincronizando com a branch remota..."
+    git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
+    
     echo "[Deploy] Atualizações do repositório git concluídas."
 }
 
@@ -63,8 +76,17 @@ deploy_backend() {
         echo "[Deploy] Projeto antigo do Backend encontrado. Atualizando arquivos..."
         dir_atual=$(pwd)
         cd $ROOT_BACKEND
-        git restore .
-        git pull
+        
+        # Descartar todas as alterações locais
+        echo "[Deploy] Descartando alterações locais do Backend..."
+        git reset --hard HEAD
+        git clean -fd
+        
+        # Buscar e forçar atualização com a versão remota
+        echo "[Deploy] Sincronizando Backend com repositório remoto..."
+        git fetch origin
+        git reset --hard origin/$(git rev-parse --abbrev-ref HEAD)
+        
         cd $dir_atual
         echo "[Deploy] Atualização do Backend concluída."
     else
