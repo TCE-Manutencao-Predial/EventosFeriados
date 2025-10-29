@@ -1,0 +1,809 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Alterações - EventosFeriados TCE-GO{% endblock %}
+
+{% block extra_css %}
+<style>
+    .historico-container {
+        padding: 20px 0;
+    }
+
+    .filters-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 25px;
+    }
+
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .filter-group label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+
+    .filter-group select,
+    .filter-group input {
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+    }
+
+    .filter-group select:focus,
+    .filter-group input:focus {
+        outline: none;
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13,110,253,.25);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 15px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 25px;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 12px;
+        padding: 20px;
+        color: white;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+    }
+
+    .stat-card.criar {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    }
+
+    .stat-card.editar {
+        background: linear-gradient(135deg, #FFB75E 0%, #ED8F03 100%);
+    }
+
+    .stat-card.excluir {
+        background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 5px;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+
+    .timeline-container {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        position: relative;
+    }
+
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 30px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #667eea, #764ba2);
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 70px;
+        margin-bottom: 30px;
+        animation: fadeInUp 0.5s ease-out;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: 18px;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        z-index: 1;
+    }
+
+    .timeline-marker.criar {
+        border-color: #38ef7d;
+        box-shadow: 0 0 0 4px rgba(56, 239, 125, 0.2);
+    }
+
+    .timeline-marker.editar {
+        border-color: #FFB75E;
+        box-shadow: 0 0 0 4px rgba(255, 183, 94, 0.2);
+    }
+
+    .timeline-marker.excluir {
+        border-color: #ee0979;
+        box-shadow: 0 0 0 4px rgba(238, 9, 121, 0.2);
+    }
+
+    .timeline-content {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        border-left: 4px solid #667eea;
+        transition: all 0.3s;
+    }
+
+    .timeline-content:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateX(5px);
+    }
+
+    .timeline-content.criar {
+        border-left-color: #38ef7d;
+    }
+
+    .timeline-content.editar {
+        border-left-color: #FFB75E;
+    }
+
+    .timeline-content.excluir {
+        border-left-color: #ee0979;
+    }
+
+    .timeline-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 10px;
+    }
+
+    .timeline-title {
+        font-weight: 600;
+        color: #212529;
+        font-size: 1rem;
+        margin-bottom: 5px;
+    }
+
+    .timeline-meta {
+        display: flex;
+        gap: 15px;
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 10px;
+    }
+
+    .timeline-meta span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .badge-operacao {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .badge-criar {
+        background: #d4edda;
+        color: #155724;
+    }
+
+    .badge-editar {
+        background: #fff3cd;
+        color: #856404;
+    }
+
+    .badge-excluir {
+        background: #f8d7da;
+        color: #721c24;
+    }
+
+    .timeline-details {
+        background: white;
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 10px;
+        font-size: 0.9rem;
+    }
+
+    .campos-alterados {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .campo-badge {
+        background: #e7f1ff;
+        color: #0c63e4;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #dee2e6;
+        margin-bottom: 20px;
+    }
+
+    .loading {
+        text-align: center;
+        padding: 40px;
+    }
+
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 30px;
+    }
+
+    .pagination button {
+        padding: 8px 16px;
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .pagination button:hover:not(:disabled) {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .pagination button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .pagination button.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .export-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .export-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .diff-table {
+        width: 100%;
+        margin-top: 10px;
+        font-size: 0.85rem;
+    }
+
+    .diff-table th {
+        background: #f8f9fa;
+        padding: 8px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .diff-table td {
+        padding: 8px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .diff-old {
+        color: #dc3545;
+        text-decoration: line-through;
+    }
+
+    .diff-new {
+        color: #28a745;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container historico-container">
+    <!-- Cabeçalho -->
+    <div class="mb-4">
+        <h1 class="display-5 fw-bold mb-2">
+            <i class="bi bi-clock-history me-2"></i>
+            Histórico de Alterações
+        </h1>
+        <p class="text-muted">Rastreamento completo de todas as modificações em feriados e eventos</p>
+    </div>
+
+    <!-- Estatísticas -->
+    <div class="stats-grid" id="statsGrid" style="display: none;">
+        <div class="stat-card">
+            <div class="stat-label">Total de Alterações</div>
+            <div class="stat-value" id="statTotal">-</div>
+        </div>
+        <div class="stat-card criar">
+            <div class="stat-label">Criações</div>
+            <div class="stat-value" id="statCriar">-</div>
+        </div>
+        <div class="stat-card editar">
+            <div class="stat-label">Edições</div>
+            <div class="stat-value" id="statEditar">-</div>
+        </div>
+        <div class="stat-card excluir">
+            <div class="stat-label">Exclusões</div>
+            <div class="stat-value" id="statExcluir">-</div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters-card">
+        <h5 class="mb-3">
+            <i class="bi bi-funnel me-2"></i>Filtros
+        </h5>
+        <form id="filterForm">
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="tipoEntidade">Tipo</label>
+                    <select id="tipoEntidade" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="feriado">Feriados</option>
+                        <option value="evento">Eventos</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="operacao">Operação</label>
+                    <select id="operacao" class="form-select">
+                        <option value="">Todas</option>
+                        <option value="criar">Criação</option>
+                        <option value="editar">Edição</option>
+                        <option value="excluir">Exclusão</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="dataInicio">Data Inicial</label>
+                    <input type="date" id="dataInicio" class="form-control">
+                </div>
+                <div class="filter-group">
+                    <label for="dataFim">Data Final</label>
+                    <input type="date" id="dataFim" class="form-control">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="button" class="btn btn-secondary" onclick="limparFiltros()">
+                    <i class="bi bi-x-circle me-1"></i>Limpar
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search me-1"></i>Buscar
+                </button>
+                <button type="button" class="export-btn" onclick="exportarHistorico()">
+                    <i class="bi bi-download me-1"></i>Exportar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-container">
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p class="text-muted">Carregando histórico...</p>
+        </div>
+        
+        <div id="timeline" class="timeline" style="display: none;">
+            <!-- Itens serão inseridos aqui via JavaScript -->
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <i class="bi bi-inbox"></i>
+            <h4>Nenhum registro encontrado</h4>
+            <p>Tente ajustar os filtros ou limpar a busca</p>
+        </div>
+
+        <!-- Paginação -->
+        <div id="pagination" class="pagination" style="display: none;">
+            <!-- Botões de paginação serão inseridos aqui -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 0;
+const pageSize = 20;
+let totalRecords = 0;
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarHistorico();
+    carregarEstatisticas();
+
+    document.getElementById('filterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        currentPage = 0;
+        carregarHistorico();
+    });
+});
+
+async function carregarHistorico() {
+    const loading = document.getElementById('loading');
+    const timeline = document.getElementById('timeline');
+    const emptyState = document.getElementById('emptyState');
+    
+    loading.style.display = 'block';
+    timeline.style.display = 'none';
+    emptyState.style.display = 'none';
+
+    try {
+        const params = new URLSearchParams({
+            limite: pageSize,
+            offset: currentPage * pageSize
+        });
+
+        // Adicionar filtros
+        const tipoEntidade = document.getElementById('tipoEntidade').value;
+        const operacao = document.getElementById('operacao').value;
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+
+        if (tipoEntidade) params.append('tipo_entidade', tipoEntidade);
+        if (operacao) params.append('operacao', operacao);
+        if (dataInicio) params.append('data_inicio', dataInicio + 'T00:00:00');
+        if (dataFim) params.append('data_fim', dataFim + 'T23:59:59');
+
+        const response = await fetch(`{{ url_for('api_historico.listar_historico') }}?${params}`);
+        const data = await response.json();
+
+        loading.style.display = 'none';
+
+        if (data.registros && data.registros.length > 0) {
+            totalRecords = data.total;
+            renderTimeline(data.registros);
+            renderPagination();
+            timeline.style.display = 'block';
+        } else {
+            emptyState.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar histórico:', error);
+        loading.style.display = 'none';
+        emptyState.style.display = 'block';
+        emptyState.innerHTML = `
+            <i class="bi bi-exclamation-triangle text-danger"></i>
+            <h4>Erro ao carregar histórico</h4>
+            <p>${error.message}</p>
+        `;
+    }
+}
+
+function renderTimeline(registros) {
+    const timeline = document.getElementById('timeline');
+    timeline.innerHTML = '';
+
+    registros.forEach(registro => {
+        const item = createTimelineItem(registro);
+        timeline.appendChild(item);
+    });
+}
+
+function createTimelineItem(registro) {
+    const div = document.createElement('div');
+    div.className = 'timeline-item';
+    
+    const operacaoClass = registro.operacao;
+    const operacaoLabel = {
+        'criar': 'Criação',
+        'editar': 'Edição',
+        'excluir': 'Exclusão'
+    }[registro.operacao] || registro.operacao;
+
+    const tipoLabel = registro.tipo_entidade === 'feriado' ? 'Feriado' : 'Evento';
+    const nomeEntidade = registro.dados_novos?.nome || registro.dados_anteriores?.nome || 'N/A';
+
+    const timestamp = new Date(registro.timestamp);
+    const dataFormatada = timestamp.toLocaleDateString('pt-BR');
+    const horaFormatada = timestamp.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+
+    let detalhesHTML = '';
+    if (registro.operacao === 'editar' && registro.campos_alterados && registro.campos_alterados.length > 0) {
+        detalhesHTML = `
+            <div class="timeline-details">
+                <strong>Campos alterados:</strong>
+                <div class="campos-alterados">
+                    ${registro.campos_alterados.map(campo => 
+                        `<span class="campo-badge">${formatarNomeCampo(campo)}</span>`
+                    ).join('')}
+                </div>
+                ${renderDiff(registro)}
+            </div>
+        `;
+    } else if (registro.dados_novos && registro.operacao === 'criar') {
+        detalhesHTML = `
+            <div class="timeline-details">
+                <strong>Detalhes:</strong><br>
+                ${formatarDados(registro.dados_novos)}
+            </div>
+        `;
+    }
+
+    div.innerHTML = `
+        <div class="timeline-marker ${operacaoClass}"></div>
+        <div class="timeline-content ${operacaoClass}">
+            <div class="timeline-header">
+                <div>
+                    <div class="timeline-title">
+                        <i class="bi bi-${registro.tipo_entidade === 'feriado' ? 'calendar-event' : 'calendar3'} me-2"></i>
+                        ${nomeEntidade}
+                    </div>
+                    <div class="timeline-meta">
+                        <span>
+                            <i class="bi bi-person"></i>
+                            ${registro.usuario_nome || registro.usuario}
+                        </span>
+                        <span>
+                            <i class="bi bi-calendar"></i>
+                            ${dataFormatada}
+                        </span>
+                        <span>
+                            <i class="bi bi-clock"></i>
+                            ${horaFormatada}
+                        </span>
+                    </div>
+                </div>
+                <span class="badge-operacao badge-${operacaoClass}">${operacaoLabel}</span>
+            </div>
+            <div class="text-muted small">
+                <i class="bi bi-tag me-1"></i>${tipoLabel}
+            </div>
+            ${detalhesHTML}
+        </div>
+    `;
+
+    return div;
+}
+
+function renderDiff(registro) {
+    if (!registro.campos_alterados || registro.campos_alterados.length === 0) return '';
+
+    let html = '<table class="diff-table mt-2"><thead><tr><th>Campo</th><th>Anterior</th><th>Novo</th></tr></thead><tbody>';
+    
+    registro.campos_alterados.forEach(campo => {
+        const valorAnterior = registro.dados_anteriores?.[campo] || '-';
+        const valorNovo = registro.dados_novos?.[campo] || '-';
+        
+        html += `
+            <tr>
+                <td><strong>${formatarNomeCampo(campo)}</strong></td>
+                <td class="diff-old">${valorAnterior}</td>
+                <td class="diff-new">${valorNovo}</td>
+            </tr>
+        `;
+    });
+    
+    html += '</tbody></table>';
+    return html;
+}
+
+function formatarNomeCampo(campo) {
+    const mapa = {
+        'nome': 'Nome',
+        'data': 'Data',
+        'hora_inicio': 'Hora Início',
+        'hora_fim': 'Hora Fim',
+        'local': 'Local',
+        'descricao': 'Descrição',
+        'tipo': 'Tipo',
+        'responsavel': 'Responsável'
+    };
+    return mapa[campo] || campo;
+}
+
+function formatarDados(dados) {
+    const campos = ['data', 'hora_inicio', 'hora_fim', 'local', 'tipo'];
+    return campos
+        .filter(c => dados[c])
+        .map(c => `<strong>${formatarNomeCampo(c)}:</strong> ${dados[c]}`)
+        .join(' | ');
+}
+
+function renderPagination() {
+    const pagination = document.getElementById('pagination');
+    const totalPages = Math.ceil(totalRecords / pageSize);
+
+    if (totalPages <= 1) {
+        pagination.style.display = 'none';
+        return;
+    }
+
+    pagination.style.display = 'flex';
+    pagination.innerHTML = '';
+
+    // Botão anterior
+    const btnPrev = document.createElement('button');
+    btnPrev.textContent = '« Anterior';
+    btnPrev.disabled = currentPage === 0;
+    btnPrev.onclick = () => {
+        currentPage--;
+        carregarHistorico();
+    };
+    pagination.appendChild(btnPrev);
+
+    // Páginas
+    for (let i = 0; i < totalPages; i++) {
+        if (i < 3 || i === totalPages - 1 || Math.abs(i - currentPage) <= 1) {
+            const btnPage = document.createElement('button');
+            btnPage.textContent = i + 1;
+            btnPage.className = i === currentPage ? 'active' : '';
+            btnPage.onclick = () => {
+                currentPage = i;
+                carregarHistorico();
+            };
+            pagination.appendChild(btnPage);
+        } else if (i === 3 || i === currentPage + 2) {
+            const span = document.createElement('span');
+            span.textContent = '...';
+            span.style.padding = '8px';
+            pagination.appendChild(span);
+        }
+    }
+
+    // Botão próximo
+    const btnNext = document.createElement('button');
+    btnNext.textContent = 'Próximo »';
+    btnNext.disabled = currentPage >= totalPages - 1;
+    btnNext.onclick = () => {
+        currentPage++;
+        carregarHistorico();
+    };
+    pagination.appendChild(btnNext);
+}
+
+async function carregarEstatisticas() {
+    try {
+        const response = await fetch('{{ url_for("api_historico.estatisticas_historico") }}?periodo=mes');
+        const data = await response.json();
+
+        if (data.sucesso) {
+            const stats = data.estatisticas;
+            document.getElementById('statTotal').textContent = stats.total_alteracoes || 0;
+            document.getElementById('statCriar').textContent = stats.por_operacao?.criar || 0;
+            document.getElementById('statEditar').textContent = stats.por_operacao?.editar || 0;
+            document.getElementById('statExcluir').textContent = stats.por_operacao?.excluir || 0;
+            document.getElementById('statsGrid').style.display = 'grid';
+        }
+    } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error);
+    }
+}
+
+function limparFiltros() {
+    document.getElementById('tipoEntidade').value = '';
+    document.getElementById('operacao').value = '';
+    document.getElementById('dataInicio').value = '';
+    document.getElementById('dataFim').value = '';
+    currentPage = 0;
+    carregarHistorico();
+}
+
+async function exportarHistorico() {
+    try {
+        const tipoEntidade = document.getElementById('tipoEntidade').value;
+        const operacao = document.getElementById('operacao').value;
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+
+        const filtros = {};
+        if (tipoEntidade) filtros.tipo_entidade = tipoEntidade;
+        if (operacao) filtros.operacao = operacao;
+        if (dataInicio) filtros.data_inicio = dataInicio + 'T00:00:00';
+        if (dataFim) filtros.data_fim = dataFim + 'T23:59:59';
+
+        const response = await fetch('{{ url_for("api_historico.exportar_historico") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                formato: 'csv',
+                filtros: filtros
+            })
+        });
+
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `historico_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            alert('Erro ao exportar histórico');
+        }
+    } catch (error) {
+        console.error('Erro ao exportar:', error);
+        alert('Erro ao exportar histórico');
+    }
+}
+</script>
+{% endblock %}

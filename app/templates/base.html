@@ -11,6 +11,9 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
     <!-- FullCalendar CSS -->
     <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.9/index.global.min.css' rel='stylesheet' />
     <!-- Fallback para FullCalendar CSS local caso CDN falhe -->
@@ -66,6 +69,10 @@
                 <button class="eventos-nav-btn {% if request.endpoint == 'web.calendario' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.calendario') }}'">
                     <i class="fas fa-calendar"></i>
                     <span>Calendário</span>
+                </button>
+                <button class="eventos-nav-btn {% if request.endpoint == 'web.historico' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.historico') }}'">
+                    <i class="fas fa-history"></i>
+                    <span>Histórico</span>
                 </button>
                 <button class="eventos-nav-btn {% if request.endpoint == 'web.sincronizacao_clp' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.sincronizacao_clp') }}'">
                     <i class="fas fa-sync-alt"></i>

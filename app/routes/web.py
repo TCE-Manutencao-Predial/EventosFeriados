@@ -48,6 +48,16 @@ def calendario():
         logger.error(f"Erro ao renderizar página de calendário: {e}")
         return "Erro ao carregar página", 500
 
+@web_bp.route('/historico')
+@require_auth
+def historico():
+    """Página de histórico de alterações"""
+    try:
+        return render_template('historico.html')
+    except Exception as e:
+        logger.error(f"Erro ao renderizar página de histórico: {e}")
+        return "Erro ao carregar página", 500
+
 @web_bp.route('/sincronizacao-clp')
 @require_auth
 def sincronizacao_clp():
