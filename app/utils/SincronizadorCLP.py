@@ -9,6 +9,10 @@ from threading import Lock
 import os
 import time
 from ..config import CLP_CONFIG, DATA_DIR
+import urllib3
+
+# Desabilitar avisos de SSL não verificado
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class SincronizadorCLP:
     """
@@ -41,7 +45,7 @@ class SincronizadorCLP:
         Faz uma requisição HTTP com correção automática de redirecionamentos incorretos
         """
         try:
-            response = self.session.get(url, timeout=self.config['TIMEOUT'], allow_redirects=False)
+            response = self.session.get(url, timeout=self.config['TIMEOUT'], allow_redirects=False, verify=False)
             
             # Verificar se houve redirecionamento
             if response.status_code in [301, 302, 303, 307, 308]:
@@ -52,10 +56,10 @@ class SincronizadorCLP:
                 if 'automacao.tce.go.br' in redirect_url and 'automacao.tce.go.gov.br' not in redirect_url:
                     corrected_url = redirect_url.replace('automacao.tce.go.br', 'automacao.tce.go.gov.br')
                     self.logger.warning(f"Corrigindo domínio para {descricao}: {corrected_url}")
-                    response = self.session.get(corrected_url, timeout=self.config['TIMEOUT'])
+                    response = self.session.get(corrected_url, timeout=self.config['TIMEOUT'], verify=False)
                 elif 'automacao.tce.go.gov.br' in redirect_url:
                     # Domínio correto, seguir normalmente
-                    response = self.session.get(redirect_url, timeout=self.config['TIMEOUT'])
+                    response = self.session.get(redirect_url, timeout=self.config['TIMEOUT'], verify=False)
                 else:
                     self.logger.error(f"Redirecionamento para domínio desconhecido em {descricao}: {redirect_url}")
                     
@@ -475,7 +479,7 @@ class SincronizadorCLP:
                 # Tentar GET no mesmo endpoint
                 try:
                     self.logger.info("Testando GET no mesmo endpoint...")
-                    get_resp = self.session.get(url_batch, timeout=10, allow_redirects=False)
+                    get_resp = self.session.get(url_batch, timeout=10, allow_redirects=False, verify=False)
                     self.logger.info(f"GET response: Status {get_resp.status_code}")
                     if get_resp.status_code != 405:
                         self.logger.info(f"GET content: {get_resp.text[:200]}...")
@@ -486,7 +490,7 @@ class SincronizadorCLP:
                 try:
                     self.logger.info("Testando API raiz...")
                     root_url = f"{self.config['API_BASE_URL']}"
-                    root_resp = self.session.get(root_url, timeout=10, allow_redirects=False)
+                    root_resp = self.session.get(root_url, timeout=10, allow_redirects=False, verify=False)
                     self.logger.info(f"API raiz response: Status {root_resp.status_code}")
                     if root_resp.status_code == 200:
                         self.logger.info(f"API raiz content: {root_resp.text[:300]}...")

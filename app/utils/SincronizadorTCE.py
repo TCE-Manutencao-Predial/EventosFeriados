@@ -6,6 +6,10 @@ import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 from .GerenciadorEventos import GerenciadorEventos
+import urllib3
+
+# Desabilitar avisos de SSL não verificado
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class SincronizadorTCE:
     """
@@ -43,7 +47,7 @@ class SincronizadorTCE:
             url = f"{self.base_url}/{mes:02d}/{ano}"
             self.logger.info(f"Consultando API do TCE: {url}")
             
-            response = requests.get(url, timeout=30)
+            response = requests.get(url, timeout=30, verify=False)
             response.raise_for_status()
             
             # Parse do JSON

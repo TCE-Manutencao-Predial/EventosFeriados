@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function carregarStatus() {
-    fetch('/api/tce/status')
+    fetch('/EventosFeriados/api/tce/status')
         .then(response => response.json())
         .then(data => {
             if (data.status === 'sucesso') {
@@ -288,7 +288,7 @@ function carregarEventos() {
     const mes = document.getElementById('filtro-mes').value;
     const ano = document.getElementById('filtro-ano').value;
     
-    let url = '/api/tce/eventos';
+    let url = '/EventosFeriados/api/tce/eventos';
     const params = new URLSearchParams();
     if (mes) params.append('mes', mes);
     if (ano) params.append('ano', ano);
@@ -357,7 +357,7 @@ function salvarConfiguracao() {
     const habilitado = document.getElementById('sync-enabled').checked;
     const horario = document.getElementById('sync-time').value;
     
-    fetch('/api/tce/configurar', {
+    fetch('/EventosFeriados/api/tce/configurar', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -386,7 +386,7 @@ function sincronizarAtual() {
     document.getElementById('sync-atual').disabled = true;
     document.getElementById('sync-atual').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
     
-    fetch('/api/tce/sincronizar', {
+    fetch('/EventosFeriados/api/tce/sincronizar', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -428,7 +428,7 @@ function sincronizarEspecifico() {
     document.getElementById('sync-especifico').disabled = true;
     document.getElementById('sync-especifico').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
     
-    fetch('/api/tce/sincronizar', {
+    fetch('/EventosFeriados/api/tce/sincronizar', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -467,7 +467,7 @@ function removerEvento(eventoId, nomeEvento) {
         return;
     }
     
-    fetch(`/api/tce/eventos/${eventoId}`, {
+    fetch(`/EventosFeriados/api/tce/eventos/${eventoId}`, {
         method: 'DELETE'
     })
     .then(response => response.json())

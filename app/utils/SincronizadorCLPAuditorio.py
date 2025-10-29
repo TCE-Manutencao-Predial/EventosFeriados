@@ -8,6 +8,10 @@ from typing import Dict, List, Tuple, Optional
 from threading import Lock
 from requests.auth import HTTPBasicAuth
 from ..config import CLP_AUDITORIO_CONFIG
+import urllib3
+
+# Desabilitar avisos de SSL não verificado
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 class SincronizadorCLPAuditorio:
     """
@@ -100,7 +104,7 @@ class SincronizadorCLPAuditorio:
         Faz uma requisição HTTP com correção automática de redirecionamentos incorretos
         """
         try:
-            response = self.session.get(url, timeout=self.config['TIMEOUT'], allow_redirects=False)
+            response = self.session.get(url, timeout=self.config['TIMEOUT'], allow_redirects=False, verify=False)
             
             if response.status_code in [301, 302, 303, 307, 308]:
                 redirect_url = response.headers.get('Location', '')
@@ -110,9 +114,9 @@ class SincronizadorCLPAuditorio:
                 if 'automacao.tce.go.br' in redirect_url and 'automacao.tce.go.gov.br' not in redirect_url:
                     corrected_url = redirect_url.replace('automacao.tce.go.br', 'automacao.tce.go.gov.br')
                     self.logger.debug(f"Corrigindo domínio em {descricao}: {corrected_url}")
-                    response = self.session.get(corrected_url, timeout=self.config['TIMEOUT'])
+                    response = self.session.get(corrected_url, timeout=self.config['TIMEOUT'], verify=False)
                 elif 'automacao.tce.go.gov.br' in redirect_url:
-                    response = self.session.get(redirect_url, timeout=self.config['TIMEOUT'])
+                    response = self.session.get(redirect_url, timeout=self.config['TIMEOUT'], verify=False)
                 else:
                     self.logger.error(f"Redirecionamento para domínio desconhecido em {descricao}: {redirect_url}")
                     raise requests.exceptions.RequestException(f"Redirecionamento inválido: {redirect_url}")
