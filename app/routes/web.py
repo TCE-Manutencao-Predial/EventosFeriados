@@ -1,6 +1,7 @@
 # app/routes/web.py
 from flask import Blueprint, render_template, current_app
 import logging
+from ..utils.auth_decorators import require_auth
 
 web_bp = Blueprint('web', __name__, 
                    template_folder='../templates',
@@ -8,6 +9,7 @@ web_bp = Blueprint('web', __name__,
 logger = logging.getLogger('EventosFeriados.web')
 
 @web_bp.route('/')
+@require_auth
 def index():
     """Página inicial do sistema"""
     try:
@@ -17,6 +19,7 @@ def index():
         return "Erro ao carregar página", 500
 
 @web_bp.route('/feriados')
+@require_auth
 def feriados():
     """Página de gerenciamento de feriados"""
     try:
@@ -26,6 +29,7 @@ def feriados():
         return "Erro ao carregar página", 500
 
 @web_bp.route('/eventos')
+@require_auth
 def eventos():
     """Página de gerenciamento de eventos"""
     try:
@@ -35,6 +39,7 @@ def eventos():
         return "Erro ao carregar página", 500
 
 @web_bp.route('/calendario')
+@require_auth
 def calendario():
     """Página do calendário"""
     try:
@@ -44,6 +49,7 @@ def calendario():
         return "Erro ao carregar página", 500
 
 @web_bp.route('/sincronizacao-clp')
+@require_auth
 def sincronizacao_clp():
     """Página de sincronização com CLP"""
     try:
@@ -53,6 +59,7 @@ def sincronizacao_clp():
         return "Erro ao carregar página", 500
 
 @web_bp.route('/sincronizacao-tce')
+@require_auth
 def sincronizacao_tce():
     """Página de sincronização com TCE"""
     try:

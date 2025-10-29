@@ -12,6 +12,15 @@ def create_app():
     app = Flask(__name__, static_url_path=f'{ROUTES_PREFIX}/static')
     app.config['SECRET_KEY'] = 'eventos_feriados_secret_key_2024'
     
+    # Inicializa gerenciador de autenticação
+    try:
+        from .utils.AuthManager import AuthManager
+        app.config['AUTH_MANAGER'] = AuthManager.get_instance()
+        eventos_logger.info("Gerenciador de autenticação iniciado")
+    except Exception as e:
+        eventos_logger.error(f"Erro ao inicializar gerenciador de autenticação: {e}")
+        app.config['AUTH_MANAGER'] = None
+    
     # Inicializa gerenciador de feriados
     try:
         from .utils.GerenciadorFeriados import GerenciadorFeriados
@@ -118,6 +127,7 @@ def create_app():
     from .routes.api_clp import api_clp_bp
     from .routes.api_clp_auditorio import api_clp_auditorio_bp
     from .routes.api_tce import api_tce
+    from .routes.api_auth import api_auth_bp
     from .routes.web import web_bp
     
     # IMPORTANTE: Registrar com url_prefix
@@ -126,6 +136,7 @@ def create_app():
     app.register_blueprint(api_clp_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_clp_auditorio_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_tce, url_prefix=f'{ROUTES_PREFIX}/api/tce')
+    app.register_blueprint(api_auth_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(web_bp, url_prefix=ROUTES_PREFIX)
     
     # Rota de status da API

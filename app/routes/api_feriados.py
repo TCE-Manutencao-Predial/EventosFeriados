@@ -2,11 +2,13 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 import logging
+from ..utils.auth_decorators import require_auth_api
 
 api_feriados_bp = Blueprint('api_feriados', __name__)
 logger = logging.getLogger('EventosFeriados.api_feriados')
 
 @api_feriados_bp.route('/feriados', methods=['GET'])
+@require_auth_api
 def listar_feriados():
     """Lista todos os feriados ou filtra por ano/mês"""
     try:
@@ -32,6 +34,7 @@ def listar_feriados():
         return jsonify({'erro': str(e)}), 500
 
 @api_feriados_bp.route('/feriados/<feriado_id>', methods=['GET'])
+@require_auth_api
 def obter_feriado(feriado_id):
     """Obtém um feriado específico"""
     try:
@@ -54,6 +57,7 @@ def obter_feriado(feriado_id):
         return jsonify({'erro': str(e)}), 500
 
 @api_feriados_bp.route('/feriados', methods=['POST'])
+@require_auth_api
 def adicionar_feriado():
     """Adiciona um novo feriado"""
     try:
@@ -87,6 +91,7 @@ def adicionar_feriado():
         return jsonify({'erro': str(e)}), 500
 
 @api_feriados_bp.route('/feriados/<feriado_id>', methods=['PUT'])
+@require_auth_api
 def atualizar_feriado(feriado_id):
     """Atualiza um feriado existente"""
     try:
@@ -117,6 +122,7 @@ def atualizar_feriado(feriado_id):
         return jsonify({'erro': str(e)}), 500
 
 @api_feriados_bp.route('/feriados/<feriado_id>', methods=['DELETE'])
+@require_auth_api
 def remover_feriado(feriado_id):
     """Remove um feriado"""
     try:
@@ -139,6 +145,7 @@ def remover_feriado(feriado_id):
         return jsonify({'erro': str(e)}), 500
 
 @api_feriados_bp.route('/feriados/verificar', methods=['GET'])
+@require_auth_api
 def verificar_feriado():
     """Verifica se uma data específica é feriado"""
     try:
@@ -167,6 +174,7 @@ def verificar_feriado():
         return jsonify({'erro': str(e)}), 500
 
 @api_feriados_bp.route('/feriados/remover-duplicatas', methods=['POST'])
+@require_auth_api
 def remover_duplicatas():
     """Remove feriados duplicados, mantendo apenas o de maior hierarquia (nacional > estadual > municipal > customizado)"""
     try:
@@ -187,6 +195,7 @@ def remover_duplicatas():
         return jsonify({'erro': str(e)}), 500
 
 @api_feriados_bp.route('/feriados/limpar-duplicatas', methods=['POST'])
+@require_auth_api
 def limpar_duplicatas_manual():
     """Remove duplicatas manualmente e reinicia os feriados padrão se necessário"""
     try:

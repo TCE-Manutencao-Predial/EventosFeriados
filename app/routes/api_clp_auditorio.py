@@ -1,5 +1,6 @@
 # app/routes/api_clp_auditorio.py
 import logging
+from ..utils.auth_decorators import require_auth_api
 from flask import Blueprint, jsonify, current_app
 from datetime import datetime
 from ..utils.IntegracaoCLPAuditorio import IntegracaoCLPAuditorio
@@ -15,6 +16,7 @@ def get_integracao_clp_auditorio():
     return current_app.config.get('INTEGRACAO_CLP_AUDITORIO')
 
 @api_clp_auditorio_bp.route('/clp-auditorio/status', methods=['GET'])
+@require_auth_api
 def obter_status_auditorio():
     """Obtém status completo da sincronização com CLP Auditório"""
     try:
@@ -39,6 +41,7 @@ def obter_status_auditorio():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/conectividade', methods=['GET'])
+@require_auth_api
 def verificar_conectividade_auditorio():
     """Verifica conectividade com CLP Auditório"""
     try:
@@ -62,6 +65,7 @@ def verificar_conectividade_auditorio():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/sincronizar', methods=['POST'])
+@require_auth_api
 def executar_sincronizacao_auditorio():
     """Executa sincronização manual com CLP Auditório"""
     try:
@@ -77,6 +81,7 @@ def executar_sincronizacao_auditorio():
         return jsonify({'erro': str(e)}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/data/<int:dia>/<int:mes>/<int:ano>', methods=['GET'])
+@require_auth_api
 def obter_status_data_auditorio(dia: int, mes: int, ano: int):
     """Obtém status de uma data específica para o Auditório"""
     try:
@@ -92,6 +97,7 @@ def obter_status_data_auditorio(dia: int, mes: int, ano: int):
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/calendario/<int:mes>/<int:ano>', methods=['GET'])
+@require_auth_api
 def obter_calendario_auditorio(mes: int, ano: int):
     """Obtém calendário resumido para CLPs do Auditório"""
     try:
@@ -107,6 +113,7 @@ def obter_calendario_auditorio(mes: int, ano: int):
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/proximo-evento', methods=['GET'])
+@require_auth_api
 def proximo_evento_auditorio():
     """Obtém próximo evento do Auditório"""
     try:
@@ -135,6 +142,7 @@ def proximo_evento_auditorio():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/verificar-disponibilidade', methods=['POST'])
+@require_auth_api
 def verificar_disponibilidade_auditorio():
     """Verifica disponibilidade de local do Auditório"""
     try:
@@ -169,6 +177,7 @@ def verificar_disponibilidade_auditorio():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/exportar', methods=['GET'])
+@require_auth_api
 def exportar_dados_auditorio():
     """Exporta dados em formato otimizado para CLPs do Auditório"""
     try:
@@ -187,6 +196,7 @@ def exportar_dados_auditorio():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/hoje', methods=['GET'])
+@require_auth_api
 def status_hoje_auditorio():
     """Atalho para obter status do dia atual para o Auditório"""
     try:
@@ -203,6 +213,7 @@ def status_hoje_auditorio():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/locais', methods=['GET'])
+@require_auth_api
 def listar_locais_auditorio():
     """Lista locais disponíveis gerenciados pelo CLP Auditório"""
     try:
@@ -228,6 +239,7 @@ def listar_locais_auditorio():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/limpar-eventos', methods=['POST'])
+@require_auth_api
 def limpar_eventos_auditorio():
     """Limpa apenas os eventos do Auditório do CLP (N91:0-N96:9)"""
     try:
@@ -260,6 +272,7 @@ def limpar_eventos_auditorio():
         }), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/limpar-completo', methods=['POST'])
+@require_auth_api
 def limpar_dados_completo_auditorio():
     """Limpa todos os dados do CLP Auditório (eventos)"""
     try:
@@ -275,6 +288,7 @@ def limpar_dados_completo_auditorio():
         return jsonify({'erro': str(e)}), 500
 
 @api_clp_auditorio_bp.route('/clp-auditorio/testar-tag', methods=['POST'])
+@require_auth_api
 def testar_tag_auditorio():
     """Testa leitura/escrita de uma tag específica no CLP Auditório"""
     try:

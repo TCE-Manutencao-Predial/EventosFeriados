@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 import logging
+from ..utils.auth_decorators import require_auth_api
 from app.utils.GerenciadorNotificacaoEventos import GerenciadorNotificacaoEventos
 from app.utils.AutoSyncCLP import AutoSyncCLP
 
@@ -9,6 +10,7 @@ api_eventos_bp = Blueprint('api_eventos', __name__)
 logger = logging.getLogger('EventosFeriados.api_eventos')
 
 @api_eventos_bp.route('/eventos', methods=['GET'])
+@require_auth_api
 def listar_eventos():
     """Lista todos os eventos ou filtra por ano/mês/local"""
     try:
@@ -35,6 +37,7 @@ def listar_eventos():
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos/<evento_id>', methods=['GET'])
+@require_auth_api
 def obter_evento(evento_id):
     """Obtém um evento específico"""
     try:
@@ -57,6 +60,7 @@ def obter_evento(evento_id):
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos', methods=['POST'])
+@require_auth_api
 def adicionar_evento():
     """Adiciona um novo evento"""
     try:
@@ -101,6 +105,7 @@ def adicionar_evento():
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos/<evento_id>', methods=['PUT'])
+@require_auth_api
 def atualizar_evento(evento_id):
     """Atualiza um evento existente"""
     try:
@@ -142,6 +147,7 @@ def atualizar_evento(evento_id):
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos/<evento_id>', methods=['DELETE'])
+@require_auth_api
 def remover_evento(evento_id):
     """Remove um evento"""
     try:
@@ -180,6 +186,7 @@ def remover_evento(evento_id):
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos/por-data', methods=['GET'])
+@require_auth_api
 def eventos_por_data():
     """Lista eventos de uma data específica"""
     try:
@@ -209,6 +216,7 @@ def eventos_por_data():
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos/por-local/<local>', methods=['GET'])
+@require_auth_api
 def eventos_por_local(local):
     """Lista eventos de um local específico"""
     try:
@@ -236,6 +244,7 @@ def eventos_por_local(local):
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos/locais', methods=['GET'])
+@require_auth_api
 def listar_locais():
     """Lista todos os locais disponíveis para eventos"""
     try:
@@ -255,6 +264,7 @@ def listar_locais():
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos/<evento_id>/forcar-notificacao-whatsapp', methods=['POST'])
+@require_auth_api
 def forcar_notificacao_whatsapp(evento_id):
     """Dispara manualmente uma notificação via WhatsApp por função EVENTOS para um evento específico.
 
@@ -328,6 +338,7 @@ def forcar_notificacao_whatsapp(evento_id):
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos/<evento_id>/encerrar', methods=['POST'])
+@require_auth_api
 def encerrar_evento(evento_id):
     """Encerra um evento mais cedo removendo o dia atual dos CLPs envolvidos.
     
@@ -420,6 +431,7 @@ def encerrar_evento(evento_id):
         return jsonify({'erro': str(e)}), 500
 
 @api_eventos_bp.route('/eventos/<evento_id>/reativar', methods=['POST'])
+@require_auth_api
 def reativar_evento(evento_id):
     """Reativa um evento que foi encerrado mais cedo.
     

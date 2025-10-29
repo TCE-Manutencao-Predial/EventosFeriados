@@ -2,6 +2,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 import logging
+from ..utils.auth_decorators import require_auth_api
 import requests
 import time
 from ..utils.IntegracaoCLP import IntegracaoCLP
@@ -20,6 +21,7 @@ def get_integracao_clp():
     return IntegracaoCLP(gerenciador_feriados, gerenciador_eventos)
 
 @api_clp_bp.route('/clp/status', methods=['GET'])
+@require_auth_api
 def status_clp():
     """Endpoint de verificação de status para CLPs"""
     try:
@@ -33,6 +35,7 @@ def status_clp():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/data/<int:dia>/<int:mes>/<int:ano>', methods=['GET'])
+@require_auth_api
 def status_data_clp(dia, mes, ano):
     """Obtém status de uma data específica para CLPs"""
     try:
@@ -50,6 +53,7 @@ def status_data_clp(dia, mes, ano):
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/calendario/<int:mes>/<int:ano>', methods=['GET'])
+@require_auth_api
 def calendario_clp(mes, ano):
     """Obtém calendário resumido para CLPs"""
     try:
@@ -68,6 +72,7 @@ def calendario_clp(mes, ano):
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/proximo-evento', methods=['GET'])
+@require_auth_api
 def proximo_evento_clp():
     """Obtém próximo evento (geral ou por local)"""
     try:
@@ -94,6 +99,7 @@ def proximo_evento_clp():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/verificar-disponibilidade', methods=['POST'])
+@require_auth_api
 def verificar_disponibilidade_clp():
     """Verifica disponibilidade de local para CLPs"""
     try:
@@ -128,6 +134,7 @@ def verificar_disponibilidade_clp():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/exportar', methods=['GET'])
+@require_auth_api
 def exportar_dados_clp():
     """Exporta dados em formato otimizado para CLPs"""
     try:
@@ -147,6 +154,7 @@ def exportar_dados_clp():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/hoje', methods=['GET'])
+@require_auth_api
 def status_hoje_clp():
     """Atalho para obter status do dia atual"""
     try:
@@ -163,6 +171,7 @@ def status_hoje_clp():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/locais', methods=['GET'])
+@require_auth_api
 def listar_locais_clp():
     """Lista locais disponíveis em formato simplificado"""
     try:
@@ -191,6 +200,7 @@ def listar_locais_clp():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/sincronizacao/status', methods=['GET'])
+@require_auth_api
 def status_sincronizacao():
     """Obtém status da sincronização com CLP"""
     try:
@@ -215,6 +225,7 @@ def status_sincronizacao():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/sincronizacao/executar', methods=['POST'])
+@require_auth_api
 def executar_sincronizacao():
     """Executa sincronização manual com CLP"""
     try:
@@ -234,6 +245,7 @@ def executar_sincronizacao():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/conectividade', methods=['GET'])
+@require_auth_api
 def verificar_conectividade():
     """Verifica conectividade com CLP"""
     try:
@@ -259,6 +271,7 @@ def verificar_conectividade():
 
 
 @api_clp_bp.route('/clp/agendador/status', methods=['GET'])
+@require_auth_api
 def status_agendador():
     """Obtém status do agendador automático"""
     try:
@@ -272,6 +285,7 @@ def status_agendador():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/teste-tag', methods=['GET'])
+@require_auth_api
 def teste_tag():
     """Testa leitura/escrita de uma tag específica do CLP"""
     try:
@@ -334,6 +348,7 @@ def teste_tag():
         return jsonify({'erro': f'Erro interno: {str(e)}'}), 500
 
 @api_clp_bp.route('/clp/limpar-feriados', methods=['POST'])
+@require_auth_api
 def limpar_feriados():
     """Limpa todos os feriados do CLP (zera N33 e N34)"""
     try:
@@ -392,6 +407,7 @@ def limpar_feriados():
         return jsonify({'erro': 'Erro interno'}), 500
 
 @api_clp_bp.route('/clp/limpar-completo', methods=['POST'])
+@require_auth_api
 def limpar_dados_completo():
     """Limpa todos os dados do CLP (feriados e eventos)"""
     try:
@@ -422,6 +438,7 @@ def limpar_dados_completo():
 
 
 @api_clp_bp.route('/clp/limpar-eventos', methods=['POST'])
+@require_auth_api
 def limpar_eventos_plenario():
     """Limpa apenas os eventos do Plenário do CLP (N60:0-N65:9)"""
     try:
