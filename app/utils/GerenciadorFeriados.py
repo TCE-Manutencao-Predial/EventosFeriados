@@ -357,6 +357,19 @@ class GerenciadorFeriados:
             self.feriados.append(novo_feriado)
             self._salvar_feriados()
             
+            # Registrar no histórico
+            try:
+                from .GerenciadorHistorico import GerenciadorHistorico
+                historico = GerenciadorHistorico.get_instance()
+                historico.registrar_alteracao(
+                    tipo_entidade='feriado',
+                    entidade_id=novo_feriado['id'],
+                    operacao='criar',
+                    dados_novos=novo_feriado
+                )
+            except Exception as e_hist:
+                self.logger.warning(f"Falha ao registrar no histórico: {e_hist}")
+            
             self.logger.info(f"Feriado adicionado: {novo_feriado['nome']} ({tipo_novo})")
             return novo_feriado
             
@@ -369,6 +382,9 @@ class GerenciadorFeriados:
         try:
             for i, feriado in enumerate(self.feriados):
                 if feriado['id'] == feriado_id:
+                    # Guardar dados anteriores para histórico
+                    dados_anteriores = feriado.copy()
+                    
                     # Validar data se fornecida
                     if any(k in dados for k in ['dia', 'mes', 'ano']):
                         dia = dados.get('dia', feriado['dia'])
@@ -400,6 +416,21 @@ class GerenciadorFeriados:
                     feriado['atualizado_em'] = datetime.now().isoformat()
                     
                     self._salvar_feriados()
+                    
+                    # Registrar no histórico
+                    try:
+                        from .GerenciadorHistorico import GerenciadorHistorico
+                        historico = GerenciadorHistorico.get_instance()
+                        historico.registrar_alteracao(
+                            tipo_entidade='feriado',
+                            entidade_id=feriado_id,
+                            operacao='editar',
+                            dados_anteriores=dados_anteriores,
+                            dados_novos=feriado
+                        )
+                    except Exception as e_hist:
+                        self.logger.warning(f"Falha ao registrar no histórico: {e_hist}")
+                    
                     self.logger.info(f"Feriado atualizado: {feriado['nome']}")
                     return feriado
             
@@ -414,9 +445,26 @@ class GerenciadorFeriados:
         try:
             for i, feriado in enumerate(self.feriados):
                 if feriado['id'] == feriado_id:
+                    # Guardar dados para histórico
+                    dados_feriado = feriado.copy()
                     nome = feriado['nome']
+                    
                     del self.feriados[i]
                     self._salvar_feriados()
+                    
+                    # Registrar no histórico
+                    try:
+                        from .GerenciadorHistorico import GerenciadorHistorico
+                        historico = GerenciadorHistorico.get_instance()
+                        historico.registrar_alteracao(
+                            tipo_entidade='feriado',
+                            entidade_id=feriado_id,
+                            operacao='excluir',
+                            dados_anteriores=dados_feriado
+                        )
+                    except Exception as e_hist:
+                        self.logger.warning(f"Falha ao registrar no histórico: {e_hist}")
+                    
                     self.logger.info(f"Feriado removido: {nome}")
                     return True
             

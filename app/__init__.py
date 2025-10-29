@@ -21,6 +21,15 @@ def create_app():
         eventos_logger.error(f"Erro ao inicializar gerenciador de autenticação: {e}")
         app.config['AUTH_MANAGER'] = None
     
+    # Inicializa gerenciador de histórico
+    try:
+        from .utils.GerenciadorHistorico import GerenciadorHistorico
+        app.config['GERENCIADOR_HISTORICO'] = GerenciadorHistorico.get_instance()
+        eventos_logger.info("Gerenciador de histórico iniciado")
+    except Exception as e:
+        eventos_logger.error(f"Erro ao inicializar gerenciador de histórico: {e}")
+        app.config['GERENCIADOR_HISTORICO'] = None
+    
     # Inicializa gerenciador de feriados
     try:
         from .utils.GerenciadorFeriados import GerenciadorFeriados
@@ -128,6 +137,7 @@ def create_app():
     from .routes.api_clp_auditorio import api_clp_auditorio_bp
     from .routes.api_tce import api_tce
     from .routes.api_auth import api_auth_bp
+    from .routes.api_historico import api_historico_bp
     from .routes.api_public import api_public_bp
     from .routes.web import web_bp
     
@@ -139,6 +149,7 @@ def create_app():
     app.register_blueprint(api_clp_auditorio_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_tce, url_prefix=f'{ROUTES_PREFIX}/api/tce')
     app.register_blueprint(api_auth_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    app.register_blueprint(api_historico_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     
     # API Pública (sem autenticação)
     app.register_blueprint(api_public_bp, url_prefix=f'{ROUTES_PREFIX}/api')

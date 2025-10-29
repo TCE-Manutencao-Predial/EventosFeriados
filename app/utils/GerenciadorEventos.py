@@ -226,6 +226,19 @@ class GerenciadorEventos:
             self.eventos.append(novo_evento)
             self._salvar_eventos()
             
+            # Registrar no histórico
+            try:
+                from .GerenciadorHistorico import GerenciadorHistorico
+                historico = GerenciadorHistorico.get_instance()
+                historico.registrar_alteracao(
+                    tipo_entidade='evento',
+                    entidade_id=novo_evento['id'],
+                    operacao='criar',
+                    dados_novos=novo_evento
+                )
+            except Exception as e_hist:
+                self.logger.warning(f"Falha ao registrar no histórico: {e_hist}")
+            
             # Integração com sistema de notificações em background
             try:
                 import threading
@@ -315,6 +328,21 @@ class GerenciadorEventos:
                     evento['atualizado_em'] = datetime.now().isoformat()
                     
                     self._salvar_eventos()
+                    
+                    # Registrar no histórico
+                    try:
+                        from .GerenciadorHistorico import GerenciadorHistorico
+                        historico = GerenciadorHistorico.get_instance()
+                        historico.registrar_alteracao(
+                            tipo_entidade='evento',
+                            entidade_id=evento_id,
+                            operacao='editar',
+                            dados_anteriores=evento_antes,
+                            dados_novos=evento
+                        )
+                    except Exception as e_hist:
+                        self.logger.warning(f"Falha ao registrar no histórico: {e_hist}")
+                    
                     self.logger.info(f"Evento atualizado: {evento['nome']}")
 
                     # Enviar notificação de alteração em background
@@ -359,6 +387,20 @@ class GerenciadorEventos:
                     # Remover evento
                     del self.eventos[i]
                     self._salvar_eventos()
+                    
+                    # Registrar no histórico
+                    try:
+                        from .GerenciadorHistorico import GerenciadorHistorico
+                        historico = GerenciadorHistorico.get_instance()
+                        historico.registrar_alteracao(
+                            tipo_entidade='evento',
+                            entidade_id=evento_id,
+                            operacao='excluir',
+                            dados_anteriores=evento_para_notificar
+                        )
+                    except Exception as e_hist:
+                        self.logger.warning(f"Falha ao registrar no histórico: {e_hist}")
+                    
                     self.logger.info(f"Evento removido: {nome} do {local}")
                     
                     # Enviar notificação de cancelamento em background thread
