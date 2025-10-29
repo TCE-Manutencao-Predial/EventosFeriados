@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Pública - Eventos e Feriados TCE-GO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        input, select, button {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        .result {
+            background: #f8f9fa;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .item {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .item-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .item-info {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .badge-feriado {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .badge-evento {
+            background: #51cf66;
+            color: white;
+        }
+        
+        .badge-plenario {
+            background: #339af0;
+            color: white;
+        }
+        
+        .badge-auditorio {
+            background: #ff8c00;
+            color: white;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-weight: bold;
+            padding: 20px;
+        }
+        
+        .error {
+            background: #ffe0e0;
+            color: #c92a2a;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #c92a2a;
+        }
+        
+        .success {
+            background: #d3f9d8;
+            color: #2b8a3e;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #2b8a3e;
+        }
+        
+        .info-box {
+            background: #e7f5ff;
+            border-left: 4px solid #339af0;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        
+        code {
+            background: #f1f3f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #c92a2a;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat {
+            flex: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 API Pública - Eventos e Feriados TCE-GO</h1>
+        
+        <div class="card">
+            <div class="info-box">
+                <strong>ℹ️ Sobre esta demonstração:</strong><br>
+                Esta página demonstra o uso da API pública do sistema EventosFeriados do TCE-GO. 
+                Todos os endpoints são públicos e não requerem autenticação.
+                <br><br>
+                <strong>Base URL:</strong> <code>https://automacao.tce.go.gov.br/EventosFeriados/api/public</code>
+            </div>
+        </div>
+        
+        <!-- Verificar Feriado -->
+        <div class="card">
+            <h2>📅 Verificar se Data é Feriado</h2>
+            <div class="controls">
+                <input type="date" id="dataVerificar" value="">
+                <button onclick="verificarFeriado()">Verificar</button>
+            </div>
+            <div id="resultadoVerificar"></div>
+        </div>
+        
+        <!-- Listar Feriados -->
+        <div class="card">
+            <h2>📅 Listar Feriados</h2>
+            <div class="controls">
+                <select id="anoFeriados">
+                    <option value="">Todos os anos</option>
+                    <option value="2024">2024</option>
+                    <option value="2025" selected>2025</option>
+                    <option value="2026">2026</option>
+                </select>
+                <select id="mesFeriados">
+                    <option value="">Todos os meses</option>
+                    <option value="1">Janeiro</option>
+                    <option value="2">Fevereiro</option>
+                    <option value="3">Março</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Maio</option>
+                    <option value="6">Junho</option>
+                    <option value="7">Julho</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                </select>
+                <button onclick="listarFeriados()">Buscar Feriados</button>
+            </div>
+            <div id="resultadoFeriados"></div>
+        </div>
+        
+        <!-- Listar Eventos -->
+        <div class="card">
+            <h2>📆 Listar Eventos</h2>
+            <div class="controls">
+                <select id="anoEventos">
+                    <option value="">Todos os anos</option>
+                    <option value="2024">2024</option>
+                    <option value="2025" selected>2025</option>
+                    <option value="2026">2026</option>
+                </select>
+                <select id="mesEventos">
+                    <option value="">Todos os meses</option>
+                    <option value="1">Janeiro</option>
+                    <option value="2">Fevereiro</option>
+                    <option value="3">Março</option>
+                    <option value="4">Abril</option>
+                    <option value="5">Maio</option>
+                    <option value="6">Junho</option>
+                    <option value="7">Julho</option>
+                    <option value="8">Agosto</option>
+                    <option value="9">Setembro</option>
+                    <option value="10">Outubro</option>
+                    <option value="11">Novembro</option>
+                    <option value="12">Dezembro</option>
+                </select>
+                <select id="localEventos">
+                    <option value="">Todos os locais</option>
+                    <option value="Plenário">Plenário</option>
+                    <option value="Auditório">Auditório</option>
+                </select>
+                <label>
+                    <input type="checkbox" id="ativosApenas" checked> Apenas ativos
+                </label>
+                <button onclick="listarEventos()">Buscar Eventos</button>
+            </div>
+            <div id="resultadoEventos"></div>
+        </div>
+        
+        <!-- Eventos por Data -->
+        <div class="card">
+            <h2>📆 Eventos em Data Específica</h2>
+            <div class="controls">
+                <input type="date" id="dataEventos" value="">
+                <button onclick="eventosPorData()">Buscar</button>
+            </div>
+            <div id="resultadoEventosData"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'https://automacao.tce.go.gov.br/EventosFeriados/api/public';
+        
+        // Definir datas padrão
+        document.addEventListener('DOMContentLoaded', () => {
+            const hoje = new Date().toISOString().split('T')[0];
+            document.getElementById('dataVerificar').value = hoje;
+            document.getElementById('dataEventos').value = hoje;
+        });
+        
+        async function verificarFeriado() {
+            const data = document.getElementById('dataVerificar').value;
+            const resultado = document.getElementById('resultadoVerificar');
+            
+            if (!data) {
+                resultado.innerHTML = '<div class="error">Por favor, selecione uma data</div>';
+                return;
+            }
+            
+            resultado.innerHTML = '<div class="loading">Verificando...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/feriados/verificar?data=${data}`);
+                const json = await response.json();
+                
+                if (json.eh_feriado) {
+                    resultado.innerHTML = `
+                        <div class="success">
+                            <strong>✅ É feriado!</strong><br>
+                            <strong>${json.feriado.nome}</strong><br>
+                            Tipo: ${json.feriado.tipo}
+                        </div>
+                    `;
+                } else {
+                    resultado.innerHTML = `
+                        <div class="info-box">
+                            ❌ Não é feriado
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultado.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        }
+        
+        async function listarFeriados() {
+            const ano = document.getElementById('anoFeriados').value;
+            const mes = document.getElementById('mesFeriados').value;
+            const resultado = document.getElementById('resultadoFeriados');
+            
+            resultado.innerHTML = '<div class="loading">Carregando feriados...</div>';
+            
+            try {
+                const params = new URLSearchParams();
+                if (ano) params.append('ano', ano);
+                if (mes) params.append('mes', mes);
+                
+                const response = await fetch(`${API_BASE}/feriados?${params}`);
+                const json = await response.json();
+                
+                if (json.feriados.length === 0) {
+                    resultado.innerHTML = '<div class="info-box">Nenhum feriado encontrado</div>';
+                    return;
+                }
+                
+                let html = `<div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">${json.total}</div>
+                        <div class="stat-label">Feriados</div>
+                    </div>
+                </div>
+                <div class="result">`;
+                
+                json.feriados.forEach(feriado => {
+                    html += `
+                        <div class="item">
+                            <div class="item-title">
+                                ${feriado.nome}
+                                <span class="badge badge-feriado">${feriado.tipo}</span>
+                            </div>
+                            <div class="item-info">
+                                📅 ${formatarData(feriado.data)} (${feriado.dia_semana || 'N/A'})
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                resultado.innerHTML = html;
+            } catch (error) {
+                resultado.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        }
+        
+        async function listarEventos() {
+            const ano = document.getElementById('anoEventos').value;
+            const mes = document.getElementById('mesEventos').value;
+            const local = document.getElementById('localEventos').value;
+            const ativosApenas = document.getElementById('ativosApenas').checked;
+            const resultado = document.getElementById('resultadoEventos');
+            
+            resultado.innerHTML = '<div class="loading">Carregando eventos...</div>';
+            
+            try {
+                const params = new URLSearchParams();
+                if (ano) params.append('ano', ano);
+                if (mes) params.append('mes', mes);
+                if (local) params.append('local', local);
+                if (ativosApenas) params.append('ativos_apenas', 'true');
+                
+                const response = await fetch(`${API_BASE}/eventos?${params}`);
+                const json = await response.json();
+                
+                if (json.eventos.length === 0) {
+                    resultado.innerHTML = '<div class="info-box">Nenhum evento encontrado</div>';
+                    return;
+                }
+                
+                let html = `<div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">${json.total}</div>
+                        <div class="stat-label">Eventos</div>
+                    </div>
+                </div>
+                <div class="result">`;
+                
+                json.eventos.forEach(evento => {
+                    const badgeLocal = evento.local === 'Plenário' ? 'badge-plenario' : 'badge-auditorio';
+                    html += `
+                        <div class="item">
+                            <div class="item-title">
+                                ${evento.titulo}
+                                <span class="badge ${badgeLocal}">${evento.local}</span>
+                            </div>
+                            <div class="item-info">
+                                📅 ${formatarData(evento.data)} ⏰ ${evento.hora || 'N/A'}
+                                ${evento.descricao ? '<br>' + evento.descricao : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                resultado.innerHTML = html;
+            } catch (error) {
+                resultado.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        }
+        
+        async function eventosPorData() {
+            const data = document.getElementById('dataEventos').value;
+            const resultado = document.getElementById('resultadoEventosData');
+            
+            if (!data) {
+                resultado.innerHTML = '<div class="error">Por favor, selecione uma data</div>';
+                return;
+            }
+            
+            resultado.innerHTML = '<div class="loading">Buscando eventos...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/eventos/por-data?data=${data}`);
+                const json = await response.json();
+                
+                if (json.eventos.length === 0) {
+                    resultado.innerHTML = `<div class="info-box">Nenhum evento em ${formatarData(data)}</div>`;
+                    return;
+                }
+                
+                let html = `<div class="stats">
+                    <div class="stat">
+                        <div class="stat-value">${json.total}</div>
+                        <div class="stat-label">Eventos em ${formatarData(data)}</div>
+                    </div>
+                </div>
+                <div class="result">`;
+                
+                json.eventos.forEach(evento => {
+                    const badgeLocal = evento.local === 'Plenário' ? 'badge-plenario' : 'badge-auditorio';
+                    html += `
+                        <div class="item">
+                            <div class="item-title">
+                                ${evento.titulo}
+                                <span class="badge ${badgeLocal}">${evento.local}</span>
+                            </div>
+                            <div class="item-info">
+                                ⏰ ${evento.hora || 'Horário não definido'}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                resultado.innerHTML = html;
+            } catch (error) {
+                resultado.innerHTML = `<div class="error">Erro: ${error.message}</div>`;
+            }
+        }
+        
+        function formatarData(data) {
+            const [ano, mes, dia] = data.split('-');
+            return `${dia}/${mes}/${ano}`;
+        }
+    </script>
+</body>
+</html>

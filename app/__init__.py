@@ -128,15 +128,22 @@ def create_app():
     from .routes.api_clp_auditorio import api_clp_auditorio_bp
     from .routes.api_tce import api_tce
     from .routes.api_auth import api_auth_bp
+    from .routes.api_public import api_public_bp
     from .routes.web import web_bp
     
     # IMPORTANTE: Registrar com url_prefix
+    # APIs com autenticação
     app.register_blueprint(api_feriados_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_eventos_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_clp_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_clp_auditorio_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_tce, url_prefix=f'{ROUTES_PREFIX}/api/tce')
     app.register_blueprint(api_auth_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    
+    # API Pública (sem autenticação)
+    app.register_blueprint(api_public_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    
+    # Rotas web
     app.register_blueprint(web_bp, url_prefix=ROUTES_PREFIX)
     
     # Rota de status da API
