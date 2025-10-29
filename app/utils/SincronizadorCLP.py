@@ -403,7 +403,7 @@ class SincronizadorCLP:
             # Teste HEAD para verificar se endpoint existe
             try:
                 self.logger.info("Testando endpoint com HEAD request...")
-                head_resp = self.session.head(url_batch, headers=headers, timeout=10, allow_redirects=False)
+                head_resp = self.session.head(url_batch, headers=headers, timeout=10, allow_redirects=False, verify=False)
                 self.logger.info(f"HEAD response: Status {head_resp.status_code}")
                 self.logger.info(f"HEAD headers: {dict(head_resp.headers)}")
             except Exception as e:
@@ -416,7 +416,8 @@ class SincronizadorCLP:
                 json=payload, 
                 headers=headers, 
                 timeout=self.config['TIMEOUT'] * 3,  # Timeout maior para operação batch
-                allow_redirects=False
+                allow_redirects=False,
+                verify=False
             )
             
             # Verificar redirecionamento
@@ -432,14 +433,16 @@ class SincronizadorCLP:
                         corrected_url, 
                         json=payload, 
                         headers=headers, 
-                        timeout=self.config['TIMEOUT'] * 3
+                        timeout=self.config['TIMEOUT'] * 3,
+                        verify=False
                     )
                 elif 'automacao.tce.go.gov.br' in redirect_url:
                     response = self.session.post(
                         redirect_url, 
                         json=payload, 
                         headers=headers, 
-                        timeout=self.config['TIMEOUT'] * 3
+                        timeout=self.config['TIMEOUT'] * 3,
+                        verify=False
                     )
                 else:
                     self.logger.error(f"Redirecionamento para domínio desconhecido: {redirect_url}")
@@ -755,7 +758,8 @@ class SincronizadorCLP:
                 json=payload, 
                 headers=headers, 
                 timeout=self.config['TIMEOUT'] * 3,  # Timeout maior para operação batch
-                allow_redirects=False
+                allow_redirects=False,
+                verify=False
             )
             
             # Verificar redirecionamento
@@ -771,14 +775,16 @@ class SincronizadorCLP:
                         corrected_url, 
                         json=payload, 
                         headers=headers, 
-                        timeout=self.config['TIMEOUT'] * 3
+                        timeout=self.config['TIMEOUT'] * 3,
+                        verify=False
                     )
                 elif 'automacao.tce.go.gov.br' in redirect_url:
                     response = self.session.post(
                         redirect_url, 
                         json=payload, 
                         headers=headers, 
-                        timeout=self.config['TIMEOUT'] * 3
+                        timeout=self.config['TIMEOUT'] * 3,
+                        verify=False
                     )
                 else:
                     self.logger.error(f"Redirecionamento para domínio desconhecido: {redirect_url}")
@@ -909,7 +915,8 @@ class SincronizadorCLP:
                 json=payload, 
                 headers=headers, 
                 timeout=self.config['TIMEOUT'] * 2,
-                allow_redirects=False
+                allow_redirects=False,
+                verify=False
             )
             
             # Verificar redirecionamento
@@ -918,10 +925,10 @@ class SincronizadorCLP:
                 if 'automacao.tce.go.br' in redirect_url and 'automacao.tce.go.gov.br' not in redirect_url:
                     corrected_url = redirect_url.replace('automacao.tce.go.br', 'automacao.tce.go.gov.br')
                     response = self.session.post(corrected_url, json=payload, headers=headers, 
-                                                timeout=self.config['TIMEOUT'] * 2)
+                                                timeout=self.config['TIMEOUT'] * 2, verify=False)
                 elif 'automacao.tce.go.gov.br' in redirect_url:
                     response = self.session.post(redirect_url, json=payload, headers=headers, 
-                                                timeout=self.config['TIMEOUT'] * 2)
+                                                timeout=self.config['TIMEOUT'] * 2, verify=False)
             
             if response.status_code == 200:
                 batch_result = response.json()
