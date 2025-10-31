@@ -307,7 +307,7 @@ def teste_tag():
         if valor is not None:
             # Escrever valor na tag
             url_escrita = f"{api_base}/tag_write/{clp_ip}/{tag.replace(':', '%253A')}/{valor}"
-            response = requests.get(url_escrita, auth=auth, timeout=30)
+            response = requests.get(url_escrita, auth=auth, timeout=30, verify=False)
             
             if response.status_code == 200:
                 data = response.json()
@@ -327,7 +327,7 @@ def teste_tag():
         else:
             # Ler valor da tag
             url_leitura = f"{api_base}/tag_read/{clp_ip}/{tag.replace(':', '%253A')}"
-            response = requests.get(url_leitura, auth=auth, timeout=30)
+            response = requests.get(url_leitura, auth=auth, timeout=30, verify=False)
             
             if response.status_code == 200:
                 data = response.json()
@@ -372,11 +372,11 @@ def limpar_feriados():
             try:
                 # Limpar dia (N33:i)
                 url_dia = f"{api_base}/tag_write/{clp_ip}/N33%253A{i}/0"
-                response_dia = requests.get(url_dia, auth=auth, timeout=30)
+                response_dia = requests.get(url_dia, auth=auth, timeout=30, verify=False)
                 
                 # Limpar mês (N34:i)
                 url_mes = f"{api_base}/tag_write/{clp_ip}/N34%253A{i}/0"
-                response_mes = requests.get(url_mes, auth=auth, timeout=30)
+                response_mes = requests.get(url_mes, auth=auth, timeout=30, verify=False)
                 
                 if response_dia.status_code == 200 and response_mes.status_code == 200:
                     data_dia = response_dia.json()
@@ -476,7 +476,7 @@ def limpar_eventos_plenario():
                 for url_limpar, tag_nome in tags_limpar:
                     try:
                         logger.debug(f"Limpando {tag_nome}: {url_limpar}")
-                        response = requests.get(url_limpar, auth=auth, timeout=30)
+                        response = requests.get(url_limpar, auth=auth, timeout=30, verify=False)
                         
                         if response.status_code == 401:
                             return jsonify({'erro': 'Erro de autenticação'}), 401

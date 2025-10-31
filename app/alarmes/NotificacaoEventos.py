@@ -6,6 +6,10 @@ import requests
 import threading
 import time
 from app.config import WHATSAPP_API
+import urllib3
+
+# Desabilitar avisos de SSL não verificado para automacao.tce.go.gov.br
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger('EventosFeriados')
 
@@ -311,7 +315,7 @@ class NotificacaoEventos:
                     "%s | POST %s | Envio WhatsApp função=EVENTOS | payload=%s",
                     req_id, url, log_payload
                 )
-                resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30))
+                resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30), verify=False)
                 self._tempo_ultima_chamada_whatsapp = datetime.now()
                 duracao_ms = int((datetime.now() - inicio_req).total_seconds() * 1000)
 
@@ -381,7 +385,7 @@ class NotificacaoEventos:
                 "%s | Segunda tentativa POST %s | payload=%s",
                 req_id, url, log_payload
             )
-            resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30))
+            resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30), verify=False)
             duracao_ms = int((datetime.now() - inicio_req).total_seconds() * 1000)
             conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text
             if resp.ok:
@@ -438,7 +442,7 @@ class NotificacaoEventos:
                     url,
                     log_payload
                 )
-                resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30))
+                resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30), verify=False)
                 self._tempo_ultima_chamada_whatsapp = datetime.now()
 
                 conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text

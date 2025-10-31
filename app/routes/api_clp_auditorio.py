@@ -316,7 +316,7 @@ def testar_tag_auditorio():
         if operacao == 'write' and valor is not None:
             # Escrita
             url = f"{api_base}/tag_write/{clp_ip}/{tag.replace(':', '%253A')}/{valor}"
-            response = requests.get(url, auth=auth, timeout=30)
+            response = requests.get(url, auth=auth, timeout=30, verify=False)
             
             if response.status_code == 200:
                 try:
@@ -350,7 +350,7 @@ def testar_tag_auditorio():
         else:
             # Leitura
             url = f"{api_base}/tag_read/{clp_ip}/{tag.replace(':', '%253A')}"
-            response = requests.get(url, auth=auth, timeout=30)
+            response = requests.get(url, auth=auth, timeout=30, verify=False)
             
             if response.status_code == 200:
                 try:
