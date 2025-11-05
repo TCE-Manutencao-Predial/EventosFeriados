@@ -32,7 +32,7 @@ except Exception as e:
         os.makedirs(DATA_DIR, exist_ok=True)
     print(f"🔄 Usando diretório fallback: {DATA_DIR}")
 
-ROUTES_PREFIX = '/eventos-feriados'
+ROUTES_PREFIX = '/EventosFeriados'
 
 # Configuração dos diretórios de logs
 # Prioridade: variavel ambiente EVENTOS_FERIADOS_LOG_DIR > /var/softwaresTCE/logs/EventosFeriados > fallback local
