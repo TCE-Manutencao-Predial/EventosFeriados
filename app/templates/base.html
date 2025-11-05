@@ -39,6 +39,70 @@
     <!-- Fallback CSS para CDNs -->
     <link href="{{ url_for('static', filename='css/fallback.css') }}" rel="stylesheet">
     
+    <style>
+        /* Dropdown de Configurações */
+        .nav-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            border-radius: 8px;
+            z-index: 1001;
+            top: 100%;
+            left: 0;
+            margin-top: 5px;
+            padding: 5px 0;
+        }
+        
+        .nav-dropdown:hover .dropdown-content {
+            display: block;
+        }
+        
+        .dropdown-content a {
+            color: #333;
+            padding: 10px 15px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background-color 0.2s;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .dropdown-content a:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .dropdown-content a.active {
+            background-color: #e7f3ff;
+            color: #0d6efd;
+        }
+        
+        .dropdown-content a i {
+            width: 18px;
+            text-align: center;
+        }
+        
+        /* Reduzir espaçamento entre botões principais */
+        .eventos-nav-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .eventos-nav-btn {
+            margin: 0 !important;
+        }
+    </style>
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body class="eventos-custom-layout">
@@ -70,22 +134,33 @@
                     <i class="fas fa-calendar"></i>
                     <span>Calendário</span>
                 </button>
-                <button class="eventos-nav-btn {% if request.endpoint == 'web.historico' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.historico') }}'">
-                    <i class="fas fa-history"></i>
-                    <span>Histórico</span>
-                </button>
-                <button class="eventos-nav-btn {% if request.endpoint == 'web.historico_notificacoes' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.historico_notificacoes') }}'">
-                    <i class="fas fa-bell"></i>
-                    <span>Notificações</span>
-                </button>
-                <button class="eventos-nav-btn {% if request.endpoint == 'web.sincronizacao_clp' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.sincronizacao_clp') }}'">
-                    <i class="fas fa-sync-alt"></i>
-                    <span>CLP</span>
-                </button>
-                <button class="eventos-nav-btn {% if request.endpoint == 'web.sincronizacao_plenario' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.sincronizacao_plenario') }}'">
-                    <i class="fas fa-building"></i>
-                    <span>Plenário API</span>
-                </button>
+                
+                <!-- Dropdown de Configurações -->
+                <div class="nav-dropdown">
+                    <button class="eventos-nav-btn {% if request.endpoint in ['web.historico', 'web.historico_notificacoes', 'web.sincronizacao_clp', 'web.sincronizacao_plenario'] %}active{% endif %}">
+                        <i class="fas fa-cog"></i>
+                        <span>Configurações</span>
+                        <i class="fas fa-chevron-down" style="margin-left: 5px; font-size: 12px;"></i>
+                    </button>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('web.historico') }}" class="{% if request.endpoint == 'web.historico' %}active{% endif %}">
+                            <i class="fas fa-history"></i>
+                            <span>Histórico</span>
+                        </a>
+                        <a href="{{ url_for('web.historico_notificacoes') }}" class="{% if request.endpoint == 'web.historico_notificacoes' %}active{% endif %}">
+                            <i class="fas fa-bell"></i>
+                            <span>Notificações</span>
+                        </a>
+                        <a href="{{ url_for('web.sincronizacao_clp') }}" class="{% if request.endpoint == 'web.sincronizacao_clp' %}active{% endif %}">
+                            <i class="fas fa-sync-alt"></i>
+                            <span>CLP</span>
+                        </a>
+                        <a href="{{ url_for('web.sincronizacao_plenario') }}" class="{% if request.endpoint == 'web.sincronizacao_plenario' %}active{% endif %}">
+                            <i class="fas fa-building"></i>
+                            <span>Plenário API</span>
+                        </a>
+                    </div>
+                </div>
             </div>
         </nav>
     </div>

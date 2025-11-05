@@ -2,6 +2,51 @@
 
 {% block title %}Sincronização Plenário API{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Garantir altura igual nas colunas */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.row > [class*='col-'] {
+    display: flex;
+    flex-direction: column;
+}
+
+.row > [class*='col-'] .card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.row > [class*='col-'] .card .card-body {
+    flex-grow: 1;
+}
+
+/* Padronizar títulos */
+.page-header h1 {
+    font-family: Arial, sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.page-header .lead {
+    font-family: Arial, sans-serif;
+    color: #6c757d;
+}
+
+.card-header h5 {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <div class="row">

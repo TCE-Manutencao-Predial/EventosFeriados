@@ -11,9 +11,24 @@
 
 /* Container principal */
 .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
+}
+
+/* Padronizar títulos */
+h1 {
+    font-family: Arial, sans-serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.text-muted {
+    font-family: Arial, sans-serif;
+    color: #6c757d;
+    margin-bottom: 25px;
 }
 
 /* Cards de status */
@@ -25,6 +40,9 @@
     margin-bottom: 20px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     transition: box-shadow 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .status-card:hover {
@@ -38,6 +56,18 @@
     color: #343a40;
     border-bottom: 2px solid #f8f9fa;
     padding-bottom: 8px;
+    font-family: Arial, sans-serif;
+}
+
+/* Garantir altura igual nas colunas */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.row > [class*='col-'] {
+    display: flex;
+    flex-direction: column;
 }
 
 /* Indicadores de status */
