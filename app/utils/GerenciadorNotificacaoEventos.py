@@ -16,8 +16,9 @@ class GerenciadorNotificacaoEventos:
     
     Esta classe gerencia:
     - notificações imediatas (criado/alterado/cancelado → e-mail por função)
-    - lembrete 1 dia antes às 08:00 → WhatsApp por função
-    - lembrete 1 hora antes do início → WhatsApp por função
+    - lembrete 1 dia antes às 08:00 → WhatsApp por função EVENTOS
+    - lembrete 1 hora antes do início → WhatsApp por função EVENTOS
+    - notificação de limpeza 1 dia após às 08:00 → WhatsApp por função LIMPEZA
     """
     
     _instance = None
@@ -129,12 +130,14 @@ class GerenciadorNotificacaoEventos:
         schedule.every().day.at("08:00").do(self._verificar_eventos_amanha)
         # Agenda verificação minuciosa para lembretes 1h antes
         schedule.every(1).minutes.do(self._verificar_eventos_1h)
+        # Agenda notificação de limpeza pós-evento às 8:00 (eventos de ontem)
+        schedule.every().day.at("08:00").do(self._verificar_eventos_ontem_limpeza)
         
         self.running = True
         self.scheduler_thread = threading.Thread(target=self._executar_scheduler, daemon=True)
         self.scheduler_thread.start()
         
-        logger.info("Scheduler de lembretes de eventos iniciado (verificação diária às 08:00)")
+        logger.info("Scheduler de lembretes iniciado: amanhã 08:00, 1h antes, limpeza pós-evento 08:00")
     
     def parar_scheduler_lembretes(self):
         """Para o agendador de lembretes"""
@@ -248,6 +251,45 @@ class GerenciadorNotificacaoEventos:
                     logger.error(f"Erro ao processar lembrete 1h do evento {evento.get('nome','')}: {e}")
         except Exception as e:
             logger.error(f"Erro ao verificar eventos 1h: {e}")
+    
+    def _verificar_eventos_ontem_limpeza(self):
+        """Verifica eventos que ocorreram ontem e notifica equipe de limpeza às 08:00."""
+        if not self.notificacao_eventos:
+            logger.error("Sistema de notificação não está disponível para notificação de limpeza")
+            return
+
+        try:
+            # Calcula a data de ontem
+            ontem = datetime.now() - timedelta(days=1)
+            
+            # Busca eventos de ontem
+            gerenciador_eventos = GerenciadorEventos.get_instance()
+            eventos_ontem = gerenciador_eventos.obter_eventos_por_data(
+                dia=ontem.day,
+                mes=ontem.month,
+                ano=ontem.year
+            )
+            
+            if not eventos_ontem:
+                logger.debug("Nenhum evento encontrado ontem para notificação de limpeza")
+                return
+                
+            logger.info(f"Encontrados {len(eventos_ontem)} eventos de ontem. Notificando equipe de limpeza...")
+            
+            # Envia notificação para cada evento que ocorreu ontem
+            for evento in eventos_ontem:
+                try:
+                    self.notificacao_eventos.notificar_limpeza_pos_evento(evento)
+                    logger.info(f"Notificação de limpeza enviada para evento: {evento['nome']}")
+                    
+                    # Pequena pausa entre as notificações
+                    time.sleep(2)
+                    
+                except Exception as e:
+                    logger.error(f"Erro ao enviar notificação de limpeza para evento {evento['nome']}: {e}")
+                    
+        except Exception as e:
+            logger.error(f"Erro ao verificar eventos de ontem para limpeza: {e}")
     
     def verificar_lembretes_manualmente(self):
         """

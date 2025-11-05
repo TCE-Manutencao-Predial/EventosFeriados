@@ -256,6 +256,32 @@ class NotificacaoEventos:
         )
 
         self.enviar_whatsapp_por_funcao(mensagem=mensagem, apenas_disponiveis=True)
+    
+    def notificar_limpeza_pos_evento(self, evento_dados: dict) -> None:
+        """
+        Envia notificação para a equipe de limpeza 1 dia após o evento às 08:00.
+        
+        Args:
+            evento_dados (dict): Dados do evento que ocorreu ontem.
+        """
+        try:
+            data_evento = f"{evento_dados['dia']:02d}/{evento_dados['mes']:02d}/{evento_dados['ano']}"
+            mensagem = (
+                f"🧹 *LIMPEZA PÓS-EVENTO*\n\n"
+                f"📋 *Evento realizado:* {evento_dados['nome']}\n"
+                f"📅 *Data do evento:* {data_evento} (ONTEM)\n"
+                f"🕒 *Horário:* {evento_dados['hora_inicio']} às {evento_dados['hora_fim']}\n\n"
+                f"✅ *Ações necessárias:*\n"
+                f"• Higienizar o ambiente\n"
+                f"• Recolher lixo e resíduos\n"
+                f"• Verificar estado dos equipamentos\n"
+                f"• Organizar mobiliário\n\n"
+                f"⚠️ Priorizar este local para limpeza completa."
+            )
+            self.enviar_whatsapp_limpeza(mensagem=mensagem)
+        except Exception as e:
+            logger.error(f"Erro ao montar/enviar notificação de limpeza pós-evento: {e}")
+    
     def enviar_notificacao_funcao_eventos(self, assunto: str, mensagem: str, apenas_disponiveis: bool = True) -> None:
         """
         Envia a notificação para todos com a função EVENTOS via API externa (e-mail por função).
@@ -409,6 +435,186 @@ class NotificacaoEventos:
                 timer = threading.Timer(300, self._segunda_tentativa_whatsapp_por_funcao, args=(mensagem,))
                 timer.daemon = True
                 timer.start()
+
+    def enviar_whatsapp_limpeza(self, mensagem: str, apenas_disponiveis: bool = True) -> None:
+        """
+        Envia mensagem via WhatsApp para todos os técnicos com a função LIMPEZA
+        utilizando a API pública de envio por função.
+
+        Args:
+            mensagem (str): Texto a ser enviado (pode conter \n para quebras de linha).
+            apenas_disponiveis (bool): Se True, envia apenas para técnicos disponíveis. Padrão: True.
+        """
+        TEMPO_ATRASO_API = 2  # pequena contenção para evitar floods
+        NUM_MAX_TENTATIVAS = 1  # apenas uma tentativa imediata
+
+        url = f"{WHATSAPP_API['HOST']}/helpdeskmonitor/api/whatsapp/send-by-function"
+        headers = {
+            'Authorization': f"Bearer {WHATSAPP_API['TOKEN']}",
+            'Content-Type': 'application/json'
+        }
+
+        payload = {
+            'funcao': 'LIMPEZA',
+            'mensagem': mensagem,
+            'origem': 'EventosFeriados',
+            'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True)
+        }
+        
+        with self._lock_api_whatsapp:
+            now = datetime.now()
+            if self._tempo_ultima_chamada_whatsapp is not None:
+                elapsed = (now - self._tempo_ultima_chamada_whatsapp).total_seconds()
+                if elapsed < TEMPO_ATRASO_API:
+                    time.sleep(TEMPO_ATRASO_API - elapsed)
+
+            try:
+                inicio_req = datetime.now()
+                req_id = f"WALIMPEZA-{int(inicio_req.timestamp()*1000)}"
+                log_payload = {
+                    'funcao': 'LIMPEZA',
+                    'origem': payload['origem'],
+                    'mensagem_len': len(payload['mensagem'])
+                }
+                logger.info(
+                    "%s | POST %s | Envio WhatsApp função=LIMPEZA | payload=%s",
+                    req_id, url, log_payload
+                )
+                resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30), verify=False)
+                self._tempo_ultima_chamada_whatsapp = datetime.now()
+                duracao_ms = int((datetime.now() - inicio_req).total_seconds() * 1000)
+
+                conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text
+                # Se for 202 Accepted, tentar exibir task_id e status_url
+                if resp.status_code == 202:
+                    try:
+                        body = resp.json()
+                        logger.info(
+                            "%s | Aceito async (202) | task_id=%s | status_url=%s | detalhes=%s",
+                            req_id, body.get('task_id'), body.get('status_url'), body.get('detalhes')
+                        )
+                    except Exception:
+                        logger.info("%s | 202 sem JSON parseável | trecho=%s", req_id, conteudo_curto)
+
+                if resp.ok:
+                    logger.info(
+                        "%s | Sucesso envio WhatsApp | status=%s | duracao_ms=%s | resposta=%s",
+                        req_id, resp.status_code, duracao_ms, conteudo_curto
+                    )
+                    # Registrar no histórico
+                    self.historico_notificacoes.registrar_notificacao(
+                        tipo='whatsapp_funcao',
+                        canal='whatsapp',
+                        mensagem=mensagem,
+                        status='sucesso',
+                        destinatarios=['LIMPEZA'],
+                        detalhes={
+                            'funcao': 'LIMPEZA',
+                            'apenas_disponiveis': apenas_disponiveis,
+                            'origem': payload['origem']
+                        },
+                        duracao_ms=duracao_ms,
+                        response_code=resp.status_code
+                    )
+                    return
+
+                # Em caso de falha, tentar extrair JSON para log estruturado
+                erro_json = None
+                try:
+                    erro_json = resp.json()
+                except Exception:
+                    pass
+                logger.error(
+                    "%s | Falha envio WhatsApp | status=%s | duracao_ms=%s | corpo=%s | erro_json=%s",
+                    req_id, resp.status_code, duracao_ms, conteudo_curto, erro_json
+                )
+                
+                # Registrar falha no histórico
+                self.historico_notificacoes.registrar_notificacao(
+                    tipo='whatsapp_funcao',
+                    canal='whatsapp',
+                    mensagem=mensagem,
+                    status='erro',
+                    destinatarios=['LIMPEZA'],
+                    detalhes={
+                        'funcao': 'LIMPEZA',
+                        'apenas_disponiveis': apenas_disponiveis,
+                        'origem': payload['origem']
+                    },
+                    duracao_ms=duracao_ms,
+                    response_code=resp.status_code,
+                    error_message=conteudo_curto
+                )
+
+                # Agendar uma segunda tentativa única para 5 minutos depois
+                logger.warning("%s | Agendando segunda tentativa em 5 minutos (status=%s)", req_id, resp.status_code)
+                timer = threading.Timer(300, self._segunda_tentativa_whatsapp_limpeza, args=(mensagem,))
+                timer.daemon = True
+                timer.start()
+            except requests.RequestException as e:
+                logger.error("Erro na chamada da API WhatsApp LIMPEZA (imediata) | excecao=%s", e)
+                # Registrar erro no histórico
+                self.historico_notificacoes.registrar_notificacao(
+                    tipo='whatsapp_funcao',
+                    canal='whatsapp',
+                    mensagem=mensagem,
+                    status='erro',
+                    destinatarios=['LIMPEZA'],
+                    detalhes={
+                        'funcao': 'LIMPEZA',
+                        'apenas_disponiveis': apenas_disponiveis
+                    },
+                    error_message=str(e)
+                )
+                # Agendar segunda tentativa em 5 minutos
+                timer = threading.Timer(300, self._segunda_tentativa_whatsapp_limpeza, args=(mensagem,))
+                timer.daemon = True
+                timer.start()
+
+    def _segunda_tentativa_whatsapp_limpeza(self, mensagem: str) -> None:
+        """Executa uma segunda tentativa única após 5 minutos para equipe de limpeza."""
+        try:
+            inicio_req = datetime.now()
+            req_id = f"WALIMPEZA-RETRY-{int(inicio_req.timestamp()*1000)}"
+            url = f"{WHATSAPP_API['HOST']}/helpdeskmonitor/api/whatsapp/send-by-function"
+            headers = {
+                'Authorization': f"Bearer {WHATSAPP_API['TOKEN']}",
+                'Content-Type': 'application/json'
+            }
+            payload = {
+                'funcao': 'LIMPEZA',
+                'mensagem': mensagem,
+                'origem': 'EventosFeriados'
+            }
+            log_payload = {
+                'funcao': 'LIMPEZA',
+                'origem': payload['origem'],
+                'mensagem_len': len(payload['mensagem'])
+            }
+            logger.info(
+                "%s | Segunda tentativa POST %s | payload=%s",
+                req_id, url, log_payload
+            )
+            resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30), verify=False)
+            duracao_ms = int((datetime.now() - inicio_req).total_seconds() * 1000)
+            conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text
+            if resp.ok:
+                logger.info(
+                    "%s | Segunda tentativa sucesso | status=%s | duracao_ms=%s | resposta=%s",
+                    req_id, resp.status_code, duracao_ms, conteudo_curto
+                )
+            else:
+                erro_json = None
+                try:
+                    erro_json = resp.json()
+                except Exception:
+                    pass
+                logger.error(
+                    "%s | Segunda tentativa falhou | status=%s | duracao_ms=%s | corpo=%s | erro_json=%s",
+                    req_id, resp.status_code, duracao_ms, conteudo_curto, erro_json
+                )
+        except requests.RequestException as e:
+            logger.error("Segunda tentativa erro de exceção na chamada WhatsApp LIMPEZA | excecao=%s", e)
 
     def _segunda_tentativa_whatsapp_por_funcao(self, mensagem: str) -> None:
         """Executa uma segunda tentativa única após 5 minutos."""
