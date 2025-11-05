@@ -11,6 +11,9 @@ from ..utils.auth_decorators import require_auth
 api_notificacoes_bp = Blueprint('api_notificacoes', __name__)
 logger = logging.getLogger('EventosFeriados.api_notificacoes')
 
+# Log de inicialização do blueprint
+logger.info("Blueprint api_notificacoes inicializado")
+
 @api_notificacoes_bp.route('/notificacoes/historico', methods=['GET'])
 @require_auth
 def listar_historico():
@@ -26,6 +29,7 @@ def listar_historico():
         - data_inicio: data/hora início (ISO format)
         - data_fim: data/hora fim (ISO format)
     """
+    logger.info(f"Requisição recebida em /notificacoes/historico com params: {request.args}")
     try:
         # Parâmetros de paginação
         limite = request.args.get('limite', 100, type=int)
@@ -88,6 +92,7 @@ def obter_estatisticas():
     Query Parameters:
         - dias: número de dias para análise (padrão: 7)
     """
+    logger.info(f"Requisição recebida em /notificacoes/estatisticas com params: {request.args}")
     try:
         dias = request.args.get('dias', 7, type=int)
         
@@ -145,3 +150,23 @@ def limpar_antigos():
             'success': False,
             'error': 'Erro ao limpar notificações antigas'
         }), 500
+
+@api_notificacoes_bp.route('/notificacoes/test', methods=['GET'])
+def test_route():
+    """Rota de teste para verificar se o blueprint está funcionando"""
+    logger.info("Rota de teste /notificacoes/test acessada!")
+    return jsonify({
+        'success': True,
+        'message': 'Blueprint api_notificacoes está funcionando!',
+        'rotas_disponiveis': [
+            '/notificacoes/historico',
+            '/notificacoes/estatisticas',
+            '/notificacoes/limpar-antigos',
+            '/notificacoes/test'
+        ]
+    }), 200
+
+# Log das rotas registradas
+logger.info("Rotas do blueprint api_notificacoes registradas:")
+for rule in ['notificacoes/historico', 'notificacoes/estatisticas', 'notificacoes/limpar-antigos', 'notificacoes/test']:
+    logger.info(f"  - {rule}")

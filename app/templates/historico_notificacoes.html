@@ -572,9 +572,17 @@
     });
 
     function carregarEstatisticas() {
+        console.log('Carregando estatísticas de: /eventos-feriados/api/notificacoes/estatisticas?dias=7');
         fetch('/eventos-feriados/api/notificacoes/estatisticas?dias=7')
-            .then(response => response.json())
+            .then(response => {
+                console.log('Status resposta estatísticas:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Dados de estatísticas recebidos:', data);
                 if (data.success && data.data) {
                     const stats = data.data;
                     document.getElementById('statTotal').textContent = stats.total || 0;
@@ -585,6 +593,7 @@
             })
             .catch(error => {
                 console.error('Erro ao carregar estatísticas:', error);
+                // Não mostrar erro ao usuário, apenas no console
             });
     }
 
@@ -598,9 +607,19 @@
             ...currentFilters
         });
 
-        fetch(`/eventos-feriados/api/notificacoes/historico?${params}`)
-            .then(response => response.json())
+        const url = `/eventos-feriados/api/notificacoes/historico?${params}`;
+        console.log('Carregando notificações de:', url);
+
+        fetch(url)
+            .then(response => {
+                console.log('Status resposta notificações:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
+                console.log('Dados de notificações recebidos:', data);
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('tableContainer').style.display = 'block';
 
@@ -609,14 +628,14 @@
                     renderizarTabela(data.data);
                     atualizarPaginacao();
                 } else {
-                    mostrarErro('Erro ao carregar notificações');
+                    mostrarErro(data.error || 'Erro ao carregar notificações');
                 }
             })
             .catch(error => {
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('tableContainer').style.display = 'block';
                 console.error('Erro ao carregar notificações:', error);
-                mostrarErro('Erro ao carregar notificações');
+                mostrarErro(`Erro ao carregar notificações: ${error.message}`);
             });
     }
 

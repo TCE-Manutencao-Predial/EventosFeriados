@@ -142,6 +142,8 @@ def create_app():
     from .routes.api_public import api_public_bp
     from .routes.web import web_bp
     
+    eventos_logger.info("Blueprints importados com sucesso")
+    
     # IMPORTANTE: Registrar com url_prefix
     # APIs com autenticação
     app.register_blueprint(api_feriados_bp, url_prefix=f'{ROUTES_PREFIX}/api')
@@ -152,6 +154,7 @@ def create_app():
     app.register_blueprint(api_auth_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_historico_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_notificacoes_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    eventos_logger.info(f"Blueprint api_notificacoes registrado com url_prefix: {ROUTES_PREFIX}/api")
     
     # API Pública (sem autenticação)
     app.register_blueprint(api_public_bp, url_prefix=f'{ROUTES_PREFIX}/api')
@@ -184,6 +187,22 @@ def create_app():
                 'proximo_horario': agendador_status.get('proximo_horario_tce'),
                 'agendador_ativo': agendador_status.get('executando', False)
             }
+        })
+    
+    # Rota de debug para listar todas as rotas (somente em dev)
+    @app.route(f'{ROUTES_PREFIX}/api/debug/routes')
+    def debug_routes():
+        routes = []
+        for rule in app.url_map.iter_rules():
+            routes.append({
+                'endpoint': rule.endpoint,
+                'methods': list(rule.methods - {'HEAD', 'OPTIONS'}),
+                'path': rule.rule
+            })
+        return jsonify({
+            'success': True,
+            'total': len(routes),
+            'routes': sorted(routes, key=lambda x: x['path'])
         })
     
     # Log de rotas registradas para debug
