@@ -74,13 +74,17 @@
                     <i class="fas fa-history"></i>
                     <span>Histórico</span>
                 </button>
+                <button class="eventos-nav-btn {% if request.endpoint == 'web.historico_notificacoes' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.historico_notificacoes') }}'">
+                    <i class="fas fa-bell"></i>
+                    <span>Notificações</span>
+                </button>
                 <button class="eventos-nav-btn {% if request.endpoint == 'web.sincronizacao_clp' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.sincronizacao_clp') }}'">
                     <i class="fas fa-sync-alt"></i>
                     <span>CLP</span>
                 </button>
-                <button class="eventos-nav-btn {% if request.endpoint == 'web.sincronizacao_tce' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.sincronizacao_tce') }}'">
+                <button class="eventos-nav-btn {% if request.endpoint == 'web.sincronizacao_plenario' %}active{% endif %}" onclick="window.location.href='{{ url_for('web.sincronizacao_plenario') }}'">
                     <i class="fas fa-building"></i>
-                    <span>TCE</span>
+                    <span>Plenário API</span>
                 </button>
             </div>
         </nav>

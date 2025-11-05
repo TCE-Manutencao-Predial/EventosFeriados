@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from app.alarmes.ClassesSistema import ConfigNotificacao
 from app.utils.GerenciadorFeriados import GerenciadorFeriados
+from app.utils.GerenciadorHistoricoNotificacoes import GerenciadorHistoricoNotificacoes
 import requests
 import threading
 import time
@@ -37,6 +38,7 @@ class NotificacaoEventos:
         """
         self.config_notificacao = config_notificacao
         self.gerenciador_feriados = GerenciadorFeriados()
+        self.historico_notificacoes = GerenciadorHistoricoNotificacoes.get_instance()
     # A lista de técnicos e verificação de disponibilidade local foram removidas;
     # o filtro por disponibilidade é realizado pela própria API externa via parâmetro.
 
@@ -338,6 +340,21 @@ class NotificacaoEventos:
                         "%s | Sucesso envio WhatsApp | status=%s | duracao_ms=%s | resposta=%s",
                         req_id, resp.status_code, duracao_ms, conteudo_curto
                     )
+                    # Registrar no histórico
+                    self.historico_notificacoes.registrar_notificacao(
+                        tipo='whatsapp_funcao',
+                        canal='whatsapp',
+                        mensagem=mensagem,
+                        status='sucesso',
+                        destinatarios=['EVENTOS'],
+                        detalhes={
+                            'funcao': 'EVENTOS',
+                            'apenas_disponiveis': apenas_disponiveis,
+                            'origem': payload['origem']
+                        },
+                        duracao_ms=duracao_ms,
+                        response_code=resp.status_code
+                    )
                     return
 
                 # Em caso de falha, tentar extrair JSON para log estruturado
@@ -350,6 +367,23 @@ class NotificacaoEventos:
                     "%s | Falha envio WhatsApp | status=%s | duracao_ms=%s | corpo=%s | erro_json=%s",
                     req_id, resp.status_code, duracao_ms, conteudo_curto, erro_json
                 )
+                
+                # Registrar falha no histórico
+                self.historico_notificacoes.registrar_notificacao(
+                    tipo='whatsapp_funcao',
+                    canal='whatsapp',
+                    mensagem=mensagem,
+                    status='erro',
+                    destinatarios=['EVENTOS'],
+                    detalhes={
+                        'funcao': 'EVENTOS',
+                        'apenas_disponiveis': apenas_disponiveis,
+                        'origem': payload['origem']
+                    },
+                    duracao_ms=duracao_ms,
+                    response_code=resp.status_code,
+                    error_message=conteudo_curto
+                )
 
                 # Agendar uma segunda tentativa única para 5 minutos depois
                 logger.warning("%s | Agendando segunda tentativa em 5 minutos (status=%s)", req_id, resp.status_code)
@@ -358,6 +392,19 @@ class NotificacaoEventos:
                 timer.start()
             except requests.RequestException as e:
                 logger.error("Erro na chamada da API WhatsApp por função (imediata) | excecao=%s", e)
+                # Registrar erro no histórico
+                self.historico_notificacoes.registrar_notificacao(
+                    tipo='whatsapp_funcao',
+                    canal='whatsapp',
+                    mensagem=mensagem,
+                    status='erro',
+                    destinatarios=['EVENTOS'],
+                    detalhes={
+                        'funcao': 'EVENTOS',
+                        'apenas_disponiveis': apenas_disponiveis
+                    },
+                    error_message=str(e)
+                )
                 # Agendar segunda tentativa em 5 minutos
                 timer = threading.Timer(300, self._segunda_tentativa_whatsapp_por_funcao, args=(mensagem,))
                 timer.daemon = True
@@ -433,6 +480,7 @@ class NotificacaoEventos:
                     time.sleep(TEMPO_ATRASO_API - elapsed)
 
             try:
+                inicio_req = datetime.now()
                 log_payload = {
                     'funcao': 'EVENTOS',
                     'apenas_disponiveis': payload['apenas_disponiveis'],
@@ -446,6 +494,7 @@ class NotificacaoEventos:
                 )
                 resp = requests.post(url, json=payload, headers=headers, timeout=WHATSAPP_API.get('TIMEOUT', 30), verify=False)
                 self._tempo_ultima_chamada_whatsapp = datetime.now()
+                duracao_ms = int((datetime.now() - inicio_req).total_seconds() * 1000)
 
                 conteudo_curto = (resp.text[:500] + '...') if len(resp.text) > 500 else resp.text
                 if resp.status_code == 202:
@@ -457,9 +506,61 @@ class NotificacaoEventos:
                         )
                     except Exception:
                         logger.info("Resposta 202 sem JSON parseável: %s", conteudo_curto)
-                logger.info(
-                    "Resultado API Email por função: status=%s | ok=%s | resposta=%s",
-                    resp.status_code, resp.ok, conteudo_curto
-                )
+                
+                if resp.ok:
+                    logger.info(
+                        "Resultado API Email por função: status=%s | ok=%s | resposta=%s",
+                        resp.status_code, resp.ok, conteudo_curto
+                    )
+                    # Registrar no histórico
+                    self.historico_notificacoes.registrar_notificacao(
+                        tipo='email_funcao',
+                        canal='email',
+                        mensagem=mensagem,
+                        assunto=assunto,
+                        status='sucesso',
+                        destinatarios=['EVENTOS'],
+                        detalhes={
+                            'funcao': 'EVENTOS',
+                            'apenas_disponiveis': apenas_disponiveis
+                        },
+                        duracao_ms=duracao_ms,
+                        response_code=resp.status_code
+                    )
+                else:
+                    logger.error(
+                        "Falha API Email por função: status=%s | resposta=%s",
+                        resp.status_code, conteudo_curto
+                    )
+                    # Registrar erro no histórico
+                    self.historico_notificacoes.registrar_notificacao(
+                        tipo='email_funcao',
+                        canal='email',
+                        mensagem=mensagem,
+                        assunto=assunto,
+                        status='erro',
+                        destinatarios=['EVENTOS'],
+                        detalhes={
+                            'funcao': 'EVENTOS',
+                            'apenas_disponiveis': apenas_disponiveis
+                        },
+                        duracao_ms=duracao_ms,
+                        response_code=resp.status_code,
+                        error_message=conteudo_curto
+                    )
             except requests.RequestException as e:
                 logger.error("Erro na chamada da API Email por função: %s", e)
+                # Registrar erro no histórico
+                self.historico_notificacoes.registrar_notificacao(
+                    tipo='email_funcao',
+                    canal='email',
+                    mensagem=mensagem,
+                    assunto=assunto,
+                    status='erro',
+                    destinatarios=['EVENTOS'],
+                    detalhes={
+                        'funcao': 'EVENTOS',
+                        'apenas_disponiveis': apenas_disponiveis
+                    },
+                    error_message=str(e)
+                )

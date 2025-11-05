@@ -138,6 +138,7 @@ def create_app():
     from .routes.api_tce import api_tce
     from .routes.api_auth import api_auth_bp
     from .routes.api_historico import api_historico_bp
+    from .routes.api_notificacoes import api_notificacoes_bp
     from .routes.api_public import api_public_bp
     from .routes.web import web_bp
     
@@ -150,6 +151,7 @@ def create_app():
     app.register_blueprint(api_tce, url_prefix=f'{ROUTES_PREFIX}/api/tce')
     app.register_blueprint(api_auth_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     app.register_blueprint(api_historico_bp, url_prefix=f'{ROUTES_PREFIX}/api')
+    app.register_blueprint(api_notificacoes_bp, url_prefix=f'{ROUTES_PREFIX}/api')
     
     # API Pública (sem autenticação)
     app.register_blueprint(api_public_bp, url_prefix=f'{ROUTES_PREFIX}/api')

@@ -58,6 +58,16 @@ def historico():
         logger.error(f"Erro ao renderizar página de histórico: {e}")
         return "Erro ao carregar página", 500
 
+@web_bp.route('/historico-notificacoes')
+@require_auth
+def historico_notificacoes():
+    """Página de histórico de notificações"""
+    try:
+        return render_template('historico_notificacoes.html')
+    except Exception as e:
+        logger.error(f"Erro ao renderizar página de histórico de notificações: {e}")
+        return "Erro ao carregar página", 500
+
 @web_bp.route('/sincronizacao-clp')
 @require_auth
 def sincronizacao_clp():
@@ -68,12 +78,12 @@ def sincronizacao_clp():
         logger.error(f"Erro ao renderizar página de sincronização CLP: {e}")
         return "Erro ao carregar página", 500
 
-@web_bp.route('/sincronizacao-tce')
+@web_bp.route('/sincronizacao-plenario')
 @require_auth
-def sincronizacao_tce():
-    """Página de sincronização com TCE"""
+def sincronizacao_plenario():
+    """Página de sincronização com Plenário API"""
     try:
         return render_template('sincronizacao_tce.html')
     except Exception as e:
-        logger.error(f"Erro ao renderizar página de sincronização TCE: {e}")
+        logger.error(f"Erro ao renderizar página de sincronização Plenário: {e}")
         return "Erro ao carregar página", 500
