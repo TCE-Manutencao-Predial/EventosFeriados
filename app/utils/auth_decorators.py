@@ -52,7 +52,8 @@ def require_auth(f):
             'email': dados_usuario.get('email', '') if dados_usuario else ''
         }
         
-        logger.info(f"Acesso autorizado para usuário: {username} ({g.current_user['nome']})")
+        # Log removido para reduzir verbosidade
+        # logger.info(f"Acesso autorizado para usuário: {username} ({g.current_user['nome']})")
         
         # Executar a função decorada
         return f(*args, **kwargs)

@@ -205,7 +205,8 @@ class AuthManager:
             except Exception:
                 pass
             
-            self.logger.info(f"Usuário {username} autorizado via cache")
+            # Log removido para reduzir verbosidade
+            # self.logger.info(f"Usuário {username} autorizado via cache")
             return True, usuario
         
         # Não encontrado no cache, tentar API
