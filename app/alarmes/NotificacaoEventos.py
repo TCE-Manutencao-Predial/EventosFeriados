@@ -272,13 +272,14 @@ class NotificacaoEventos:
     _tempo_ultima_chamada_whatsapp = None
     _lock_api_whatsapp = threading.Lock()
 
-    def enviar_whatsapp_por_funcao(self, mensagem: str) -> None:
+    def enviar_whatsapp_por_funcao(self, mensagem: str, apenas_disponiveis: bool = True) -> None:
         """
         Envia mensagem via WhatsApp para todos os técnicos com a função EVENTOS
         utilizando a API pública de envio por função.
 
         Args:
             mensagem (str): Texto a ser enviado (pode conter \n para quebras de linha).
+            apenas_disponiveis (bool): Se True, envia apenas para técnicos disponíveis. Padrão: True.
         """
         TEMPO_ATRASO_API = 2  # pequena contenção para evitar floods
         NUM_MAX_TENTATIVAS = 1  # apenas uma tentativa imediata
@@ -293,7 +294,8 @@ class NotificacaoEventos:
             'funcao': 'EVENTOS',
             'mensagem': mensagem,
             # Origem fixada conforme solicitação (mantendo nome do sistema)
-            'origem': 'EventosFeriados'
+            'origem': 'EventosFeriados',
+            'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True)
         }
         
         with self._lock_api_whatsapp:
