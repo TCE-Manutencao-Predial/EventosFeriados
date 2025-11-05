@@ -123,14 +123,14 @@
    ======================================================================== */
 .eventos-stats {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
     margin-bottom: 30px;
 }
 
 .eventos-stat-card {
     background: white;
-    padding: 20px;
+    padding: 15px 10px;
     border-radius: 12px;
     box-shadow: var(--eventos-shadow);
     text-align: center;
@@ -142,12 +142,12 @@
 }
 
 .eventos-stat-icon {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
+    font-size: 1.8rem;
+    margin-bottom: 8px;
 }
 
 .eventos-stat-value {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: var(--eventos-dark);
     margin: 0;
@@ -155,8 +155,9 @@
 
 .eventos-stat-label {
     color: #6c757d;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     margin: 5px 0 0 0;
+    line-height: 1.2;
 }
 
 /* ========================================================================
@@ -485,13 +486,30 @@
     }
     
     .eventos-stats {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+    }
+    
+    .eventos-stat-card {
+        padding: 12px 8px;
+    }
+    
+    .eventos-stat-icon {
+        font-size: 1.5rem;
+    }
+    
+    .eventos-stat-value {
+        font-size: 1.3rem;
+    }
+    
+    .eventos-stat-label {
+        font-size: 0.75rem;
     }
 }
 
 @media (max-width: 480px) {
     .eventos-stats {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, 1fr);
     }
     
     .eventos-nav-buttons {

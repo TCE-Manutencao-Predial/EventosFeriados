@@ -8,10 +8,10 @@ import logging
 from ..utils.GerenciadorHistoricoNotificacoes import GerenciadorHistoricoNotificacoes
 from ..utils.auth_decorators import require_auth
 
-api_notificacoes_bp = Blueprint('api_notificacoes', __name__, url_prefix='/api/notificacoes')
+api_notificacoes_bp = Blueprint('api_notificacoes', __name__)
 logger = logging.getLogger('EventosFeriados.api_notificacoes')
 
-@api_notificacoes_bp.route('/historico', methods=['GET'])
+@api_notificacoes_bp.route('/notificacoes/historico', methods=['GET'])
 @require_auth
 def listar_historico():
     """
@@ -79,7 +79,7 @@ def listar_historico():
             'error': 'Erro ao buscar histórico de notificações'
         }), 500
 
-@api_notificacoes_bp.route('/estatisticas', methods=['GET'])
+@api_notificacoes_bp.route('/notificacoes/estatisticas', methods=['GET'])
 @require_auth
 def obter_estatisticas():
     """
@@ -110,7 +110,7 @@ def obter_estatisticas():
             'error': 'Erro ao obter estatísticas'
         }), 500
 
-@api_notificacoes_bp.route('/limpar-antigos', methods=['POST'])
+@api_notificacoes_bp.route('/notificacoes/limpar-antigos', methods=['POST'])
 @require_auth
 def limpar_antigos():
     """
