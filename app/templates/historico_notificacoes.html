@@ -572,8 +572,8 @@
     });
 
     function carregarEstatisticas() {
-        console.log('Carregando estatísticas de: /eventos-feriados/api/notificacoes/estatisticas?dias=7');
-        fetch('/eventos-feriados/api/notificacoes/estatisticas?dias=7')
+        console.log('Carregando estatísticas de: /EventosFeriados/api/notificacoes/estatisticas?dias=7');
+        fetch('/EventosFeriados/api/notificacoes/estatisticas?dias=7')
             .then(response => {
                 console.log('Status resposta estatísticas:', response.status);
                 if (!response.ok) {
@@ -607,7 +607,7 @@
             ...currentFilters
         });
 
-        const url = `/eventos-feriados/api/notificacoes/historico?${params}`;
+        const url = `/EventosFeriados/api/notificacoes/historico?${params}`;
         console.log('Carregando notificações de:', url);
 
         fetch(url)
