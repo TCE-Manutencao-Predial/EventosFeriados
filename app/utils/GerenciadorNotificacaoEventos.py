@@ -126,18 +126,18 @@ class GerenciadorNotificacaoEventos:
             logger.warning("Scheduler de lembretes já está em execução")
             return
             
-        # Agenda verificação diária às 8:00 (lembrete 1 dia antes)
-        schedule.every().day.at("08:00").do(self._verificar_eventos_amanha)
+        # Agenda verificação diária às 9:30 (lembrete 1 dia antes)
+        schedule.every().day.at("09:30").do(self._verificar_eventos_amanha)
         # Agenda verificação minuciosa para lembretes 1h antes
         schedule.every(1).minutes.do(self._verificar_eventos_1h)
-        # Agenda notificação de limpeza pós-evento às 8:00 (eventos de ontem)
-        schedule.every().day.at("08:00").do(self._verificar_eventos_ontem_limpeza)
+        # Agenda notificação de limpeza pós-evento às 9:30 (eventos de ontem)
+        schedule.every().day.at("09:30").do(self._verificar_eventos_ontem_limpeza)
         
         self.running = True
         self.scheduler_thread = threading.Thread(target=self._executar_scheduler, daemon=True)
         self.scheduler_thread.start()
         
-        logger.info("Scheduler de lembretes iniciado: amanhã 08:00, 1h antes, limpeza pós-evento 08:00")
+        logger.info("Scheduler de lembretes iniciado: amanhã 09:30, 1h antes, limpeza pós-evento 09:30")
     
     def parar_scheduler_lembretes(self):
         """Para o agendador de lembretes"""
