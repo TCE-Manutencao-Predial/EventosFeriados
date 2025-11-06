@@ -255,7 +255,7 @@ class NotificacaoEventos:
             f"⚠️ Preparar infraestrutura e checagens finais."
         )
 
-        self.enviar_whatsapp_por_funcao(mensagem=mensagem, apenas_disponiveis=True)
+        self.enviar_whatsapp_por_funcao(mensagem=mensagem)
     
     def notificar_limpeza_pos_evento(self, evento_dados: dict) -> None:
         """
@@ -300,14 +300,13 @@ class NotificacaoEventos:
     _tempo_ultima_chamada_whatsapp = None
     _lock_api_whatsapp = threading.Lock()
 
-    def enviar_whatsapp_por_funcao(self, mensagem: str, apenas_disponiveis: bool = True) -> None:
+    def enviar_whatsapp_por_funcao(self, mensagem: str) -> None:
         """
         Envia mensagem via WhatsApp para todos os técnicos com a função EVENTOS
         utilizando a API pública de envio por função.
 
         Args:
             mensagem (str): Texto a ser enviado (pode conter \n para quebras de linha).
-            apenas_disponiveis (bool): Se True, envia apenas para técnicos disponíveis. Padrão: True.
         """
         TEMPO_ATRASO_API = 2  # pequena contenção para evitar floods
         NUM_MAX_TENTATIVAS = 1  # apenas uma tentativa imediata
@@ -321,9 +320,7 @@ class NotificacaoEventos:
         payload = {
             'funcao': 'EVENTOS',
             'mensagem': mensagem,
-            # Origem fixada conforme solicitação (mantendo nome do sistema)
-            'origem': 'EventosFeriados',
-            'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True)
+            'origem': 'EventosFeriados'
         }
         
         with self._lock_api_whatsapp:
@@ -375,7 +372,6 @@ class NotificacaoEventos:
                         destinatarios=['EVENTOS'],
                         detalhes={
                             'funcao': 'EVENTOS',
-                            'apenas_disponiveis': apenas_disponiveis,
                             'origem': payload['origem']
                         },
                         duracao_ms=duracao_ms,
@@ -403,7 +399,6 @@ class NotificacaoEventos:
                     destinatarios=['EVENTOS'],
                     detalhes={
                         'funcao': 'EVENTOS',
-                        'apenas_disponiveis': apenas_disponiveis,
                         'origem': payload['origem']
                     },
                     duracao_ms=duracao_ms,
@@ -426,8 +421,7 @@ class NotificacaoEventos:
                     status='erro',
                     destinatarios=['EVENTOS'],
                     detalhes={
-                        'funcao': 'EVENTOS',
-                        'apenas_disponiveis': apenas_disponiveis
+                        'funcao': 'EVENTOS'
                     },
                     error_message=str(e)
                 )
@@ -436,14 +430,13 @@ class NotificacaoEventos:
                 timer.daemon = True
                 timer.start()
 
-    def enviar_whatsapp_limpeza(self, mensagem: str, apenas_disponiveis: bool = True) -> None:
+    def enviar_whatsapp_limpeza(self, mensagem: str) -> None:
         """
         Envia mensagem via WhatsApp para todos os técnicos com a função LIMPEZA
         utilizando a API pública de envio por função.
 
         Args:
             mensagem (str): Texto a ser enviado (pode conter \n para quebras de linha).
-            apenas_disponiveis (bool): Se True, envia apenas para técnicos disponíveis. Padrão: True.
         """
         TEMPO_ATRASO_API = 2  # pequena contenção para evitar floods
         NUM_MAX_TENTATIVAS = 1  # apenas uma tentativa imediata
@@ -457,8 +450,7 @@ class NotificacaoEventos:
         payload = {
             'funcao': 'LIMPEZA',
             'mensagem': mensagem,
-            'origem': 'EventosFeriados',
-            'apenas_disponiveis': apenas_disponiveis if apenas_disponiveis is not None else WHATSAPP_API.get('APENAS_DISPONIVEIS', True)
+            'origem': 'EventosFeriados'
         }
         
         with self._lock_api_whatsapp:
@@ -510,7 +502,6 @@ class NotificacaoEventos:
                         destinatarios=['LIMPEZA'],
                         detalhes={
                             'funcao': 'LIMPEZA',
-                            'apenas_disponiveis': apenas_disponiveis,
                             'origem': payload['origem']
                         },
                         duracao_ms=duracao_ms,
@@ -538,7 +529,6 @@ class NotificacaoEventos:
                     destinatarios=['LIMPEZA'],
                     detalhes={
                         'funcao': 'LIMPEZA',
-                        'apenas_disponiveis': apenas_disponiveis,
                         'origem': payload['origem']
                     },
                     duracao_ms=duracao_ms,
@@ -561,8 +551,7 @@ class NotificacaoEventos:
                     status='erro',
                     destinatarios=['LIMPEZA'],
                     detalhes={
-                        'funcao': 'LIMPEZA',
-                        'apenas_disponiveis': apenas_disponiveis
+                        'funcao': 'LIMPEZA'
                     },
                     error_message=str(e)
                 )
