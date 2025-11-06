@@ -9,6 +9,20 @@ from app.utils.AutoSyncCLP import AutoSyncCLP
 api_eventos_bp = Blueprint('api_eventos', __name__)
 logger = logging.getLogger('EventosFeriados.api_eventos')
 
+def formatar_participantes(participantes):
+    """
+    Formata o número de participantes, retornando 'desconhecido' quando for 0.
+    
+    Args:
+        participantes: Número de participantes estimados (pode ser int, str ou None)
+        
+    Returns:
+        str: Número formatado ou 'desconhecido'
+    """
+    if participantes is None or participantes == '' or participantes == 0 or participantes == '0':
+        return 'desconhecido'
+    return str(participantes)
+
 @api_eventos_bp.route('/eventos', methods=['GET'])
 @require_auth_api
 def listar_eventos():
@@ -292,7 +306,7 @@ def forcar_notificacao_whatsapp(evento_id):
                 f"🕒 *Horário:* {evento['hora_inicio']} às {evento['hora_fim']}\n"
                 f"📍 *Local:* {evento['local']}\n"
                 f"👤 *Responsável:* {evento.get('responsavel', 'Não informado')}\n"
-                f"👥 *Participantes:* {evento.get('participantes_estimados', 'Não informado')}\n\n"
+                f"👥 *Participantes:* {formatar_participantes(evento.get('participantes_estimados'))}\n\n"
                 f"⚠️ Verifique se todos os equipamentos e instalações estão prontos."
             )
         elif tipo == '1h':
@@ -303,7 +317,7 @@ def forcar_notificacao_whatsapp(evento_id):
                 f"🕒 *Horário:* {evento['hora_inicio']} às {evento['hora_fim']}\n"
                 f"📍 *Local:* {evento['local']}\n"
                 f"👤 *Responsável:* {evento.get('responsavel', 'Não informado')}\n"
-                f"👥 *Participantes:* {evento.get('participantes_estimados', 'Não informado')}\n\n"
+                f"👥 *Participantes:* {formatar_participantes(evento.get('participantes_estimados'))}\n\n"
                 f"⚠️ Preparar infraestrutura e checagens finais."
             )
         else:
@@ -314,7 +328,7 @@ def forcar_notificacao_whatsapp(evento_id):
                 f"🕒 *Horário:* {evento['hora_inicio']} às {evento['hora_fim']}\n"
                 f"📍 *Local:* {evento['local']}\n"
                 f"👤 *Responsável:* {evento.get('responsavel', 'Não informado')}\n"
-                f"👥 *Participantes:* {evento.get('participantes_estimados', 'Não informado')}\n\n"
+                f"👥 *Participantes:* {formatar_participantes(evento.get('participantes_estimados'))}\n\n"
                 f"ℹ️ Notificação disparada manualmente pelo sistema."
             )
 

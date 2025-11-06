@@ -42,6 +42,21 @@ class NotificacaoEventos:
     # A lista de técnicos e verificação de disponibilidade local foram removidas;
     # o filtro por disponibilidade é realizado pela própria API externa via parâmetro.
 
+    @staticmethod
+    def formatar_participantes(participantes):
+        """
+        Formata o número de participantes, retornando 'desconhecido' quando for 0.
+        
+        Args:
+            participantes: Número de participantes estimados (pode ser int, str ou None)
+            
+        Returns:
+            str: Número formatado ou 'desconhecido'
+        """
+        if participantes is None or participantes == '' or participantes == 0 or participantes == '0':
+            return 'desconhecido'
+        return str(participantes)
+
     def verificar_horario_data_alarme(self, agora: datetime) -> bool:
         """
         Verifica se o sistema está dentro do horário e dia configurados
@@ -107,7 +122,7 @@ class NotificacaoEventos:
             f"🕒 *Horário:* {evento_dados['hora_inicio']} às {evento_dados['hora_fim']}\n"
             f"📍 *Local:* {evento_dados['local']}\n"
             f"👤 *Responsável:* {evento_dados.get('responsavel', 'Não informado')}\n"
-            f"👥 *Participantes:* {evento_dados.get('participantes_estimados', 'Não informado')}\n\n"
+            f"👥 *Participantes:* {self.formatar_participantes(evento_dados.get('participantes_estimados'))}\n\n"
             f"ℹ️ Um lembrete será enviado 1 dia antes do evento."
         )
 
@@ -231,7 +246,7 @@ class NotificacaoEventos:
                 f"🕒 *Horário:* {evento_dados['hora_inicio']} às {evento_dados['hora_fim']}\n"
                 f"📍 *Local:* {evento_dados['local']}\n"
                 f"👤 *Responsável:* {evento_dados.get('responsavel', 'Não informado')}\n"
-                f"👥 *Participantes:* {evento_dados.get('participantes_estimados', 'Não informado')}\n\n"
+                f"👥 *Participantes:* {self.formatar_participantes(evento_dados.get('participantes_estimados'))}\n\n"
                 f"⚠️ Verifique se todos os equipamentos e instalações estão funcionando adequadamente."
             )
             self.enviar_whatsapp_por_funcao(mensagem=mensagem)
@@ -251,7 +266,7 @@ class NotificacaoEventos:
             f"🕒 *Horário:* {evento_dados['hora_inicio']} às {evento_dados['hora_fim']}\n"
             f"📍 *Local:* {evento_dados['local']}\n"
             f"👤 *Responsável:* {evento_dados.get('responsavel', 'Não informado')}\n"
-            f"👥 *Participantes:* {evento_dados.get('participantes_estimados', 'Não informado')}\n\n"
+            f"👥 *Participantes:* {self.formatar_participantes(evento_dados.get('participantes_estimados'))}\n\n"
             f"⚠️ Preparar infraestrutura e checagens finais."
         )
 
