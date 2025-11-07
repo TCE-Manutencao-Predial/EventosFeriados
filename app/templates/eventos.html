@@ -404,7 +404,7 @@ function exibirEventos() {
                 <td><span class="badge bg-${localBadge[evento.local] || 'secondary'}">${evento.local}</span></td>
                 <td ${estiloTextoEncerrado}>${evento.hora_inicio} - ${evento.hora_fim}</td>
                 <td ${estiloTextoEncerrado}>${evento.responsavel || '<span class="text-muted">-</span>'}</td>
-                <td ${estiloTextoEncerrado}>${evento.participantes_estimados || '<span class="text-muted">-</span>'}</td>
+                <td ${estiloTextoEncerrado}>${evento.participantes_estimados && evento.participantes_estimados !== 0 ? evento.participantes_estimados : '<span class="text-muted">desconhecido</span>'}</td>
                 <td class="text-center">
                     ${!eventoEncerrado ? `
                     <button class="btn btn-sm btn-outline-primary" onclick="editarEvento('${evento.id}')" title="Editar">

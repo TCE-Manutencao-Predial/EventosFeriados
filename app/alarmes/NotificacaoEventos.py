@@ -206,7 +206,7 @@ class NotificacaoEventos:
             mudancas.append(f"• Responsável: {evento_anterior.get('responsavel','-')} → {evento_atual.get('responsavel','-')}")
         if evento_anterior.get('participantes_estimados') != evento_atual.get('participantes_estimados'):
             mudancas.append(
-                f"• Participantes: {evento_anterior.get('participantes_estimados','-')} → {evento_atual.get('participantes_estimados','-')}"
+                f"• Participantes: {self.formatar_participantes(evento_anterior.get('participantes_estimados'))} → {self.formatar_participantes(evento_atual.get('participantes_estimados'))}"
             )
 
         # Montar mensagem

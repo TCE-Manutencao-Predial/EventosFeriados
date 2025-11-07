@@ -423,8 +423,9 @@ function mostrarDetalhesEvento(evento) {
             conteudo += `<p><strong>Responsável:</strong> ${props.responsavel}</p>`;
         }
         
-        if (props.participantes) {
-            conteudo += `<p><strong>Participantes estimados:</strong> ${props.participantes}</p>`;
+        if (props.participantes !== undefined && props.participantes !== null) {
+            const participantesTexto = props.participantes === 0 ? 'desconhecido' : props.participantes;
+            conteudo += `<p><strong>Participantes estimados:</strong> ${participantesTexto}</p>`;
         }
         
         if (props.descricao) {
