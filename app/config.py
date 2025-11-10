@@ -35,9 +35,9 @@ except Exception as e:
 ROUTES_PREFIX = '/EventosFeriados'
 
 # Configuração dos diretórios de logs
-# Prioridade: variavel ambiente EVENTOS_FERIADOS_LOG_DIR > /var/softwaresTCE/logs/EventosFeriados > fallback local
+# Prioridade: variavel ambiente EVENTOS_FERIADOS_LOG_DIR > /var/softwaresTCE/logs/eventos_feriados > fallback local
 _LOG_DIR_ENV = os.environ.get('EVENTOS_FERIADOS_LOG_DIR')
-LOG_DIR = _LOG_DIR_ENV or '/var/softwaresTCE/logs/EventosFeriados'
+LOG_DIR = _LOG_DIR_ENV or '/var/softwaresTCE/logs/eventos_feriados'
 
 try:
     if not os.path.exists(LOG_DIR):
