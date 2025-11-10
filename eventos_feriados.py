@@ -1,4 +1,4 @@
-# EventosFeriados.py
+# eventos_feriados.py
 from app import create_app
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging

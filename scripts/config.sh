@@ -1,5 +1,5 @@
-PROJECT_NAME="EventosFeriados"
-SERVICE_NAME="EventosFeriados.service"
+PROJECT_NAME="eventos_feriados"
+SERVICE_NAME="eventos_feriados.service"
 
 ROOT_FRONTEND=/var/www/automacao.tce.go.gov.br/$PROJECT_NAME
 

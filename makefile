@@ -1,4 +1,4 @@
-APP_NAME=EventosFeriados
+APP_NAME=eventos_feriados
 PORT=5045
 
 VENV_PYTHON=.venv/bin/python
@@ -38,7 +38,7 @@ undeploy:
 
 # Configurações do Servico
 # ----------------------------
-SERVICE_NAME=EventosFeriados
+SERVICE_NAME=eventos_feriados
 
 service-reload:
 	sudo systemctl daemon-reload

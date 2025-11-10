@@ -1,5 +1,5 @@
 [project]
-name = "RFID"
+name = "eventos-feriados-app"
 version = "1.0.0"
 description = ""
 dependencies = [
