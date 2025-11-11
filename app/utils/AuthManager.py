@@ -133,21 +133,19 @@ class AuthManager:
             if not usuario_htpasswd:
                 continue
             
-            # Verificar se está disponível (não de férias e não indisponível)
+            # Armazenar informações de disponibilidade para referência
+            # mas NÃO usar para bloquear acesso ao sistema
             disponivel = tecnico.get('disponivel', False)
             ferias = tecnico.get('ferias', False)
             
-            if not disponivel or ferias:
-                self.logger.debug(f"Técnico {tecnico.get('nome')} não está disponível ou está de férias")
-                continue
-            
-            # Adicionar ao cache
+            # Adicionar ao cache - todos os técnicos com a função são autorizados
             usuarios_autorizados[usuario_htpasswd] = {
                 'nome': tecnico.get('nome', ''),
                 'cargo': tecnico.get('cargo', ''),
                 'email': tecnico.get('email', ''),
                 'telefone': tecnico.get('telefone_principal', ''),
                 'disponivel': disponivel,
+                'ferias': ferias,
                 'valido_ate': (datetime.now() + timedelta(hours=self.CACHE_EXPIRATION_HOURS)).isoformat()
             }
         
