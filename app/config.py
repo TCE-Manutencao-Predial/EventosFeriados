@@ -63,7 +63,7 @@ CLP_CONFIG = {
     'AUTH_PASS': 'WzPcMMFU',  # Senha para autenticação básica
     'TIMEOUT': int(os.environ.get('CLP_TIMEOUT', '30')),  # Timeout em segundos para requisições
     'RETRY_COUNT': int(os.environ.get('CLP_RETRY_COUNT', '3')),  # Número de tentativas em caso de falha
-    'SYNC_TIMES': os.environ.get('CLP_SYNC_TIMES', '07:00,18:00').split(','),  # Horários de sincronização automática
+    'SYNC_TIMES': os.environ.get('CLP_SYNC_TIMES', '07:00,20:00').split(','),  # Horários de sincronização automática
     'MAX_FERIADOS': 20,  # Máximo de feriados (N33:0 a N33:19)
     'SYNC_ENABLED': os.environ.get('CLP_SYNC_ENABLED', 'true').lower() == 'true',  # Habilitar sincronização automática
     'STATUS_FILE': os.path.join(DATA_DIR, 'clp_status.json'),  # Arquivo de status
@@ -92,7 +92,7 @@ CLP_AUDITORIO_CONFIG = {
     'AUTH_PASS': 'WzPcMMFU',  # Senha para autenticação básica
     'TIMEOUT': int(os.environ.get('CLP_TIMEOUT', '30')),  # Timeout em segundos para requisições
     'RETRY_COUNT': int(os.environ.get('CLP_RETRY_COUNT', '3')),  # Número de tentativas em caso de falha
-    'SYNC_TIMES': os.environ.get('CLP_SYNC_TIMES', '07:00,18:00').split(','),  # Horários de sincronização automática
+    'SYNC_TIMES': os.environ.get('CLP_SYNC_TIMES', '07:00,20:00').split(','),  # Horários de sincronização automática
     'SYNC_ENABLED': os.environ.get('CLP_SYNC_ENABLED', 'true').lower() == 'true',  # Habilitar sincronização automática
     'STATUS_FILE': os.path.join(DATA_DIR, 'clp_auditorio_status.json'),  # Arquivo de status
     'BACKUP_FILE': os.path.join(DATA_DIR, 'clp_auditorio_backup.json'),   # Backup dos dados
