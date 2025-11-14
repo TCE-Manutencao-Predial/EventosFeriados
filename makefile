@@ -36,7 +36,13 @@ setup:
 # Valida configurações do .env.deploy
 validate:
 	@echo "🔍 Validando configurações..."
-	@python tools/validate-env.py
+	@if [ -f "$(VENV_PYTHON)" ]; then \
+		$(VENV_PYTHON) tools/validate-env.py; \
+	elif command -v python3 > /dev/null 2>&1; then \
+		python3 tools/validate-env.py; \
+	else \
+		python tools/validate-env.py; \
+	fi
 
 # Cria .env.deploy a partir do template
 reset-env:

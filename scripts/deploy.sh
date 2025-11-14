@@ -122,6 +122,11 @@ deploy_backend() {
     dir_atual=$(pwd)
     cd $ROOT_BACKEND
     make setup
+    
+    # Instalar python-dotenv globalmente para o validator
+    echo "[Deploy] Instalando python-dotenv para validação..."
+    sudo pip3 install python-dotenv
+    
     cd $dir_atual
     echo "[Deploy] Configuração do Backend concluída."
 
