@@ -20,11 +20,26 @@ from logging.handlers import RotatingFileHandler
 # =============================================================================
 
 # Carrega .env.deploy do diretório raiz do projeto
+# Busca em múltiplos locais para suportar diferentes ambientes
 BASE_DIR = Path(__file__).resolve().parent.parent
-ENV_FILE = BASE_DIR / '.env.deploy'
 
-if not ENV_FILE.exists():
-    print(f"❌ ERRO: Arquivo .env.deploy não encontrado em {ENV_FILE}")
+# Tenta localizar .env.deploy em diferentes locais
+ENV_FILE_CANDIDATES = [
+    BASE_DIR / '.env.deploy',  # No diretório do módulo (dev)
+    Path('/var/softwaresTCE/eventos_feriados/.env.deploy'),  # Produção
+    Path.cwd() / '.env.deploy',  # Diretório de trabalho atual
+]
+
+ENV_FILE = None
+for candidate in ENV_FILE_CANDIDATES:
+    if candidate.exists():
+        ENV_FILE = candidate
+        break
+
+if ENV_FILE is None:
+    print(f"❌ ERRO: Arquivo .env.deploy não encontrado nos seguintes locais:")
+    for candidate in ENV_FILE_CANDIDATES:
+        print(f"   - {candidate}")
     print(f"💡 Execute: make reset-env")
     sys.exit(1)
 
