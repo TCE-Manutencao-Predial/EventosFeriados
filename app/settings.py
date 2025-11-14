@@ -255,6 +255,7 @@ def setup_logging():
     
     Evita adicionar handlers duplicados se chamada múltiplas vezes.
     """
+    global LOG_DIR, LOG_FILE
     logger = logging.getLogger('EventosFeriados')
 
     if not logger.handlers:
@@ -266,7 +267,6 @@ def setup_logging():
             try:
                 fallback_dir.mkdir(parents=True, exist_ok=True)
                 logger.warning(f"Falha ao criar LOG_DIR '{LOG_DIR}': {e}. Usando fallback '{fallback_dir}'.")
-                global LOG_DIR, LOG_FILE
                 LOG_DIR = str(fallback_dir)
                 LOG_FILE = f"{LOG_DIR}/eventos_feriados.log"
             except Exception:
