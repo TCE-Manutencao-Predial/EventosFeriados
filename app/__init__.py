@@ -1,6 +1,6 @@
 # app/__init__.py
 from flask import Flask, render_template, jsonify, request
-from .config import setup_logging, ROUTES_PREFIX
+from .settings import setup_logging, ROUTES_PREFIX, SECRET_KEY
 import logging
 
 # Configurar logging
@@ -10,7 +10,7 @@ def create_app():
     """Cria e configura a aplicação Flask"""
     # IMPORTANTE: Configurar static_url_path com o prefixo
     app = Flask(__name__, static_url_path=f'{ROUTES_PREFIX}/static')
-    app.config['SECRET_KEY'] = 'eventos_feriados_secret_key_2024'
+    app.config['SECRET_KEY'] = SECRET_KEY
     
     # Inicializa gerenciador de autenticação
     try:

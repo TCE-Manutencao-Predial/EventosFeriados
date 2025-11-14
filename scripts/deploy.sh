@@ -101,10 +101,16 @@ deploy_backend() {
     sudo chown -Rv $(whoami) $ROOT_BACKEND
     echo "[Deploy] Permissões do Backend ajustadas."
 
-    echo "[Deploy] Criando diretório centralizado de logs..."
-    sudo mkdir -p /var/softwaresTCE/logs/$PROJECT_NAME
-    sudo chown -R $(whoami) /var/softwaresTCE/logs/$PROJECT_NAME
-    echo "[Deploy] Diretório de logs criado: /var/softwaresTCE/logs/$PROJECT_NAME"
+    echo "[Deploy] Criando diretórios de dados, logs e backups..."
+    sudo mkdir -p $ROOT_DATA
+    sudo mkdir -p $ROOT_LOGS
+    sudo mkdir -p $BACKUP_DIR
+    sudo chown -R tcego:tcego $ROOT_DATA
+    sudo chown -R tcego:tcego $ROOT_LOGS
+    echo "[Deploy] Diretórios criados:"
+    echo "   Dados: $ROOT_DATA"
+    echo "   Logs: $ROOT_LOGS"
+    echo "   Backups: $BACKUP_DIR"
 
     if [ -e $ROOT_BACKEND/*.log ]; then
         echo "[Deploy] Ajustando permissões dos arquivos de log..."
@@ -122,6 +128,7 @@ deploy_backend() {
     echo "[Deploy] Verificando permissões de execução para scripts do Backend..."
     [ ! -x "$ROOT_BACKEND/scripts/deploy.sh" ] && sudo chmod -v +x "$ROOT_BACKEND/scripts/deploy.sh"
     [ ! -x "$ROOT_BACKEND/scripts/run.sh" ] && sudo chmod -v +x "$ROOT_BACKEND/scripts/run.sh"
+    [ ! -x "$ROOT_BACKEND/scripts/generate-service.sh" ] && sudo chmod -v +x "$ROOT_BACKEND/scripts/generate-service.sh"
 
     CURRENT_CONTEXT=$(ls -Z "$ROOT_BACKEND/scripts/run.sh" | awk -F: '{print $3}')
     if [[ "$CURRENT_CONTEXT" != "bin_t" ]]; then
@@ -141,6 +148,11 @@ deploy_backend() {
 
 deploy_servico() {
     echo "[Deploy] Iniciando instalação do serviço..."
+    
+    echo "[Deploy] Gerando arquivo de serviço a partir do template..."
+    cd $ROOT_BACKEND
+    ./scripts/generate-service.sh
+    cd - > /dev/null
 
     if [ -e "/usr/lib/systemd/system/$SERVICE_NAME" ]; then
         echo "[Deploy] Serviço existente encontrado. Removendo configuração antiga..."
@@ -148,7 +160,7 @@ deploy_servico() {
     fi
 
     echo "[Deploy] Copiando novo arquivo de serviço..."
-    sudo cp -v scripts/$SERVICE_NAME /usr/lib/systemd/system/$SERVICE_NAME
+    sudo cp -v $ROOT_BACKEND/scripts/$SERVICE_NAME /usr/lib/systemd/system/$SERVICE_NAME
 
     if ! systemctl is-enabled "$SERVICE_NAME" && [ $AUTO_HABILITAR_SERVICO ]; then
         echo "[Deploy] Serviço desabilitado. Habilitando..."
